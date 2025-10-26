@@ -156,7 +156,7 @@ void Editor::handle_key_cmd(int ch)
         if (!area_selection_mode) {
             // Start area selection
             area_selection_mode = true;
-            param_c0 = param_c1 = wksp.offset + cursor_col;
+            param_c0 = param_c1 = wksp.basecol + cursor_col;
             param_r0 = param_r1 = wksp.topline + cursor_line;
             status              = "*** Area defined by cursor ***";
         }
@@ -223,15 +223,11 @@ void Editor::handle_key_cmd(int ch)
             } else if (cmd.size() >= 2 && cmd.substr(0, 2) == "w ") {
                 // w + to make writable (or other w commands)
                 if (cmd.size() >= 3 && cmd[2] == '+') {
-                    if (!files.empty() && wksp.wfile < (int)files.size()) {
-                        files[wksp.wfile].writable = 1;
-                    }
-                    status = "File marked writable";
+                    wksp.writable = 1;
+                    status        = "File marked writable";
                 } else {
-                    if (!files.empty() && wksp.wfile < (int)files.size()) {
-                        files[wksp.wfile].writable = 0;
-                    }
-                    status = "File marked read-only";
+                    wksp.writable = 0;
+                    status        = "File marked read-only";
                 }
             } else if (cmd == "s") {
                 save_file();
@@ -494,7 +490,7 @@ void Editor::handle_area_selection(int ch)
     }
 
     // Update area bounds
-    int curCol  = wksp.offset + cursor_col;
+    int curCol  = wksp.basecol + cursor_col;
     int curLine = wksp.topline + cursor_line;
 
     if (curCol > param_c0) {
@@ -566,7 +562,7 @@ void Editor::handle_key_edit(int ch)
         // Paste clipboard at current position
         if (!clipboard.is_empty()) {
             int curLine = wksp.topline + cursor_line;
-            int curCol  = wksp.offset + cursor_col;
+            int curCol  = wksp.basecol + cursor_col;
             paste(curLine, curCol);
         }
         return;
@@ -629,7 +625,7 @@ void Editor::handle_key_edit(int ch)
     if (ch == 22) { // Ctrl-V
         if (!clipboard.is_empty()) {
             int curLine = wksp.topline + cursor_line;
-            int curCol  = wksp.offset + cursor_col;
+            int curCol  = wksp.basecol + cursor_col;
             paste(curLine, curCol);
         }
         return;
@@ -676,7 +672,7 @@ void Editor::handle_key_edit(int ch)
     // ^X f - Shift view right
     if (ctrlx_state && (ch == 'f' || ch == 'F')) {
         int shift = param_count > 0 ? param_count : ncols / 4;
-        wksp.offset += shift;
+        wksp.basecol += shift;
         param_count = 0;
         ctrlx_state = false;
         ensure_cursor_visible();
@@ -685,9 +681,9 @@ void Editor::handle_key_edit(int ch)
     // ^X b - Shift view left
     if (ctrlx_state && (ch == 'b' || ch == 'B')) {
         int shift = param_count > 0 ? param_count : ncols / 4;
-        wksp.offset -= shift;
-        if (wksp.offset < 0)
-            wksp.offset = 0;
+        wksp.basecol -= shift;
+        if (wksp.basecol < 0)
+            wksp.basecol = 0;
         param_count = 0;
         ctrlx_state = false;
         ensure_cursor_visible();
@@ -742,28 +738,27 @@ void Editor::handle_key_edit(int ch)
     }
 
     if (ch == KEY_HOME) {
-        wksp.offset = 0;
-        cursor_col  = 0;
+        wksp.basecol = 0;
+        cursor_col   = 0;
         return;
     }
     if (ch == KEY_END) {
         int len = current_line_length();
         if (len >= ncols - 1) {
-            wksp.offset = len - (ncols - 2);
-            if (wksp.offset < 0)
-                wksp.offset = 0;
-            cursor_col = len - wksp.offset;
+            wksp.basecol = len - (ncols - 2);
+            if (wksp.basecol < 0)
+                wksp.basecol = 0;
+            cursor_col = len - wksp.basecol;
             if (cursor_col > ncols - 2)
                 cursor_col = ncols - 2;
         } else {
-            wksp.offset = 0;
-            cursor_col  = len;
+            wksp.basecol = 0;
+            cursor_col   = len;
         }
         return;
     }
     if (ch == KEY_NPAGE) {
-        int total = !files.empty() && files[wksp.wfile].chain ? files[wksp.wfile].nlines
-                                                              : (int)lines.size();
+        int total = wksp.chain ? wksp.nlines : (int)lines.size();
         int step  = nlines - 2;
         if (step < 1)
             step = 1;

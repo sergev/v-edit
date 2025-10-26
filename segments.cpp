@@ -13,11 +13,7 @@
 //
 void Editor::load_file_to_segments(const std::string &path)
 {
-    if (files.empty())
-        model_init();
-
-    FileDesc &f = files[wksp.wfile];
-    f.path      = path;
+    wksp.path = path;
 
     // Open file for reading
     int fd = open(path.c_str(), O_RDONLY);
@@ -37,21 +33,17 @@ void Editor::load_file_to_segments(const std::string &path)
 //
 void Editor::build_segment_chain_from_file(int fd)
 {
-    if (files.empty())
-        model_init();
-
-    FileDesc &f = files[wksp.wfile];
-    f.nlines    = 0;
+    wksp.nlines = 0;
 
     // Clean up old chain
-    if (f.chain) {
-        Segment *seg = f.chain;
+    if (wksp.chain) {
+        Segment *seg = wksp.chain;
         while (seg) {
             Segment *next = seg->next;
             delete seg;
             seg = next;
         }
-        f.chain = nullptr;
+        wksp.chain = nullptr;
     }
 
     // Build segment chain by reading file
@@ -94,7 +86,7 @@ void Editor::build_segment_chain_from_file(int fd)
                         first_seg = seg;
 
                     last_seg = seg;
-                    f.nlines += lines_in_seg;
+                    wksp.nlines += lines_in_seg;
                 }
                 break;
             }
@@ -160,7 +152,7 @@ void Editor::build_segment_chain_from_file(int fd)
                 first_seg = seg;
 
             last_seg = seg;
-            f.nlines += lines_in_seg;
+            wksp.nlines += lines_in_seg;
 
             // Reset for next segment
             temp_seg.data.clear();
@@ -183,7 +175,7 @@ void Editor::build_segment_chain_from_file(int fd)
             first_seg = tail;
     }
 
-    f.chain       = first_seg;
+    wksp.chain    = first_seg;
     wksp.cursegm  = first_seg;
     wksp.segmline = 0;
     wksp.line     = 0;
@@ -194,7 +186,7 @@ void Editor::build_segment_chain_from_file(int fd)
 //
 std::string Editor::read_line_from_segment(int line_no)
 {
-    if (files.empty() || files[wksp.wfile].path.empty())
+    if (wksp.path.empty())
         return std::string();
 
     if (wksp_position(line_no))
@@ -222,7 +214,7 @@ std::string Editor::read_line_from_segment(int line_no)
     char *buffer = new char[line_len];
 
     // Open file and read
-    int fd = open(files[wksp.wfile].path.c_str(), O_RDONLY);
+    int fd = open(wksp.path.c_str(), O_RDONLY);
     if (fd >= 0) {
         if (lseek(fd, seek_pos, SEEK_SET) >= 0) {
             read(fd, buffer, line_len);
@@ -241,7 +233,7 @@ std::string Editor::read_line_from_segment(int line_no)
 //
 bool Editor::write_segments_to_file(const std::string &path)
 {
-    if (files.empty() || !files[wksp.wfile].chain || files[wksp.wfile].path.empty())
+    if (!wksp.chain || wksp.path.empty())
         return false;
 
     int out_fd = creat(path.c_str(), 0664);
@@ -249,13 +241,13 @@ bool Editor::write_segments_to_file(const std::string &path)
         return false;
 
     // Open source file
-    int in_fd = open(files[wksp.wfile].path.c_str(), O_RDONLY);
+    int in_fd = open(wksp.path.c_str(), O_RDONLY);
     if (in_fd < 0) {
         close(out_fd);
         return false;
     }
 
-    Segment *seg = files[wksp.wfile].chain;
+    Segment *seg = wksp.chain;
     char buffer[8192];
 
     while (seg && seg->fdesc) {

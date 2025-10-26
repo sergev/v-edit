@@ -14,7 +14,7 @@ void Editor::save_state()
     if (out) {
         out << filename << '\n';
         out << wksp.topline << '\n';
-        out << wksp.offset << '\n';
+        out << wksp.basecol << '\n';
         out << cursor_line << '\n';
         out << cursor_col << '\n';
         out << insert_mode << '\n';
@@ -72,7 +72,7 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
                 filename    = nm;
                 backup_done = false; // reset backup flag for restored file
             }
-            in >> wksp.topline >> wksp.offset >> cursor_line >> cursor_col;
+            in >> wksp.topline >> wksp.basecol >> cursor_line >> cursor_col;
             in >> insert_mode >> cmd_mode;
             std::getline(in, cmd); // consume newline
             std::getline(in, cmd);

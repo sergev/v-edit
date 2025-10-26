@@ -6,7 +6,7 @@
 void Editor::save_macro_position(char name)
 {
     int absLine           = wksp.topline + cursor_line;
-    int absCol            = wksp.offset + cursor_col;
+    int absCol            = wksp.basecol + cursor_col;
     macros[name].type     = Macro::POSITION;
     macros[name].position = std::make_pair(absLine, absCol);
 }
@@ -20,8 +20,8 @@ bool Editor::goto_macro_position(char name)
     if (it == macros.end() || it->second.type != Macro::POSITION)
         return false;
     goto_line(it->second.position.first);
-    wksp.offset = it->second.position.second;
-    cursor_col  = 0;
+    wksp.basecol = it->second.position.second;
+    cursor_col   = 0;
     ensure_cursor_visible();
     return true;
 }
@@ -228,7 +228,7 @@ bool Editor::mdeftag(char tag_name)
 
     // Get current cursor position
     int curLine = wksp.topline + cursor_line;
-    int curCol  = wksp.offset + cursor_col;
+    int curCol  = wksp.basecol + cursor_col;
 
     // Get tag position
     int tagLine = it->second.position.first;
@@ -264,8 +264,8 @@ bool Editor::mdeftag(char tag_name)
     // Move cursor to start if swapped
     if (f) {
         goto_line(param_r0);
-        wksp.offset = param_c0;
-        cursor_col  = 0;
+        wksp.basecol = param_c0;
+        cursor_col   = 0;
         ensure_cursor_visible();
     }
 

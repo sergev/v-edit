@@ -11,24 +11,13 @@
 //
 void Editor::build_segment_chain_from_lines()
 {
-    if (files.empty())
-        model_init();
-    FileDesc &f = files[wksp.wfile];
-    f.name      = filename;
-    f.writable  = 1;
-    f.nlines    = (int)lines.size();
-    // Build contiguous contents to facilitate extracting lines by offset
-    f.contents.clear();
-    for (size_t i = 0; i < lines.size(); ++i) {
-        f.contents += lines[i];
-        if (i + 1 != lines.size())
-            f.contents.push_back('\n');
-    }
+    wksp.writable = 1;
+    wksp.nlines   = (int)lines.size();
 
     // Create actual segment and initialize workspace pointer
-    if (f.chain) {
+    if (wksp.chain) {
         // Clean up old chain if any
-        Segment *seg = f.chain;
+        Segment *seg = wksp.chain;
         while (seg) {
             Segment *next = seg->next;
             delete seg;
@@ -49,7 +38,7 @@ void Editor::build_segment_chain_from_lines()
         int n = (int)ln.size() + 1; // include newline
         seg->add_line_length(n);
     }
-    f.chain = seg;
+    wksp.chain = seg;
 
     // Set workspace pointer to first segment
     wksp.cursegm  = seg;
@@ -57,8 +46,8 @@ void Editor::build_segment_chain_from_lines()
 
     // Don't reset wksp.topline here as it's called during editing and would reset scroll position
     // Only reset offset and line
-    wksp.offset = 0;
-    wksp.line   = 0;
+    wksp.basecol = 0;
+    wksp.line    = 0;
 }
 
 //
@@ -145,12 +134,12 @@ std::string Editor::get_line_from_model(int lno)
 std::string Editor::get_line_from_segments(int lno)
 {
     // Try segment-based reading first
-    if (files.empty() || !files[wksp.wfile].chain) {
+    if (!wksp.chain) {
         return get_line_from_model(lno); // fallback to lines vector
     }
 
     // Check if we have file-based segments
-    Segment *seg = files[wksp.wfile].chain;
+    Segment *seg = wksp.chain;
     if (seg && seg->fdesc > 0) {
         // Use segment-based reading
         return read_line_from_segment(lno);

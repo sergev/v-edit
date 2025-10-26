@@ -96,11 +96,8 @@ void Editor::startup(int restart)
 //
 void Editor::model_init()
 {
-    // Initialize minimal file/segment/workspace tables to enable future port
-    files.clear();
-    files.resize(3); // 0 unused, 1 temp, 2 clipboard as in prototype layout
-    wksp       = Workspace{};
-    wksp.wfile = 1;
+    // Initialize workspace
+    wksp = Workspace{};
 
     // Initialize multiple file support - start with empty list
     open_files.clear();

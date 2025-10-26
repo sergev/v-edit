@@ -297,10 +297,9 @@ bool Editor::open_help_file()
 
     // Create a help file state
     FileState help_file_state;
-    help_file_state.filename   = DEFAULT_HELP_FILE;
-    help_file_state.lines      = help_lines;
-    help_file_state.wksp       = Workspace{};
-    help_file_state.wksp.wfile = 1; // Use temp file slot
+    help_file_state.filename = DEFAULT_HELP_FILE;
+    help_file_state.lines    = help_lines;
+    help_file_state.wksp     = Workspace{};
 
     // Add to open files
     open_files.push_back(help_file_state);
@@ -349,10 +348,9 @@ bool Editor::create_builtin_help()
 
     // Create a help file state
     FileState help_file_state;
-    help_file_state.filename   = "Built-in Help";
-    help_file_state.lines      = help_lines;
-    help_file_state.wksp       = Workspace{};
-    help_file_state.wksp.wfile = 1; // Use temp file slot
+    help_file_state.filename = "Built-in Help";
+    help_file_state.lines    = help_lines;
+    help_file_state.wksp     = Workspace{};
 
     // Add to open files
     open_files.push_back(help_file_state);

@@ -14,25 +14,18 @@ private:
 public:
     // --- Core data model types (ported from prototype) ---
 
-    struct FileDesc {
-        Segment *chain{ nullptr };
-        std::string name;
-        std::string path; // full path for segment-based reading
-        int writable{ 0 };
-        int backup_done{ 0 };
-        int nlines{ 0 };
-        std::string contents; // contiguous storage of file text (lines joined by \n)
-    };
-
     struct Workspace {
-        Segment *cursegm{ nullptr };
-        int topline{ 0 };
-        int offset{ 0 };
-        int line{ 0 };
-        int segmline{ 0 };
-        int wfile{ 0 };
-        int cursorcol{ 0 };
-        int cursorrow{ 0 };
+        Segment *cursegm{ nullptr }; // current segment in chain
+        Segment *chain{ nullptr };   // file's segment chain (direct access)
+        std::string path;            // file path (for segment-based I/O)
+        int writable{ 0 };           // write permission
+        int nlines{ 0 };             // line count
+        int topline{ 0 };            // top line visible on screen
+        int basecol{ 0 };            // horizontal scroll base column
+        int line{ 0 };               // current line number
+        int segmline{ 0 };           // first line in current segment
+        int cursorcol{ 0 };          // saved cursor column
+        int cursorrow{ 0 };          // saved cursor row
     };
 
     Editor();
@@ -127,8 +120,6 @@ private:
     };
     Clipboard clipboard;
 
-    // Segment/file/workspace tables (single-window, at least 2 entries as per prototype usage)
-    std::vector<FileDesc> files;
     Workspace wksp{};
 
     // Journaling

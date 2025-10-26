@@ -17,10 +17,7 @@ protected:
     {
         editor = std::make_unique<Editor>();
         // Manually initialize editor state needed for tests
-        editor->files.clear();
-        editor->files.resize(3);
-        editor->wksp       = Editor::Workspace{};
-        editor->wksp.wfile = 1;
+        editor->wksp = Editor::Workspace{};
         editor->open_files.clear();
         editor->current_file_index     = 0;
         editor->alternative_file_index = -1;
@@ -50,9 +47,8 @@ TEST_F(SegmentTest, LoadFileToSegments)
 
     editor->load_file_to_segments(filename);
 
-    // Verify segments were created
-    auto &files = editor->files;
-    EXPECT_FALSE(files.empty());
+    // Verify segments were created (test now uses wksp.chain directly)
+    EXPECT_FALSE(editor->wksp.chain == nullptr);
 
     cleanupTestFile(filename);
 }
@@ -64,8 +60,7 @@ TEST_F(SegmentTest, ReadLineFromSegment)
     editor->load_file_to_segments(filename);
 
     // Verify segments were created
-    EXPECT_FALSE(editor->files.empty());
-    EXPECT_FALSE(editor->files[editor->wksp.wfile].chain == nullptr);
+    EXPECT_FALSE(editor->wksp.chain == nullptr);
 
     // Read first line
     std::string line1 = editor->read_line_from_segment(0);
@@ -197,12 +192,10 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     editor->load_file_to_segments(filename);
 
     // Verify segments were created
-    auto &files = editor->files;
-    EXPECT_FALSE(files.empty());
-    EXPECT_FALSE(files[editor->wksp.wfile].chain == nullptr);
+    EXPECT_FALSE(editor->wksp.chain == nullptr);
 
     // Check segment chain structure
-    auto *segment           = files[editor->wksp.wfile].chain;
+    auto *segment           = editor->wksp.chain;
     int segment_count       = 0;
     int total_segment_lines = 0;
 

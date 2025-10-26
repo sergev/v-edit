@@ -7,8 +7,7 @@ void Editor::goto_line(int lineNumber)
 {
     if (lineNumber < 0)
         lineNumber = 0;
-    int total =
-        !files.empty() && files[wksp.wfile].chain ? files[wksp.wfile].nlines : (int)lines.size();
+    int total = wksp.chain ? wksp.nlines : (int)lines.size();
     if (lineNumber >= total)
         lineNumber = total - 1;
     if (lineNumber < 0)
@@ -17,7 +16,7 @@ void Editor::goto_line(int lineNumber)
     wksp.topline = lineNumber;
     cursor_line  = 0;
     cursor_col   = 0;
-    wksp.offset  = 0;
+    wksp.basecol = 0;
     ensure_cursor_visible();
 }
 
@@ -28,15 +27,15 @@ void Editor::move_left()
 {
     if (cursor_col > 0) {
         cursor_col--;
-    } else if (wksp.offset > 0) {
-        wksp.offset--;
+    } else if (wksp.basecol > 0) {
+        wksp.basecol--;
     } else if (cursor_line > 0) {
         cursor_line--;
         int len    = current_line_length();
         cursor_col = len;
         if (cursor_col >= ncols - 1) {
-            wksp.offset = len - (ncols - 2);
-            cursor_col  = ncols - 2;
+            wksp.basecol = len - (ncols - 2);
+            cursor_col   = ncols - 2;
         }
     }
 }
@@ -50,11 +49,11 @@ void Editor::move_right()
     if (cursor_col < len && cursor_col < ncols - 1) {
         cursor_col++;
     } else if (cursor_col >= ncols - 1) {
-        wksp.offset++;
+        wksp.basecol++;
     } else if (cursor_line < nlines - 2) {
         cursor_line++;
-        cursor_col  = 0;
-        wksp.offset = 0;
+        cursor_col   = 0;
+        wksp.basecol = 0;
     }
 }
 
@@ -76,8 +75,7 @@ void Editor::move_up()
 //
 void Editor::move_down()
 {
-    int total =
-        !files.empty() && files[wksp.wfile].chain ? files[wksp.wfile].nlines : (int)lines.size();
+    int total = wksp.chain ? wksp.nlines : (int)lines.size();
     if (cursor_line < nlines - 2) {
         int absLine = wksp.topline + cursor_line + 1;
         if (absLine < total) {
@@ -110,7 +108,7 @@ int Editor::current_line_length() const
 bool Editor::search_forward(const std::string &needle)
 {
     int startLine = wksp.topline + cursor_line;
-    int startCol  = wksp.offset + cursor_col;
+    int startCol  = wksp.basecol + cursor_col;
 
     // Search from current position forward
     for (int i = startLine; i < (int)lines.size(); ++i) {
@@ -123,11 +121,11 @@ bool Editor::search_forward(const std::string &needle)
             cursor_line  = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.offset = (int)pos - (ncols - 10);
+                wksp.basecol = (int)pos - (ncols - 10);
             } else {
-                wksp.offset = 0;
+                wksp.basecol = 0;
             }
-            cursor_col = (int)pos - wksp.offset;
+            cursor_col = (int)pos - wksp.basecol;
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -150,11 +148,11 @@ bool Editor::search_forward(const std::string &needle)
             cursor_line  = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.offset = (int)pos - (ncols - 10);
+                wksp.basecol = (int)pos - (ncols - 10);
             } else {
-                wksp.offset = 0;
+                wksp.basecol = 0;
             }
-            cursor_col = (int)pos - wksp.offset;
+            cursor_col = (int)pos - wksp.basecol;
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -171,7 +169,7 @@ bool Editor::search_forward(const std::string &needle)
 bool Editor::search_backward(const std::string &needle)
 {
     int startLine = wksp.topline + cursor_line;
-    int startCol  = wksp.offset + cursor_col;
+    int startCol  = wksp.basecol + cursor_col;
 
     // Search from current position backward
     for (int i = startLine; i >= 0; --i) {
@@ -187,11 +185,11 @@ bool Editor::search_backward(const std::string &needle)
             cursor_line  = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.offset = (int)pos - (ncols - 10);
+                wksp.basecol = (int)pos - (ncols - 10);
             } else {
-                wksp.offset = 0;
+                wksp.basecol = 0;
             }
-            cursor_col = (int)pos - wksp.offset;
+            cursor_col = (int)pos - wksp.basecol;
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -207,11 +205,11 @@ bool Editor::search_backward(const std::string &needle)
             cursor_line  = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.offset = (int)pos - (ncols - 10);
+                wksp.basecol = (int)pos - (ncols - 10);
             } else {
-                wksp.offset = 0;
+                wksp.basecol = 0;
             }
-            cursor_col = (int)pos - wksp.offset;
+            cursor_col = (int)pos - wksp.basecol;
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -273,9 +271,7 @@ void Editor::insertlines(int from, int number)
         }
     }
 
-    if (!files.empty() && wksp.wfile < (int)files.size()) {
-        files[wksp.wfile].nlines += number;
-    }
+    wksp.nlines += number;
 
     build_segment_chain_from_lines();
     segments_dirty = true;
@@ -313,9 +309,7 @@ void Editor::deletelines(int from, int number)
         lines.push_back("");
     }
 
-    if (!files.empty() && wksp.wfile < (int)files.size()) {
-        files[wksp.wfile].nlines = std::max(0, files[wksp.wfile].nlines - number);
-    }
+    wksp.nlines = std::max(0, wksp.nlines - number);
 
     build_segment_chain_from_lines();
     segments_dirty = true;
@@ -362,9 +356,7 @@ void Editor::splitline(int line, int col)
         lines.push_back(tail);
     }
 
-    if (!files.empty() && wksp.wfile < (int)files.size()) {
-        files[wksp.wfile].nlines++;
-    }
+    wksp.nlines++;
 
     build_segment_chain_from_lines();
     segments_dirty = true;
@@ -402,9 +394,7 @@ void Editor::combineline(int line, int col)
     // Delete the next line
     lines.erase(lines.begin() + line + 1);
 
-    if (!files.empty() && wksp.wfile < (int)files.size()) {
-        files[wksp.wfile].nlines = std::max(1, files[wksp.wfile].nlines - 1);
-    }
+    wksp.nlines = std::max(1, wksp.nlines - 1);
 
     build_segment_chain_from_lines();
     segments_dirty = true;

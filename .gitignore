@@ -1,0 +1,9 @@
+build
+obj/*
+cedit
+*.o
+*-
+*~
+untitled
+z
+prototype/re

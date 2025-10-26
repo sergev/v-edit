@@ -338,13 +338,13 @@ void Editor::handle_key_cmd(int ch)
                 }
                 auto it = macros.find(cmd[1]);
                 if (it != macros.end()) {
-                    if (it->second.type == Macro::BUFFER) {
+                    if (it->second.isBuffer()) {
                         if (paste_macro_buffer(cmd[1])) {
                             status = std::string("Pasted buffer '") + cmd[1] + "'";
                         } else {
                             status = std::string("Buffer '") + cmd[1] + "' empty";
                         }
-                    } else if (it->second.type == Macro::POSITION) {
+                    } else if (it->second.isPosition()) {
                         if (goto_macro_position(cmd[1])) {
                             status = std::string("Goto position '") + cmd[1] + "'";
                         } else {

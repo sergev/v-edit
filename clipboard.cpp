@@ -5,10 +5,9 @@
 //
 void Editor::save_macro_position(char name)
 {
-    int absLine           = wksp.topline() + cursor_line;
-    int absCol            = wksp.basecol() + cursor_col;
-    macros[name].type     = Macro::POSITION;
-    macros[name].position = std::make_pair(absLine, absCol);
+    int absLine = wksp.topline() + cursor_line;
+    int absCol  = wksp.basecol() + cursor_col;
+    macros[name].setPosition(absLine, absCol);
 }
 
 //
@@ -17,10 +16,11 @@ void Editor::save_macro_position(char name)
 bool Editor::goto_macro_position(char name)
 {
     auto it = macros.find(name);
-    if (it == macros.end() || it->second.type != Macro::POSITION)
+    if (it == macros.end() || !it->second.isPosition())
         return false;
-    goto_line(it->second.position.first);
-    wksp.set_basecol(it->second.position.second);
+    auto pos = it->second.getPosition();
+    goto_line(pos.first);
+    wksp.set_basecol(pos.second);
     cursor_col = 0;
     ensure_cursor_visible();
     return true;
@@ -32,13 +32,8 @@ bool Editor::goto_macro_position(char name)
 void Editor::save_macro_buffer(char name)
 {
     // Save current clipboard content to named macro buffer
-    macros[name].type           = Macro::BUFFER;
-    macros[name].buffer_lines   = clipboard.lines;
-    macros[name].start_line     = clipboard.start_line;
-    macros[name].end_line       = clipboard.end_line;
-    macros[name].start_col      = clipboard.start_col;
-    macros[name].end_col        = clipboard.end_col;
-    macros[name].is_rectangular = clipboard.is_rectangular;
+    macros[name].setBuffer(clipboard.lines, clipboard.start_line, clipboard.end_line,
+                           clipboard.start_col, clipboard.end_col, clipboard.is_rectangular);
 }
 
 //
@@ -47,16 +42,18 @@ void Editor::save_macro_buffer(char name)
 bool Editor::paste_macro_buffer(char name)
 {
     auto it = macros.find(name);
-    if (it == macros.end() || it->second.type != Macro::BUFFER)
+    if (it == macros.end() || !it->second.isBuffer())
         return false;
 
     // Restore clipboard from macro buffer
-    clipboard.lines          = it->second.buffer_lines;
-    clipboard.start_line     = it->second.start_line;
-    clipboard.end_line       = it->second.end_line;
-    clipboard.start_col      = it->second.start_col;
-    clipboard.end_col        = it->second.end_col;
-    clipboard.is_rectangular = it->second.is_rectangular;
+    auto data = it->second.getAllBufferData();
+
+    clipboard.lines          = data.lines;
+    clipboard.start_line     = data.start_line;
+    clipboard.end_line       = data.end_line;
+    clipboard.start_col      = data.start_col;
+    clipboard.end_col        = data.end_col;
+    clipboard.is_rectangular = data.is_rectangular;
 
     // Paste the buffer
     if (!clipboard.is_empty()) {
@@ -221,7 +218,7 @@ void Editor::openspaces(int line, int col, int number, int nl)
 bool Editor::mdeftag(char tag_name)
 {
     auto it = macros.find(tag_name);
-    if (it == macros.end() || it->second.type != Macro::POSITION) {
+    if (it == macros.end() || !it->second.isPosition()) {
         status = "Tag not found";
         return false;
     }
@@ -231,8 +228,9 @@ bool Editor::mdeftag(char tag_name)
     int curCol  = wksp.basecol() + cursor_col;
 
     // Get tag position
-    int tagLine = it->second.position.first;
-    int tagCol  = it->second.position.second;
+    auto pos    = it->second.getPosition();
+    int tagLine = pos.first;
+    int tagCol  = pos.second;
 
     // Set up area between current cursor and tag
     param_type = -2;

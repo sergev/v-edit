@@ -27,9 +27,9 @@ set(CE_SOURCES
     filter.cpp
     files.cpp
     signal.cpp
-    segments.cpp
     segment.cpp
     workspace.cpp
+    macro.cpp
 )
 
 set(CE_MAIN

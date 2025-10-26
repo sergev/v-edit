@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "macro.h"
 #include "segment.h"
 #include "workspace.h"
 
@@ -50,20 +51,6 @@ private:
     bool interrupt_flag{ false }; // interrupt signal occurred
 
     // Macros (position markers and text buffers)
-    struct Macro {
-        enum Type { POSITION, BUFFER };
-        Type type;
-        std::pair<int, int> position;                 // for POSITION type
-        std::vector<std::string> buffer_lines;        // for BUFFER type
-        int start_line, end_line, start_col, end_col; // buffer bounds
-        bool is_rectangular;
-
-        Macro()
-            : type(POSITION), position({ 0, 0 }), start_line(-1), end_line(-1), start_col(-1),
-              end_col(-1), is_rectangular(false)
-        {
-        }
-    };
     std::map<char, Macro> macros; // char -> macro data
 
     // Multiple file support

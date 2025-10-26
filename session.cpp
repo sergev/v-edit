@@ -28,21 +28,7 @@ void Editor::save_state()
         out << macros.size() << '\n';
         for (const auto &pair : macros) {
             out << pair.first << '\n';
-            out << (int)pair.second.type << '\n';
-            if (pair.second.type == Macro::POSITION) {
-                out << pair.second.position.first << '\n';
-                out << pair.second.position.second << '\n';
-            } else if (pair.second.type == Macro::BUFFER) {
-                out << pair.second.start_line << '\n';
-                out << pair.second.end_line << '\n';
-                out << pair.second.start_col << '\n';
-                out << pair.second.end_col << '\n';
-                out << pair.second.is_rectangular << '\n';
-                out << pair.second.buffer_lines.size() << '\n';
-                for (const std::string &line : pair.second.buffer_lines) {
-                    out << line << '\n';
-                }
-            }
+            pair.second.serialize(out);
         }
         // Save clipboard
         out << clipboard.is_rectangular << '\n';
@@ -88,27 +74,8 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
             macros.clear();
             for (size_t i = 0; i < macro_count; ++i) {
                 char name;
-                int type;
-                in >> name >> type;
-                Macro &m = macros[name];
-                m.type   = (Macro::Type)type;
-                if (type == Macro::POSITION) {
-                    int line, col;
-                    in >> line >> col;
-                    m.position = std::make_pair(line, col);
-                } else if (type == Macro::BUFFER) {
-                    in >> m.start_line >> m.end_line >> m.start_col >> m.end_col;
-                    in >> m.is_rectangular;
-                    size_t line_count;
-                    in >> line_count;
-                    m.buffer_lines.clear();
-                    for (size_t j = 0; j < line_count; ++j) {
-                        std::string line;
-                        std::getline(in, line); // consume newline
-                        std::getline(in, line);
-                        m.buffer_lines.push_back(line);
-                    }
-                }
+                in >> name;
+                macros[name].deserialize(in);
             }
 
             // Load clipboard

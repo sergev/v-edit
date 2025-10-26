@@ -63,10 +63,11 @@ private:
     std::string cmd;
 
     // Enhanced parameter system (from prototype)
-    int param_type{ 0 };              // 0=none, 1=string, -1=area
+    int param_type{ 0 };              // 0=none, 1=string, -1=area, -2=tag-defined area
     std::string param_str;            // string parameter
     int param_c0{ 0 }, param_r0{ 0 }; // area top-left corner
     int param_c1{ 0 }, param_r1{ 0 }; // area bottom-right corner
+    int param_count{ 0 };             // numeric count parameter
     std::string last_search;          // last search needle
     bool last_search_forward{ true };
     std::vector<std::string> clipboard_lines; // simple line clipboard (F5/F6)
@@ -156,6 +157,7 @@ private:
     // Basic editing/input
     void open_initial(int argc, char **argv);
     void save_file();
+    void save_as(const std::string &filename);
     void handle_key(int ch);
     void handle_key_cmd(int ch);
     void handle_key_edit(int ch);
@@ -203,6 +205,12 @@ private:
     // External filter execution
     bool execute_external_filter(const std::string &command, int start_line, int num_lines);
 
+    // Line operations
+    void insertlines(int from, int number);
+    void deletelines(int from, int number);
+    void splitline(int line, int col);
+    void combineline(int line, int col);
+
     // Multiple file operations
     bool open_file(const std::string &file_to_open);
     void switch_to_file(int file_index);
@@ -244,6 +252,7 @@ private:
     bool goto_macro_position(char name);
     void save_macro_buffer(char name);
     bool paste_macro_buffer(char name);
+    bool mdeftag(char tag_name); // define area using tag
 
     // Journaling
     void journal_write_key(int ch);

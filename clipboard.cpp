@@ -187,3 +187,57 @@ void Editor::openspaces(int line, int col, int number, int nl)
     build_segment_chain_from_lines();
     ensure_cursor_visible();
 }
+
+bool Editor::mdeftag(char tag_name)
+{
+    auto it = macros.find(tag_name);
+    if (it == macros.end() || it->second.type != Macro::POSITION) {
+        status = "Tag not found";
+        return false;
+    }
+
+    // Get current cursor position
+    int curLine = wksp.topline + cursor_line;
+    int curCol = wksp.offset + cursor_col;
+
+    // Get tag position
+    int tagLine = it->second.position.first;
+    int tagCol = it->second.position.second;
+
+    // Set up area between current cursor and tag
+    param_type = -2;
+    param_r0 = curLine;
+    param_c0 = curCol;
+    param_r1 = tagLine;
+    param_c1 = tagCol;
+
+    // Normalize bounds (swap if needed)
+    int f = 0;
+    if (param_r0 > param_r1) {
+        std::swap(param_r0, param_r1);
+        f++;
+    }
+    if (param_c0 > param_c1) {
+        std::swap(param_c0, param_c1);
+        f++;
+    }
+
+    // Determine message based on selection type
+    if (param_r1 == param_r0) {
+        status = "*** Columns defined by tag ***";
+    } else if (param_c1 == param_c0) {
+        status = "*** Lines defined by tag ***";
+    } else {
+        status = "*** Area defined by tag ***";
+    }
+
+    // Move cursor to start if swapped
+    if (f) {
+        goto_line(param_r0);
+        wksp.offset = param_c0;
+        cursor_col = 0;
+        ensure_cursor_visible();
+    }
+
+    return true;
+}

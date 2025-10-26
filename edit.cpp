@@ -221,3 +221,150 @@ bool Editor::search_prev()
     }
     return false;
 }
+
+// Core line operations matching prototype behavior
+
+void Editor::insertlines(int from, int number)
+{
+    if (from < 0 || number < 1)
+        return;
+
+    ensure_segments_up_to_date();
+
+    // Insert blank lines
+    for (int i = 0; i < number; ++i) {
+        if (from >= (int)lines.size()) {
+            lines.push_back("");
+        } else {
+            lines.insert(lines.begin() + from + i, "");
+        }
+    }
+
+    if (!files.empty() && wksp.wfile < (int)files.size()) {
+        files[wksp.wfile].nlines += number;
+    }
+
+    build_segment_chain_from_lines();
+    segments_dirty = true;
+    ensure_cursor_visible();
+}
+
+void Editor::deletelines(int from, int number)
+{
+    if (from < 0 || number < 1)
+        return;
+
+    ensure_segments_up_to_date();
+
+    // Save to clipboard (delete buffer)
+    clipboard.clear();
+    clipboard.is_rectangular = false;
+    clipboard.start_line = from;
+    clipboard.end_line = from + number - 1;
+
+    for (int i = 0; i < number && (from + i) < (int)lines.size(); ++i) {
+        clipboard.lines.push_back(lines[from + i]);
+    }
+
+    // Delete the lines
+    int end_line = std::min(from + number, (int)lines.size());
+    if (from < (int)lines.size()) {
+        lines.erase(lines.begin() + from, lines.begin() + end_line);
+    }
+
+    // Ensure at least one line exists
+    if (lines.empty()) {
+        lines.push_back("");
+    }
+
+    if (!files.empty() && wksp.wfile < (int)files.size()) {
+        files[wksp.wfile].nlines = std::max(0, files[wksp.wfile].nlines - number);
+    }
+
+    build_segment_chain_from_lines();
+    segments_dirty = true;
+    ensure_cursor_visible();
+}
+
+void Editor::splitline(int line, int col)
+{
+    if (line < 0 || col < 0)
+        return;
+
+    ensure_segments_up_to_date();
+
+    // Get the line
+    std::string ln;
+    if (line < (int)lines.size()) {
+        ln = lines[line];
+    } else {
+        ln = "";
+    }
+
+    // Split at column
+    if (col >= (int)ln.size()) {
+        // Just insert a blank line after
+        insertlines(line + 1, 1);
+        return;
+    }
+
+    std::string tail = ln.substr(col);
+    ln.erase(col);
+
+    // Update current line
+    if (line < (int)lines.size()) {
+        lines[line] = ln;
+    }
+
+    // Insert new line with tail
+    if (line + 1 < (int)lines.size()) {
+        lines.insert(lines.begin() + line + 1, tail);
+    } else {
+        lines.push_back(tail);
+    }
+
+    if (!files.empty() && wksp.wfile < (int)files.size()) {
+        files[wksp.wfile].nlines++;
+    }
+
+    build_segment_chain_from_lines();
+    segments_dirty = true;
+    ensure_cursor_visible();
+}
+
+void Editor::combineline(int line, int col)
+{
+    if (line < 0 || col < 0)
+        return;
+
+    if (line + 1 >= (int)lines.size())
+        return; // No next line to combine
+
+    ensure_segments_up_to_date();
+
+    // Get both lines
+    std::string current = (line < (int)lines.size()) ? lines[line] : "";
+    std::string next = (line + 1 < (int)lines.size()) ? lines[line + 1] : "";
+
+    // Combine at column
+    // Pad current line to col if needed
+    if (col > (int)current.size()) {
+        current.resize(col, ' ');
+    }
+
+    current += next;
+
+    // Update line
+    lines[line] = current;
+
+    // Delete the next line
+    lines.erase(lines.begin() + line + 1);
+
+    if (!files.empty() && wksp.wfile < (int)files.size()) {
+        files[wksp.wfile].nlines = std::max(1, files[wksp.wfile].nlines - 1);
+    }
+
+    build_segment_chain_from_lines();
+    segments_dirty = true;
+    ensure_cursor_visible();
+}

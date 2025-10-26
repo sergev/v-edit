@@ -260,3 +260,31 @@ void Editor::save_file()
     }
     status = std::string("Saved: ") + filename;
 }
+
+void Editor::save_as(const std::string &new_filename)
+{
+    // Unlink the original file to ensure backup is not affected by the write
+    unlink(new_filename.c_str());
+
+    std::ofstream out(new_filename.c_str());
+    if (!out) {
+        status = std::string("Cannot write: ") + new_filename;
+        return;
+    }
+    for (size_t i = 0; i < lines.size(); ++i) {
+        out << lines[i];
+        if (i + 1 != lines.size())
+            out << '\n';
+    }
+    out.flush();
+    // Ensure data hits disk for test stability
+    int fd = ::open(new_filename.c_str(), O_WRONLY);
+    if (fd >= 0) {
+        ::fsync(fd);
+        ::close(fd);
+    }
+    
+    // Update filename
+    filename = new_filename;
+    status = std::string("Saved as: ") + new_filename;
+}

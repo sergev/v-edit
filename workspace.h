@@ -150,6 +150,7 @@ private:
     bool backup_done_{ false };   // track if backup file has been created
     int tempfile_fd_{ -1 };       // file descriptor for temporary file
     long tempseek_{ 0 };          // seek position for temporary file
+    int original_fd_{ -1 };       // file descriptor for original file
 
     // Helper to update current segment pointer
     void update_current_segment(Segment *seg) { cursegm_ = seg; }

@@ -564,3 +564,106 @@ TEST_F(WorkspaceTest, UpdateToplineBeforeEdit)
     // Since topline < edit position, should not change
     EXPECT_EQ(wksp->topline(), 60);
 }
+
+TEST_F(WorkspaceTest, WriteLineToTempAndSave)
+{
+    // Create a test file with 3 lines
+    std::string filename = createTestFile("line1\nline2\nline3\n");
+
+    // Load workspace from file
+    wksp->load_file_to_segments(filename);
+
+    // Verify initial load
+    EXPECT_TRUE(wksp->has_segments());
+    EXPECT_EQ(wksp->nlines(), 3);
+
+    // Create a temp segment with modified line content
+    Segment *temp_seg = wksp->write_line_to_temp("modified_line2\n");
+    ASSERT_NE(temp_seg, nullptr);
+    EXPECT_EQ(temp_seg->nlines, 1);
+    EXPECT_NE(temp_seg->fdesc, 0); // Should not be 0
+    EXPECT_GT(temp_seg->fdesc, 0); // Should be a valid file descriptor
+
+    // Add assertion: fdesc should never be 0 for any segment in the workspace
+    Segment *check_seg = wksp->chain();
+    while (check_seg) {
+        if (check_seg->nlines > 0) { // Skip tail segment with nlines=0
+            EXPECT_NE(check_seg->fdesc, 0)
+                << "Segment has fdesc=0, which is invalid for non-empty segments";
+        }
+        check_seg = check_seg->next;
+    }
+
+    // Insert temp segment to replace line 1 (0-indexed, so line1->modified_line2)
+    // First break at line 1
+    EXPECT_EQ(wksp->breaksegm(1, true), 0);
+    Segment *old_seg = wksp->cursegm();
+    Segment *prev    = old_seg ? old_seg->prev : nullptr;
+
+    std::cout << "After first breaksegm: old_seg nlines=" << (old_seg ? old_seg->nlines : 0)
+              << std::endl;
+
+    // Break at line 2 to isolate line 1
+    EXPECT_EQ(wksp->breaksegm(2, false), 0);
+    Segment *after = wksp->cursegm();
+
+    std::cout << "After second breaksegm: after nlines=" << (after ? after->nlines : 0)
+              << std::endl;
+
+    // Link new segment in place of old line
+    temp_seg->prev = prev;
+    temp_seg->next = after;
+
+    if (prev) {
+        prev->next = temp_seg;
+    } else {
+        wksp->set_chain(temp_seg);
+    }
+
+    if (after) {
+        after->prev = temp_seg;
+    }
+
+    // Update workspace position
+    wksp->set_cursegm(temp_seg);
+    wksp->set_segmline(1);
+
+    // Delete old segment
+    delete old_seg;
+
+    // Save to new file
+    std::string out_filename = filename + ".out";
+    cleanupTestFile(out_filename);
+
+    bool saved = wksp->write_segments_to_file(out_filename);
+    EXPECT_TRUE(saved);
+
+    // Verify output file exists
+    std::ifstream in(out_filename);
+    EXPECT_TRUE(in.good());
+
+    // Read and verify content line by line
+    std::string line;
+    std::vector<std::string> lines;
+    while (std::getline(in, line)) {
+        lines.push_back(line);
+    }
+    in.close();
+
+    // Debug: print actual content
+    for (size_t i = 0; i < lines.size(); ++i) {
+        std::cout << "Line " << i << ": '" << lines[i] << "'" << std::endl;
+    }
+
+    // Verify we have 3 lines
+    EXPECT_EQ(lines.size(), 3);
+    if (lines.size() >= 3) {
+        EXPECT_EQ(lines[0], "line1");
+        EXPECT_EQ(lines[1], "modified_line2");
+        EXPECT_EQ(lines[2], "line3");
+    }
+
+    // Cleanup
+    cleanupTestFile(filename);
+    cleanupTestFile(out_filename);
+}

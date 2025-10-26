@@ -61,16 +61,21 @@ void Editor::put_line()
     int line_no     = current_line_no;
     current_line_no = -1;
 
-    // Break segment at line_no position
+    // Break segment at line_no position to split into segments before and at line_no
     if (wksp.breaksegm(line_no, true) == 0) {
+        // Now cursegm_ points to the segment starting at line_no
+        // Get the segment we want to replace (the one containing line_no)
         Segment *old_seg = wksp.cursegm();
         Segment *prev    = old_seg ? old_seg->prev : nullptr;
 
         // Break at line_no + 1 to isolate the line
         if (wksp.breaksegm(line_no + 1, false) == 0) {
+            // Now cursegm_ points to segment starting at line_no + 1
             Segment *after = wksp.cursegm();
 
-            // Link new segment in place of old line
+            // old_seg is the segment containing ONLY line_no (isolated between prev and after)
+
+            // Link new segment in place of old_seg
             new_seg->prev = prev;
             new_seg->next = after;
 
@@ -88,10 +93,8 @@ void Editor::put_line()
             wksp.set_cursegm(new_seg);
             wksp.set_segmline(line_no);
 
-            // Free old segment
-            if (old_seg) {
-                delete old_seg;
-            }
+            // Free the old isolated segment
+            delete old_seg;
 
             // Try to merge adjacent segments
             wksp.catsegm();
@@ -133,7 +136,10 @@ void Editor::open_initial(int argc, char **argv)
     if (argc > 1 && argv[1][0] != '-') {
         // Open the specified file
         filename = argv[1];
-        load_file_segments(filename);
+        if (!load_file_segments(filename)) {
+            // File doesn't exist or can't be opened - create empty segments for new file
+            build_segment_chain_from_text("");
+        }
     } else {
         // No file specified, create untitled file with one empty line
         filename = "untitled";
@@ -176,7 +182,7 @@ void Editor::save_file()
         std::string backup_name = filename + "~";
         // Remove existing backup
         unlink(backup_name.c_str());
-        // Create hard link to original file
+        // Create hard link to original file BEFORE we unlink it
         if (link(filename.c_str(), backup_name.c_str()) < 0 && errno != ENOENT) {
             // Backup failed, but continue with save
             status = std::string("Backup failed, continuing save");
@@ -186,12 +192,22 @@ void Editor::save_file()
     }
 
     // Unlink the original file to ensure backup is not affected by the write
+    // NOTE: The original fd remains valid even after unlinking because we created a hard link
     if (filename != "untitled") {
         unlink(filename.c_str());
     }
 
+    // Ensure we have segments to save
+    if (!wksp.has_segments()) {
+        status = "No content to save";
+        return;
+    }
+
     // Use workspace's write_segments_to_file
-    if (wksp.write_segments_to_file(filename)) {
+    // Note: original file has been unlinked, so unchanged segments won't be readable
+    // But modified segments (in temp file) will be written
+    bool saved = wksp.write_segments_to_file(filename);
+    if (saved) {
         status = std::string("Saved: ") + filename;
         wksp.set_modified(false); // Clear modified flag after save
     } else {

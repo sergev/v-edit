@@ -83,6 +83,28 @@ public:
     // Line count
     int get_line_count(int fallback_count) const;
 
+    // Segment manipulation (from prototype)
+    // Split segment at given line number (breaksegm from prototype)
+    int breaksegm(int line_no, bool realloc_flag = true);
+
+    // Merge adjacent segments (catsegm from prototype)
+    bool catsegm();
+
+    // Insert segments into workspace before given line (insert from prototype)
+    void insert_segments(Segment *seg, int at);
+
+    // Delete segments from workspace between from and to lines (delete from prototype)
+    Segment *delete_segments(int from, int to);
+
+    // Copy segment chain (copysegm from prototype)
+    static Segment *copy_segment_chain(Segment *start, Segment *end = nullptr);
+
+    // Create segments for n empty lines (blanklines from prototype)
+    static Segment *create_blank_lines(int n);
+
+    // Cleanup a segment chain (static helper)
+    static void cleanup_segments(Segment *seg);
+
 private:
     Segment *cursegm_{ nullptr }; // current segment in chain
     Segment *chain_{ nullptr };   // file's segment chain (direct access)

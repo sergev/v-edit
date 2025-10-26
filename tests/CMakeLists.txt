@@ -33,6 +33,7 @@ set(TEST_SOURCES
     signal_handling_test.cpp
     segment_test.cpp
     segment_unit_test.cpp
+    workspace_unit_test.cpp
     command_mode_test.cpp
     TmuxDriver.cpp
 )

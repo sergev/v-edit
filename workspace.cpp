@@ -477,3 +477,334 @@ int Workspace::get_line_count(int fallback_count) const
 {
     return chain_ ? nlines_ : fallback_count;
 }
+
+//
+// Split segment at given line number (based on breaksegm from prototype).
+// When the needed line is beyond the end of file, creates empty segments.
+// Returns 0 on success, 1 if line is beyond end of file.
+//
+int Workspace::breaksegm(int line_no, bool realloc_flag)
+{
+    if (!chain_ || !cursegm_)
+        return 1;
+
+    // Position workspace to the target line
+    if (position(line_no))
+        return 1;
+
+    // Now we're at the segment containing line_no
+    Segment *seg = cursegm_;
+    int rel_line = line_no - segmline_;
+
+    if (rel_line == 0) {
+        return 0; // Already at the right position
+    }
+
+    // Calculate file offset and find split point by walking through lines
+    size_t data_idx = 0;
+    long offs       = 0;
+
+    // Walk through the first rel_line lines to calculate offset
+    for (int i = 0; i < rel_line; ++i) {
+        if (data_idx >= seg->data.size())
+            break;
+
+        int len = seg->decode_line_len(data_idx);
+        offs += len;
+    }
+
+    // Record where we are in the data after processing rel_line entries
+    size_t split_point = data_idx;
+
+    // Create new segment for the remainder
+    Segment *new_seg = new Segment();
+    new_seg->nlines  = seg->nlines - rel_line;
+    new_seg->fdesc   = seg->fdesc;
+    new_seg->seek    = seg->seek + offs;
+
+    // Copy remaining data bytes from split_point to end
+    for (size_t i = split_point; i < seg->data.size(); ++i) {
+        new_seg->data.push_back(seg->data[i]);
+    }
+
+    // Link new segment
+    new_seg->next = seg->next;
+    new_seg->prev = seg;
+    if (seg->next)
+        seg->next->prev = new_seg;
+    seg->next = new_seg;
+
+    // Truncate original segment data - keep only first rel_line data
+    std::vector<unsigned char> new_data;
+    for (size_t i = 0; i < split_point; ++i) {
+        new_data.push_back(seg->data[i]);
+    }
+    seg->data   = new_data;
+    seg->nlines = rel_line;
+
+    // Update workspace position
+    cursegm_  = new_seg;
+    segmline_ = line_no;
+
+    return 0;
+}
+
+//
+// Merge adjacent segments (based on catsegm from prototype).
+// Tries to merge current segment with previous if they're adjacent.
+// Returns true if merge occurred, false otherwise.
+//
+bool Workspace::catsegm()
+{
+    if (!chain_ || !cursegm_ || !cursegm_->prev)
+        return false;
+
+    Segment *curr = cursegm_;
+    Segment *prev = curr->prev;
+
+    // Check if segments can be merged
+    // They must be from the same file and together have < 127 lines
+    if (prev->fdesc > 0 && prev->fdesc == curr->fdesc && (prev->nlines + curr->nlines) < 127) {
+        // Calculate if they're adjacent
+        long prev_bytes = prev->get_total_bytes();
+        if (curr->seek == prev->seek + prev_bytes) {
+            // Segments are adjacent - merge them
+            Segment *merged = new Segment();
+            merged->nlines  = prev->nlines + curr->nlines;
+            merged->fdesc   = prev->fdesc;
+            merged->seek    = prev->seek;
+            merged->next    = curr->next;
+            merged->prev    = prev->prev;
+
+            // Copy data from both segments
+            merged->data = prev->data;
+            for (unsigned char byte : curr->data)
+                merged->data.push_back(byte);
+
+            // Update links
+            if (prev->prev)
+                prev->prev->next = merged;
+            else
+                chain_ = merged;
+
+            if (curr->next)
+                curr->next->prev = merged;
+
+            // Update workspace position
+            if (cursegm_ == curr) {
+                cursegm_ = merged;
+                segmline_ -= prev->nlines;
+            }
+
+            // Clean up old segments
+            delete prev;
+            delete curr;
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+//
+// Insert segments into workspace before given line (based on insert from prototype).
+//
+void Workspace::insert_segments(Segment *new_seg, int at)
+{
+    if (!new_seg)
+        return;
+
+    // Find the last segment in the chain to insert
+    Segment *last = new_seg;
+    while (last->next && last->next->fdesc != 0)
+        last = last->next;
+
+    // Split at insertion point
+    if (breaksegm(at, true) == 0) {
+        // Link new segments in
+        Segment *after = cursegm_->next;
+        cursegm_->next = new_seg;
+        new_seg->prev  = cursegm_;
+
+        if (after)
+            after->prev = last;
+
+        // Update workspace position
+        cursegm_  = new_seg;
+        segmline_ = at;
+    }
+
+    writable_ = 1; // Mark as edited
+}
+
+//
+// Delete segments between from and to lines (based on delete from prototype).
+// Returns the deleted segment chain.
+//
+Segment *Workspace::delete_segments(int from, int to)
+{
+    if (!chain_ || from > to)
+        return nullptr;
+
+    // Break at end line + 1
+    if (breaksegm(to + 1, true) != 0)
+        return nullptr;
+
+    Segment *end_seg = cursegm_;
+    Segment *after   = end_seg->next; // Save pointer to what comes after
+
+    // Break at start line
+    if (breaksegm(from, true) != 0)
+        return nullptr;
+
+    Segment *start_seg = cursegm_;
+    Segment *before    = start_seg->prev;
+
+    // Unlink the segment chain to delete
+    if (before)
+        before->next = after;
+    else
+        chain_ = after;
+
+    if (after)
+        after->prev = before;
+
+    // Update workspace position
+    cursegm_ = after ? after : before;
+    if (cursegm_ == after) {
+        segmline_ = from;
+    } else if (cursegm_ == before) {
+        segmline_ = segmline_ - (to - from + 1);
+    }
+
+    // Remove the back link from the deleted chain
+    start_seg->prev = nullptr;
+
+    // Add a tail segment to the deleted chain
+    end_seg->next        = new Segment();
+    end_seg->next->prev  = end_seg;
+    end_seg->next->fdesc = 0;
+
+    writable_ = 1; // Mark as edited
+
+    return start_seg;
+}
+
+//
+// Copy segment chain (based on copysegm from prototype).
+// Returns a deep copy of the segment chain from start to end.
+//
+Segment *Workspace::copy_segment_chain(Segment *start, Segment *end)
+{
+    if (!start)
+        return nullptr;
+
+    Segment *copied_first = nullptr;
+    Segment *copied_last  = nullptr;
+
+    Segment *curr = start;
+    while (curr && curr != end) {
+        Segment *copy = new Segment();
+        copy->nlines  = curr->nlines;
+        copy->fdesc   = curr->fdesc;
+        copy->seek    = curr->seek;
+        copy->data    = curr->data; // Copy vector
+        copy->next    = nullptr;
+        copy->prev    = copied_last;
+
+        if (copied_last)
+            copied_last->next = copy;
+        else
+            copied_first = copy;
+
+        copied_last = copy;
+
+        if (curr->fdesc == 0)
+            break;
+
+        curr = curr->next;
+    }
+
+    // Add tail segment
+    if (copied_first) {
+        Segment *tail     = new Segment();
+        tail->nlines      = 0;
+        tail->fdesc       = 0;
+        tail->seek        = end ? end->seek : (curr ? curr->seek : 0);
+        tail->next        = nullptr;
+        tail->prev        = copied_last;
+        copied_last->next = tail;
+    }
+
+    return copied_first;
+}
+
+//
+// Create segments for n empty lines (based on blanklines from prototype).
+// Each empty line has length 1 (just the newline).
+//
+Segment *Workspace::create_blank_lines(int n)
+{
+    if (n <= 0)
+        return nullptr;
+
+    Segment *first = nullptr;
+    Segment *last  = nullptr;
+
+    while (n > 0) {
+        int lines_in_seg = (n > 127) ? 127 : n;
+
+        Segment *seg = new Segment();
+        seg->nlines  = lines_in_seg;
+        seg->fdesc   = -1; // Empty lines not from file
+        seg->seek    = 0;
+        seg->data.clear();
+
+        // Add line length data: each empty line has length 1 (just newline)
+        for (int i = 0; i < lines_in_seg; ++i) {
+            seg->add_line_length(1);
+        }
+
+        // Link segments
+        seg->prev = last;
+        if (last)
+            last->next = seg;
+        else
+            first = seg;
+
+        last = seg;
+        n -= lines_in_seg;
+    }
+
+    // Add tail segment
+    if (first) {
+        Segment *tail = new Segment();
+        tail->nlines  = 0;
+        tail->fdesc   = 0;
+        tail->prev    = last;
+        last->next    = tail;
+    }
+
+    return first;
+}
+
+//
+// Cleanup a segment chain (static helper for tests).
+//
+void Workspace::cleanup_segments(Segment *seg)
+{
+    if (!seg)
+        return;
+
+    // First, unlink from chain
+    if (seg->prev)
+        seg->prev->next = nullptr;
+
+    // Delete all segments in chain
+    while (seg) {
+        Segment *next = seg->next;
+        delete seg;
+        seg = next;
+    }
+}

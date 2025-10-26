@@ -29,6 +29,7 @@ set(CE_SOURCES
     files.cpp
     signal.cpp
     segment.cpp
+    tempfile.cpp
     workspace.cpp
     macro.cpp
 )

@@ -8,17 +8,15 @@
 #include "segment.h"
 
 // Forward declaration
-class Editor;
+class Tempfile;
 
 //
 // Workspace class - manages segment chain and file workspace state.
 // Encapsulates segment chain operations and positioning.
 //
 class Workspace {
-    friend class Editor; // Allow Editor to access private members
-
 public:
-    Workspace(Editor *editor = nullptr);
+    Workspace(Tempfile &tempfile);
     ~Workspace();
 
     // Accessors
@@ -127,7 +125,7 @@ public:
     void update_topline_after_edit(int from, int to, int delta);
 
 private:
-    Editor *editor_{ nullptr };   // reference to Editor for temp file access
+    Tempfile &tempfile_;          // reference to temp file manager
     Segment *cursegm_{ nullptr }; // current segment in chain
     Segment *chain_{ nullptr };   // file's segment chain (direct access)
     int writable_{ 0 };           // write permission

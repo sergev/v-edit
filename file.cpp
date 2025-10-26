@@ -52,7 +52,7 @@ void Editor::put_line()
     current_line_modified = false;
 
     // Write the modified line to temp file and get a segment for it
-    Segment *new_seg = write_line_to_temp(current_line);
+    Segment *new_seg = tempfile_.write_line_to_temp(current_line);
     if (!new_seg) {
         current_line_no = -1;
         return;

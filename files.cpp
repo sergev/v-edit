@@ -30,8 +30,8 @@ void Editor::switch_to_alternative_workspace()
 //
 void Editor::create_alternative_workspace()
 {
-    // Create a fresh alternative workspace (with Editor reference for temp file access)
-    alt_wksp     = std::make_unique<Workspace>(this);
+    // Create a fresh alternative workspace (with tempfile reference)
+    alt_wksp     = std::make_unique<Workspace>(tempfile_);
     alt_filename = filename;
 
     // Try to open the help file in alternative workspace
@@ -78,7 +78,7 @@ bool Editor::open_help_file()
 
     // Set alternative workspace to help file
     alt_filename = DEFAULT_HELP_FILE;
-    alt_wksp     = std::make_unique<Workspace>(this);
+    alt_wksp     = std::make_unique<Workspace>(tempfile_);
     alt_wksp->build_segment_chain_from_text(help_content);
 
     return true;
@@ -125,7 +125,7 @@ bool Editor::create_builtin_help()
 
     // Set alternative workspace to built-in help
     alt_filename = "Built-in Help";
-    alt_wksp     = std::make_unique<Workspace>();
+    alt_wksp     = std::make_unique<Workspace>(tempfile_);
     alt_wksp->build_segment_chain_from_text(help_text);
 
     return true;

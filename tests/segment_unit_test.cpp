@@ -17,8 +17,8 @@ protected:
     {
         editor = std::make_unique<Editor>();
         // Manually initialize editor state needed for tests
-        editor->wksp     = std::make_unique<Workspace>();
-        editor->alt_wksp = std::make_unique<Workspace>();
+        editor->wksp     = std::make_unique<Workspace>(editor->tempfile_);
+        editor->alt_wksp = std::make_unique<Workspace>(editor->tempfile_);
     }
 
     void TearDown() override { editor.reset(); }

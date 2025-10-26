@@ -7,9 +7,9 @@
 #include <cstring>
 #include <fstream>
 
-#include "editor.h"
+#include "tempfile.h"
 
-Workspace::Workspace(Editor *editor) : editor_(editor)
+Workspace::Workspace(Tempfile &tempfile) : tempfile_(tempfile)
 {
 }
 
@@ -66,13 +66,9 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
         return;
     }
 
-    if (!editor_) {
-        return;
-    }
-
-    // Ask Editor for temp file access
-    int tempfile_fd = editor_->tempfile_fd_;
-    long tempseek   = editor_->tempseek_;
+    // Ask Tempfile for temp file access
+    int tempfile_fd = tempfile_.tempfile_fd_;
+    long tempseek   = tempfile_.tempseek_;
 
     // Write all lines to temp file
     Segment *seg = new Segment();
@@ -97,7 +93,7 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
         }
 
         seg->sizes.push_back(nbytes);
-        editor_->tempseek_ += nbytes;
+        tempfile_.tempseek_ += nbytes;
     }
 
     chain_    = seg;

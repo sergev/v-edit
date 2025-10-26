@@ -53,7 +53,7 @@ void Editor::paste(int afterLine, int atCol)
         // Paste as lines
         for (const auto &line : clip_lines) {
             // Create a segment for this line
-            Segment *new_seg = write_line_to_temp(line);
+            Segment *new_seg = tempfile_.write_line_to_temp(line);
             if (new_seg) {
                 wksp->insert_segments(new_seg, afterLine + 1);
                 afterLine++;

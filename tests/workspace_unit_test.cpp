@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 
+#include "tempfile.h"
 #include "workspace.h"
 
 namespace fs = std::filesystem;
@@ -12,10 +13,21 @@ namespace fs = std::filesystem;
 // Workspace test fixture
 class WorkspaceTest : public ::testing::Test {
 protected:
-    void SetUp() override { wksp = std::make_unique<Workspace>(nullptr); }
+    void SetUp() override
+    {
+        tempfile = std::make_unique<Tempfile>();
+        wksp     = std::make_unique<Workspace>(*tempfile);
+        // Open temp file for workspace use
+        tempfile->open_temp_file();
+    }
 
-    void TearDown() override { wksp.reset(); }
+    void TearDown() override
+    {
+        wksp.reset();
+        tempfile.reset();
+    }
 
+    std::unique_ptr<Tempfile> tempfile;
     std::unique_ptr<Workspace> wksp;
 
     std::string createTestFile(const std::string &content)

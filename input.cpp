@@ -840,7 +840,7 @@ void Editor::handle_key_edit(int ch)
         put_line();
         // Insert new line with tail content
         if (!tail.empty()) {
-            Segment *tail_seg = write_line_to_temp(tail);
+            Segment *tail_seg = tempfile_.write_line_to_temp(tail);
             if (tail_seg) {
                 wksp->insert_segments(tail_seg, curLine + 1);
             } else {

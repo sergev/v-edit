@@ -83,9 +83,9 @@ TEST_F(TmuxDriver, VerticalScrollingShowsLaterLines)
     // The window has 10 total rows (9 content + 1 status)
     std::vector<std::string> expected;
     expected.reserve(10);
-    const int total = 15;
+    const int total        = 15;
     const int visible_rows = 9; // 9 content rows in a 10-row window
-    const int top   = std::max(1, total - visible_rows + 1); // top = 15 - 9 + 1 = 7
+    const int top          = std::max(1, total - visible_rows + 1); // top = 15 - 9 + 1 = 7
     for (int i = top; i <= total; ++i) {
         char buf[8];
         std::snprintf(buf, sizeof(buf), "L%02d", i);

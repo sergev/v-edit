@@ -28,6 +28,7 @@ set(CE_SOURCES
     files.cpp
     signal.cpp
     segments.cpp
+    segment.cpp
 )
 
 set(CE_MAIN

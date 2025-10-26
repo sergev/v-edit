@@ -228,18 +228,18 @@ bool Editor::mdeftag(char tag_name)
 
     // Get current cursor position
     int curLine = wksp.topline + cursor_line;
-    int curCol = wksp.offset + cursor_col;
+    int curCol  = wksp.offset + cursor_col;
 
     // Get tag position
     int tagLine = it->second.position.first;
-    int tagCol = it->second.position.second;
+    int tagCol  = it->second.position.second;
 
     // Set up area between current cursor and tag
     param_type = -2;
-    param_r0 = curLine;
-    param_c0 = curCol;
-    param_r1 = tagLine;
-    param_c1 = tagCol;
+    param_r0   = curLine;
+    param_c0   = curCol;
+    param_r1   = tagLine;
+    param_c1   = tagCol;
 
     // Normalize bounds (swap if needed)
     int f = 0;
@@ -265,7 +265,7 @@ bool Editor::mdeftag(char tag_name)
     if (f) {
         goto_line(param_r0);
         wksp.offset = param_c0;
-        cursor_col = 0;
+        cursor_col  = 0;
         ensure_cursor_visible();
     }
 

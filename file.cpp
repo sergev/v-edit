@@ -25,19 +25,6 @@ void Editor::build_segment_chain_from_lines()
             f.contents.push_back('\n');
     }
 
-    // Build segment chain with line length data
-    std::vector<unsigned char> data;
-    data.reserve(lines.size() * 2);
-    for (const std::string &ln : lines) {
-        int n = (int)ln.size() + 1; // include newline
-        if (n > 127) {
-            data.push_back((unsigned char)((n / 128) | 0200));
-            data.push_back((unsigned char)(n % 128));
-        } else {
-            data.push_back((unsigned char)n);
-        }
-    }
-
     // Create actual segment and initialize workspace pointer
     if (f.chain) {
         // Clean up old chain if any
@@ -55,8 +42,14 @@ void Editor::build_segment_chain_from_lines()
     seg->nlines  = (int)lines.size();
     seg->fdesc   = 0;
     seg->seek    = 0;
-    seg->data    = data;
-    f.chain      = seg;
+
+    // Build segment chain with line length data
+    seg->data.reserve(lines.size() * 2);
+    for (const std::string &ln : lines) {
+        int n = (int)ln.size() + 1; // include newline
+        seg->add_line_length(n);
+    }
+    f.chain = seg;
 
     // Set workspace pointer to first segment
     wksp.cursegm  = seg;
@@ -89,24 +82,6 @@ void Editor::build_segment_chain_from_text(const std::string &text)
     if (!cur.empty() || lines.empty())
         lines.push_back(cur);
     build_segment_chain_from_lines();
-}
-
-//
-// Decode line length from segment data array.
-//
-int Editor::decode_line_len(const Segment *seg, size_t &idx) const
-{
-    if (idx >= seg->data.size())
-        return 0;
-    unsigned char b = seg->data[idx++];
-    if (b & 0200) {
-        // two-byte length
-        if (idx >= seg->data.size())
-            return 0;
-        unsigned char b2 = seg->data[idx++];
-        return (int)((b & 0177) * 128 + b2);
-    }
-    return (int)b;
 }
 
 //
@@ -146,7 +121,7 @@ int Editor::wksp_seek(int lno, long &outSeek)
     int rel      = lno - wksp.segmline;
     size_t idx   = 0;
     for (int i = 0; i < rel; ++i) {
-        int len = decode_line_len(seg, idx);
+        int len = seg->decode_line_len(idx);
         seek += len;
     }
     outSeek = seek;
@@ -322,8 +297,8 @@ void Editor::save_as(const std::string &new_filename)
         ::fsync(fd);
         ::close(fd);
     }
-    
+
     // Update filename
     filename = new_filename;
-    status = std::string("Saved as: ") + new_filename;
+    status   = std::string("Saved as: ") + new_filename;
 }

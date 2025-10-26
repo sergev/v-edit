@@ -23,7 +23,7 @@ install: all
 reindent:
 	@echo "Running clang-format on C++ sources..."
 	@command -v $(CLANG_FORMAT) >/dev/null 2>&1 || { echo "Error: $(CLANG_FORMAT) not found in PATH"; exit 1; }
-	@find . -type f \( -name '*.cpp' -o -name '*.h' \) -not -path './build/*' -print0 | xargs -0 $(CLANG_FORMAT) -i
+	@$(CLANG_FORMAT) -i *.h *.cpp tests/*.h tests/*.cpp
 
 test:   all
 	ctest --test-dir $(BUILD_DIR)/tests

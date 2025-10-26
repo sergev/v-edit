@@ -6,6 +6,7 @@
 #include <fstream>
 
 #include "editor.h"
+#include "segment.h"
 
 //
 // Load file content into segment chain structure.
@@ -62,7 +63,8 @@ void Editor::build_segment_chain_from_file(int fd)
     int buf_next     = 0;
     long file_offset = 0;
 
-    std::vector<unsigned char> seg_data;
+    // Temporary segment to build data
+    Segment temp_seg;
     int lines_in_seg = 0;
     long seg_seek    = 0;
 
@@ -81,7 +83,10 @@ void Editor::build_segment_chain_from_file(int fd)
                     seg->nlines  = lines_in_seg;
                     seg->fdesc   = fd;
                     seg->seek    = seg_seek;
-                    seg->data    = seg_data;
+                    seg->data    = temp_seg.data;
+
+                    // Reset temp segment for next use
+                    temp_seg.data.clear();
 
                     if (last_seg)
                         last_seg->next = seg;
@@ -134,25 +139,20 @@ void Editor::build_segment_chain_from_file(int fd)
             seg_seek = file_offset;
         }
 
-        if (line_len > 127) {
-            seg_data.push_back((unsigned char)((line_len / 128) | 0200));
-            seg_data.push_back((unsigned char)(line_len % 128));
-        } else {
-            seg_data.push_back((unsigned char)line_len);
-        }
+        temp_seg.add_line_length(line_len);
 
         ++lines_in_seg;
         file_offset += line_len;
 
         // Create new segment if we've hit limits
-        if (lines_in_seg >= 127 || seg_data.size() >= 4000) {
+        if (lines_in_seg >= 127 || temp_seg.data.size() >= 4000) {
             Segment *seg = new Segment();
             seg->prev    = last_seg;
             seg->next    = nullptr;
             seg->nlines  = lines_in_seg;
             seg->fdesc   = fd;
             seg->seek    = seg_seek;
-            seg->data    = seg_data;
+            seg->data    = temp_seg.data;
 
             if (last_seg)
                 last_seg->next = seg;
@@ -163,7 +163,7 @@ void Editor::build_segment_chain_from_file(int fd)
             f.nlines += lines_in_seg;
 
             // Reset for next segment
-            seg_data.clear();
+            temp_seg.data.clear();
             lines_in_seg = 0;
         }
     }
@@ -209,12 +209,12 @@ std::string Editor::read_line_from_segment(int line_no)
     long seek_pos = seg->seek;
     size_t idx    = 0;
     for (int i = 0; i < rel_line; ++i) {
-        int len = decode_line_len(seg, idx);
+        int len = seg->decode_line_len(idx);
         seek_pos += len;
     }
 
     // Get line length
-    int line_len = decode_line_len(seg, idx);
+    int line_len = seg->decode_line_len(idx);
     if (line_len <= 0)
         return std::string();
 
@@ -261,12 +261,7 @@ bool Editor::write_segments_to_file(const std::string &path)
     while (seg && seg->fdesc) {
         if (seg->fdesc > 0) {
             // Calculate total bytes for this segment
-            long total_bytes = 0;
-            size_t idx       = 0;
-            for (int i = 0; i < seg->nlines; ++i) {
-                int len = decode_line_len(seg, idx);
-                total_bytes += len;
-            }
+            long total_bytes = seg->get_total_bytes();
 
             // Read from source file and write to output
             lseek(in_fd, seg->seek, SEEK_SET);

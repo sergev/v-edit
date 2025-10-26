@@ -34,19 +34,20 @@ void Editor::handle_key_cmd(int ch)
             int numCols  = param_c1 - param_c0 + 1;
             int numLines = param_r1 - param_r0 + 1;
             pickspaces(param_r0, param_c0, numCols, numLines);
-            
+
             // Check if we should store to a named buffer (>name)
-            if (!cmd.empty() && cmd[0] == '>' && cmd.size() == 2 && cmd[1] >= 'a' && cmd[1] <= 'z') {
+            if (!cmd.empty() && cmd[0] == '>' && cmd.size() == 2 && cmd[1] >= 'a' &&
+                cmd[1] <= 'z') {
                 save_macro_buffer(cmd[1]);
                 status = std::string("Copied and saved to buffer '") + cmd[1] + "'";
             } else {
                 status = "Copied rectangular block";
             }
-            
+
             cmd_mode            = false;
             area_selection_mode = false;
             cmd.clear();
-            param_type          = 0;
+            param_type = 0;
             return;
         }
         if (ch == 25) { // ^Y - Delete rectangular block
@@ -60,19 +61,20 @@ void Editor::handle_key_cmd(int ch)
             int numCols  = param_c1 - param_c0 + 1;
             int numLines = param_r1 - param_r0 + 1;
             closespaces(param_r0, param_c0, numCols, numLines);
-            
+
             // Check if we should store to a named buffer (>name)
-            if (!cmd.empty() && cmd[0] == '>' && cmd.size() == 2 && cmd[1] >= 'a' && cmd[1] <= 'z') {
+            if (!cmd.empty() && cmd[0] == '>' && cmd.size() == 2 && cmd[1] >= 'a' &&
+                cmd[1] <= 'z') {
                 save_macro_buffer(cmd[1]);
                 status = std::string("Deleted and saved to buffer '") + cmd[1] + "'";
             } else {
                 status = "Deleted rectangular block";
             }
-            
+
             cmd_mode            = false;
             area_selection_mode = false;
             cmd.clear();
-            param_type          = 0;
+            param_type = 0;
             return;
         }
         if (ch == 15) { // ^O - Insert rectangular block of spaces
@@ -90,11 +92,11 @@ void Editor::handle_key_cmd(int ch)
             cmd_mode            = false;
             area_selection_mode = false;
             cmd.clear();
-            param_type          = 0;
+            param_type = 0;
             return;
         }
     }
-    
+
     // Handle control characters in command mode (not in area selection)
     if (ch == 3) { // ^C - Copy lines
         int curLine = wksp.topline + cursor_line;
@@ -108,11 +110,12 @@ void Editor::handle_key_cmd(int ch)
             }
             if (i > 0) {
                 count = std::atoi(cmd.substr(0, i).c_str());
-                if (count < 1) count = 1;
+                if (count < 1)
+                    count = 1;
             }
         }
         picklines(curLine, count);
-        status = std::string("Copied ") + std::to_string(count) + " line(s)";
+        status   = std::string("Copied ") + std::to_string(count) + " line(s)";
         cmd_mode = false;
         cmd.clear();
         return;
@@ -123,10 +126,11 @@ void Editor::handle_key_cmd(int ch)
         int count = 1;
         if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
             count = std::atoi(cmd.c_str());
-            if (count < 1) count = 1;
+            if (count < 1)
+                count = 1;
         }
         deletelines(curLine, count);
-        status = std::string("Deleted ") + std::to_string(count) + " line(s)";
+        status   = std::string("Deleted ") + std::to_string(count) + " line(s)";
         cmd_mode = false;
         cmd.clear();
         return;
@@ -137,10 +141,11 @@ void Editor::handle_key_cmd(int ch)
         int count = 1;
         if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
             count = std::atoi(cmd.c_str());
-            if (count < 1) count = 1;
+            if (count < 1)
+                count = 1;
         }
         insertlines(curLine, count);
-        status = std::string("Inserted ") + std::to_string(count) + " line(s)";
+        status   = std::string("Inserted ") + std::to_string(count) + " line(s)";
         cmd_mode = false;
         cmd.clear();
         return;
@@ -198,7 +203,7 @@ void Editor::handle_key_cmd(int ch)
             }
             if (i > 0) {
                 param_count = std::atoi(cmd.substr(0, i).c_str());
-                cmd = cmd.substr(i);
+                cmd         = cmd.substr(i);
             }
         }
         if (!cmd.empty()) {
@@ -382,7 +387,7 @@ void Editor::handle_key_cmd(int ch)
             }
         }
         // Clear param_count at end of command
-        param_count = 0;
+        param_count         = 0;
         cmd_mode            = false;
         filter_mode         = false;
         area_selection_mode = false;
@@ -390,21 +395,21 @@ void Editor::handle_key_cmd(int ch)
         param_type = 0;
         return;
     }
-    
+
     if (ch == KEY_BACKSPACE || ch == 127) {
         if (!cmd.empty())
             cmd.pop_back();
         return;
     }
-    
+
     // Handle control characters immediately, even in command mode
     if (ch == 3) { // ^C - Copy
         if (cmd_mode && !area_selection_mode && !filter_mode) {
             int curLine = wksp.topline + cursor_line;
-            int count = param_count > 0 ? param_count : 1;
+            int count   = param_count > 0 ? param_count : 1;
             picklines(curLine, count);
-            status = std::string("Copied ") + std::to_string(count) + " line(s)";
-            cmd_mode = false;
+            status      = std::string("Copied ") + std::to_string(count) + " line(s)";
+            cmd_mode    = false;
             param_count = 0;
             cmd.clear();
             return;
@@ -413,10 +418,10 @@ void Editor::handle_key_cmd(int ch)
     if (ch == 25) { // ^Y - Delete
         if (cmd_mode && !area_selection_mode && !filter_mode) {
             int curLine = wksp.topline + cursor_line;
-            int count = param_count > 0 ? param_count : 1;
+            int count   = param_count > 0 ? param_count : 1;
             deletelines(curLine, count);
-            status = std::string("Deleted ") + std::to_string(count) + " line(s)";
-            cmd_mode = false;
+            status      = std::string("Deleted ") + std::to_string(count) + " line(s)";
+            cmd_mode    = false;
             param_count = 0;
             cmd.clear();
             return;
@@ -425,16 +430,16 @@ void Editor::handle_key_cmd(int ch)
     if (ch == 15) { // ^O - Insert blank lines
         if (cmd_mode && !area_selection_mode && !filter_mode) {
             int curLine = wksp.topline + cursor_line;
-            int count = param_count > 0 ? param_count : 1;
+            int count   = param_count > 0 ? param_count : 1;
             insertlines(curLine, count);
-            status = std::string("Inserted ") + std::to_string(count) + " line(s)";
-            cmd_mode = false;
+            status      = std::string("Inserted ") + std::to_string(count) + " line(s)";
+            cmd_mode    = false;
             param_count = 0;
             cmd.clear();
             return;
         }
     }
-    
+
     if (ch >= 32 && ch < 127) {
         cmd.push_back((char)ch);
     }

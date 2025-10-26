@@ -6,6 +6,7 @@
 #include <fstream>
 
 #include "editor.h"
+#include "segment.h"
 
 namespace fs = std::filesystem;
 
@@ -208,7 +209,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     std::cout << "\n=== Segment Chain Analysis ===\n";
 
     // Store segments for detailed verification
-    std::vector<Editor::Segment *> segments;
+    std::vector<Segment *> segments;
     while (segment) {
         segments.push_back(segment);
         segment = segment->next;

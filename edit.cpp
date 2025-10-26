@@ -295,8 +295,8 @@ void Editor::deletelines(int from, int number)
     // Save to clipboard (delete buffer)
     clipboard.clear();
     clipboard.is_rectangular = false;
-    clipboard.start_line = from;
-    clipboard.end_line = from + number - 1;
+    clipboard.start_line     = from;
+    clipboard.end_line       = from + number - 1;
 
     for (int i = 0; i < number && (from + i) < (int)lines.size(); ++i) {
         clipboard.lines.push_back(lines[from + i]);
@@ -386,7 +386,7 @@ void Editor::combineline(int line, int col)
 
     // Get both lines
     std::string current = (line < (int)lines.size()) ? lines[line] : "";
-    std::string next = (line + 1 < (int)lines.size()) ? lines[line + 1] : "";
+    std::string next    = (line + 1 < (int)lines.size()) ? lines[line + 1] : "";
 
     // Combine at column
     // Pad current line to col if needed

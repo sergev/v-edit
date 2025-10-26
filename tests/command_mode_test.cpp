@@ -34,7 +34,8 @@ TEST_F(TmuxDriver, BasicCommandQuit)
 
     // Verify editor exited
     std::string pane = capturePane(session, -5);
-    EXPECT_TRUE(pane.find("Exiting") != std::string::npos || pane.find("Exiting") == std::string::npos)
+    EXPECT_TRUE(pane.find("Exiting") != std::string::npos ||
+                pane.find("Exiting") == std::string::npos)
         << "Editor should have exited or shown exit message";
 
     killSession(session);
@@ -248,8 +249,7 @@ TEST_F(TmuxDriver, MacroPositionMarkers)
 
     // Verify we're back at line 1
     std::string pane = capturePane(session, -10);
-    EXPECT_TRUE(pane.find("Line 1") != std::string::npos)
-        << "Should be at saved position (line 1)";
+    EXPECT_TRUE(pane.find("Line 1") != std::string::npos) << "Should be at saved position (line 1)";
 
     sendKeys(session, "qa");
     sendKeys(session, "Enter");

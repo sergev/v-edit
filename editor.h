@@ -5,21 +5,14 @@
 #include <string>
 #include <vector>
 
+#include "segment.h"
+
 class Editor {
 private:
     static Editor *instance_; // For signal handler access
 
 public:
     // --- Core data model types (ported from prototype) ---
-    struct Segment {
-        Segment *prev{ nullptr };
-        Segment *next{ nullptr };
-        int nlines{ 0 };
-        int fdesc{ 0 };
-        long seek{ 0 };
-        // In C this is a flexible array member; in C++ we store bytes here.
-        std::vector<unsigned char> data;
-    };
 
     struct FileDesc {
         Segment *chain{ nullptr };
@@ -182,7 +175,6 @@ private:
     int wksp_seek(int lno, long &outSeek); // compute byte offset of line lno in file
 
     // helpers
-    int decode_line_len(const Segment *seg, size_t &idx) const; // returns length incl. "\n"
     std::string get_line_from_model(int lno);
     std::string get_line_from_segments(int lno); // get line directly from segment chain
     void update_line_in_segments(int lno,

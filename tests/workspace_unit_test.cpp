@@ -727,3 +727,120 @@ TEST_F(WorkspaceTest, BuildSegmentChainFromLines)
 
     cleanupTestFile(out_filename);
 }
+
+TEST_F(WorkspaceTest, InsertSegmentsUpdatesNlines)
+{
+    // Test that insert_segments updates nlines correctly
+    std::string filename = createTestFile("line0\nline1\nline2\n");
+    wksp->load_file_to_segments(filename);
+
+    EXPECT_EQ(wksp->nlines(), 3);
+
+    // Create blank lines to insert
+    Segment *blank_lines = Workspace::create_blank_lines(2);
+    ASSERT_NE(blank_lines, nullptr);
+
+    // Insert at line 1
+    wksp->insert_segments(blank_lines, 1);
+
+    // Verify line count increased
+    EXPECT_EQ(wksp->nlines(), 5);
+
+    // Verify we can read the lines
+    EXPECT_EQ(wksp->read_line_from_segment(0), "line0");
+    EXPECT_EQ(wksp->read_line_from_segment(1), "");
+    EXPECT_EQ(wksp->read_line_from_segment(2), "");
+    EXPECT_EQ(wksp->read_line_from_segment(3), "line1");
+    EXPECT_EQ(wksp->read_line_from_segment(4), "line2");
+
+    cleanupTestFile(filename);
+}
+
+TEST_F(WorkspaceTest, InsertSegmentsAtStart)
+{
+    // Test inserting at the beginning
+    std::string filename = createTestFile("line0\nline1\n");
+    wksp->load_file_to_segments(filename);
+
+    EXPECT_EQ(wksp->nlines(), 2);
+
+    Segment *blank_lines = Workspace::create_blank_lines(1);
+    wksp->insert_segments(blank_lines, 0);
+
+    // Should have 3 lines now
+    EXPECT_EQ(wksp->nlines(), 3);
+
+    cleanupTestFile(filename);
+}
+
+TEST_F(WorkspaceTest, DeleteSegmentsUpdatesNlines)
+{
+    // Test basic delete_segments functionality
+    std::string filename = createTestFile("line0\nline1\nline2\n");
+    wksp->load_file_to_segments(filename);
+
+    EXPECT_EQ(wksp->nlines(), 3);
+
+    // Delete lines 0-1
+    Segment *deleted = wksp->delete_segments(0, 1);
+    ASSERT_NE(deleted, nullptr);
+
+    // Should have 1 line left
+    EXPECT_EQ(wksp->nlines(), 1);
+
+    // Should be line2
+    EXPECT_EQ(wksp->read_line_from_segment(0), "line2");
+
+    // Cleanup
+    Workspace::cleanup_segments(deleted);
+    cleanupTestFile(filename);
+}
+
+TEST_F(WorkspaceTest, DeleteSegmentsMiddle)
+{
+    // Test deleting from middle
+    std::string filename = createTestFile("line0\nline1\nline2\nline3\n");
+    wksp->load_file_to_segments(filename);
+
+    EXPECT_EQ(wksp->nlines(), 4);
+
+    // Delete middle lines
+    Segment *deleted = wksp->delete_segments(1, 2);
+    ASSERT_NE(deleted, nullptr);
+
+    EXPECT_EQ(wksp->nlines(), 2);
+    EXPECT_EQ(wksp->read_line_from_segment(0), "line0");
+    EXPECT_EQ(wksp->read_line_from_segment(1), "line3");
+
+    Workspace::cleanup_segments(deleted);
+    cleanupTestFile(filename);
+}
+
+TEST_F(WorkspaceTest, InsertAndDeleteWorkflow)
+{
+    // Test complete workflow: load, insert, delete
+    std::string filename = createTestFile("original0\noriginal1\noriginal2\n");
+    wksp->load_file_to_segments(filename);
+
+    EXPECT_EQ(wksp->nlines(), 3);
+
+    // Insert 2 blank lines at line 0
+    Segment *blank_lines = Workspace::create_blank_lines(2);
+    wksp->insert_segments(blank_lines, 0);
+
+    EXPECT_EQ(wksp->nlines(), 5);
+
+    // Delete the first two lines (the blank ones we just inserted)
+    Segment *deleted = wksp->delete_segments(0, 1);
+    ASSERT_NE(deleted, nullptr);
+
+    EXPECT_EQ(wksp->nlines(), 3);
+
+    // Should be back to original content
+    EXPECT_EQ(wksp->read_line_from_segment(0), "original0");
+    EXPECT_EQ(wksp->read_line_from_segment(1), "original1");
+    EXPECT_EQ(wksp->read_line_from_segment(2), "original2");
+
+    Workspace::cleanup_segments(deleted);
+    cleanupTestFile(filename);
+}

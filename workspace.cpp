@@ -417,9 +417,10 @@ std::string Workspace::read_line_from_segment(int line_no)
     int line_len = seg->sizes[rel_line];
     if (line_len <= 0)
         return "";
+
+    // Handle empty lines (just newline) - return empty string without newline
     if (line_len == 1 || seg->fdesc == -1) {
-        // Eempty line.
-        return "\n";
+        return "";
     }
 
     // Assert that fdesc is valid.
@@ -644,23 +645,38 @@ void Workspace::insert_segments(Segment *new_seg, int at)
         return;
 
     // Find the last segment in the chain to insert
-    Segment *last = new_seg;
-    while (last->next && last->next->fdesc != 0)
+    Segment *last      = new_seg;
+    int inserted_lines = 0;
+    while (last->next && last->next->fdesc != 0) {
+        inserted_lines += last->nlines;
         last = last->next;
+    }
+    inserted_lines += last->nlines;
 
     // Split at insertion point
     if (breaksegm(at, true) == 0) {
-        // Link new segments in
-        Segment *after = cursegm_->next;
-        cursegm_->next = new_seg;
-        new_seg->prev  = cursegm_;
+        // after breaksegm, cursegm_ points to the segment at position 'at'
+        // Link new segments BEFORE cursegm_
+        Segment *insert_before = cursegm_;            // The segment at position 'at'
+        Segment *insert_prev   = insert_before->prev; // Segment before position 'at'
 
-        if (after)
-            after->prev = last;
+        // Insert new_seg before insert_before
+        new_seg->prev       = insert_prev;
+        new_seg->next       = insert_before;
+        insert_before->prev = last;
+        last->next          = insert_before;
+
+        if (insert_prev)
+            insert_prev->next = new_seg;
+        else
+            chain_ = new_seg; // New segments become the start
 
         // Update workspace position
         cursegm_  = new_seg;
         segmline_ = at;
+
+        // Update line count
+        nlines_ += inserted_lines;
     }
 
     writable_ = 1; // Mark as edited
@@ -694,7 +710,7 @@ Segment *Workspace::delete_segments(int from, int to)
     // Break at start line
     result = breaksegm(from, true);
     if (result != 0) {
-        // Debug: could not break at start line
+        // Could not break at start line - might be out of bounds
         return nullptr;
     }
 
@@ -725,6 +741,17 @@ Segment *Workspace::delete_segments(int from, int to)
     end_seg->next        = new Segment();
     end_seg->next->prev  = end_seg;
     end_seg->next->fdesc = 0;
+
+    // Count lines in deleted segments
+    int deleted_lines = 0;
+    Segment *del_seg  = start_seg;
+    while (del_seg && del_seg != end_seg->next) {
+        deleted_lines += del_seg->nlines;
+        del_seg = del_seg->next;
+    }
+
+    // Update line count
+    nlines_ -= deleted_lines;
 
     writable_ = 1; // Mark as edited
 

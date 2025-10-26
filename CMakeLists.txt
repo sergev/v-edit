@@ -23,6 +23,7 @@ set(CE_SOURCES
     input.cpp
     edit.cpp
     clipboard.cpp
+    copy_paste.cpp
     session.cpp
     filter.cpp
     files.cpp

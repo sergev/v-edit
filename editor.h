@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "clipboard.h"
 #include "macro.h"
 #include "segment.h"
 #include "workspace.h"
@@ -75,21 +76,6 @@ private:
     static const std::string DEFAULT_HELP_FILE;
 
     // Enhanced clipboard (supports line ranges)
-    struct Clipboard {
-        std::vector<std::string> lines;
-        int start_line{ -1 };
-        int end_line{ -1 };
-        int start_col{ -1 };
-        int end_col{ -1 };
-        bool is_rectangular{ false };
-        bool is_empty() const { return lines.empty(); }
-        void clear()
-        {
-            lines.clear();
-            start_line = end_line = start_col = end_col = -1;
-            is_rectangular                              = false;
-        }
-    };
     Clipboard clipboard;
 
     Workspace wksp{};

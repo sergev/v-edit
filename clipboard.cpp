@@ -1,271 +1,188 @@
-#include "editor.h"
+#include "clipboard.h"
 
-//
-// Save current cursor position to named macro.
-//
-void Editor::save_macro_position(char name)
+#include <iostream>
+
+Clipboard::Clipboard()
+    : start_line(-1), end_line(-1), start_col(-1), end_col(-1), m_is_rectangular(false)
 {
-    int absLine = wksp.topline() + cursor_line;
-    int absCol  = wksp.basecol() + cursor_col;
-    macros[name].setPosition(absLine, absCol);
 }
 
-//
-// Navigate to position stored in named macro.
-//
-bool Editor::goto_macro_position(char name)
+bool Clipboard::is_empty() const
 {
-    auto it = macros.find(name);
-    if (it == macros.end() || !it->second.isPosition())
-        return false;
-    auto pos = it->second.getPosition();
-    goto_line(pos.first);
-    wksp.set_basecol(pos.second);
-    cursor_col = 0;
-    ensure_cursor_visible();
-    return true;
+    return lines.empty();
 }
 
-//
-// Save current clipboard to named buffer.
-//
-void Editor::save_macro_buffer(char name)
+bool Clipboard::is_rectangular() const
 {
-    // Save current clipboard content to named macro buffer
-    macros[name].setBuffer(clipboard.lines, clipboard.start_line, clipboard.end_line,
-                           clipboard.start_col, clipboard.end_col, clipboard.is_rectangular);
+    return m_is_rectangular;
 }
 
-//
-// Paste content from named buffer.
-//
-bool Editor::paste_macro_buffer(char name)
+int Clipboard::get_start_line() const
 {
-    auto it = macros.find(name);
-    if (it == macros.end() || !it->second.isBuffer())
-        return false;
-
-    // Restore clipboard from macro buffer
-    auto data = it->second.getAllBufferData();
-
-    clipboard.lines          = data.lines;
-    clipboard.start_line     = data.start_line;
-    clipboard.end_line       = data.end_line;
-    clipboard.start_col      = data.start_col;
-    clipboard.end_col        = data.end_col;
-    clipboard.is_rectangular = data.is_rectangular;
-
-    // Paste the buffer
-    if (!clipboard.is_empty()) {
-        int curLine = wksp.topline() + cursor_line;
-        lines.insert(lines.begin() + std::min((int)lines.size(), curLine + 1),
-                     clipboard.lines.begin(), clipboard.lines.end());
-        build_segment_chain_from_lines();
-        ensure_cursor_visible();
-    }
-    return true;
+    return start_line;
 }
 
-//
-// Copy specified lines to clipboard.
-//
-void Editor::picklines(int startLine, int count)
+int Clipboard::get_end_line() const
 {
-    clipboard.clear();
-    clipboard.is_rectangular = false;
-    clipboard.start_line     = startLine;
-    clipboard.end_line       = startLine + count - 1;
+    return end_line;
+}
+
+int Clipboard::get_start_col() const
+{
+    return start_col;
+}
+
+int Clipboard::get_end_col() const
+{
+    return end_col;
+}
+
+const std::vector<std::string> &Clipboard::get_lines() const
+{
+    return lines;
+}
+
+void Clipboard::clear()
+{
+    lines.clear();
+    start_line = end_line = start_col = end_col = -1;
+    m_is_rectangular                            = false;
+}
+
+void Clipboard::copy_lines(const std::vector<std::string> &source, int startLine, int count)
+{
+    clear();
+    m_is_rectangular = false;
+    start_line       = startLine;
+    end_line         = startLine + count - 1;
 
     for (int i = 0; i < count; ++i) {
-        if (startLine + i < (int)lines.size()) {
-            clipboard.lines.push_back(lines[startLine + i]);
+        if (startLine + i < (int)source.size()) {
+            lines.push_back(source[startLine + i]);
         }
     }
 }
 
-//
-// Insert clipboard content at specified position.
-//
-void Editor::paste(int afterLine, int atCol)
+void Clipboard::copy_rectangular_block(const std::vector<std::string> &source, int line, int col,
+                                       int width, int height)
 {
-    if (clipboard.is_empty()) {
-        return;
-    }
+    clear();
+    m_is_rectangular = true;
+    start_line       = line;
+    end_line         = line + height - 1;
+    start_col        = col;
+    end_col          = col + width - 1;
 
-    if (!clipboard.is_rectangular) {
-        // Paste as lines
-        lines.insert(lines.begin() + std::min((int)lines.size(), afterLine + 1),
-                     clipboard.lines.begin(), clipboard.lines.end());
-    } else {
-        // Paste as rectangular block
-        int startLine = afterLine + 1;
-        int numLines  = clipboard.lines.size();
-        int numCols   = clipboard.end_col - clipboard.start_col + 1;
-
-        // Ensure we have enough lines
-        while ((int)lines.size() <= startLine + numLines - 1) {
-            lines.push_back("");
-        }
-
-        // Insert the rectangular block
-        for (int i = 0; i < numLines; ++i) {
-            std::string &targetLine = lines[startLine + i];
-
-            // Expand line if necessary
-            if ((int)targetLine.size() < atCol + numCols) {
-                targetLine.resize(atCol + numCols, ' ');
-            }
-
-            // Copy the block content
-            if (i < (int)clipboard.lines.size()) {
-                const std::string &src = clipboard.lines[i];
-                for (int j = 0; j < numCols && j < (int)src.size(); ++j) {
-                    targetLine[atCol + j] = src[j];
-                }
-            }
-        }
-    }
-
-    build_segment_chain_from_lines();
-    ensure_cursor_visible();
-}
-
-//
-// Copy rectangular block to clipboard.
-//
-void Editor::pickspaces(int line, int col, int number, int nl)
-{
-    // Copy rectangular area to clipboard
-    clipboard.clear();
-    clipboard.is_rectangular = true;
-    clipboard.start_line     = line;
-    clipboard.end_line       = line + nl - 1;
-    clipboard.start_col      = col;
-    clipboard.end_col        = col + number - 1;
-
-    for (int i = 0; i < nl; ++i) {
-        if (line + i < (int)lines.size()) {
-            std::string &ln = lines[line + i];
+    for (int i = 0; i < height; ++i) {
+        if (line + i < (int)source.size()) {
+            const std::string &ln = source[line + i];
             std::string block_line;
-            for (int j = 0; j < number; ++j) {
+            for (int j = 0; j < width; ++j) {
                 if (col + j < (int)ln.size()) {
                     block_line += ln[col + j];
                 } else {
                     block_line += ' '; // pad with spaces
                 }
             }
-            clipboard.lines.push_back(block_line);
+            lines.push_back(block_line);
         } else {
-            clipboard.lines.push_back(std::string(number, ' '));
+            lines.push_back(std::string(width, ' '));
         }
     }
 }
 
-//
-// Delete rectangular block and save to clipboard.
-//
-void Editor::closespaces(int line, int col, int number, int nl)
+Clipboard::BlockData Clipboard::get_data() const
 {
-    // Delete rectangular area and save to clipboard
-    pickspaces(line, col, number, nl); // copy first
+    BlockData data;
+    data.lines          = lines;
+    data.start_line     = start_line;
+    data.end_line       = end_line;
+    data.start_col      = start_col;
+    data.end_col        = end_col;
+    data.is_rectangular = m_is_rectangular;
+    return data;
+}
 
-    // Now delete the rectangular area
-    for (int i = 0; i < nl; ++i) {
-        if (line + i < (int)lines.size()) {
-            std::string &ln = lines[line + i];
-            if (col < (int)ln.size()) {
-                int end_pos = std::min(col + number, (int)ln.size());
-                ln.erase(col, end_pos - col);
+void Clipboard::set_data(bool rect, int s_line, int e_line, int s_col, int e_col,
+                         const std::vector<std::string> &clipboard_lines)
+{
+    m_is_rectangular = rect;
+    start_line       = s_line;
+    end_line         = e_line;
+    start_col        = s_col;
+    end_col          = e_col;
+    lines            = clipboard_lines;
+}
+
+void Clipboard::paste_into_lines(std::vector<std::string> &target, int afterLine)
+{
+    if (is_empty()) {
+        return;
+    }
+
+    // Paste as lines
+    target.insert(target.begin() + std::min((int)target.size(), afterLine + 1), lines.begin(),
+                  lines.end());
+}
+
+void Clipboard::paste_into_rectangular(std::vector<std::string> &target, int afterLine, int atCol)
+{
+    if (is_empty()) {
+        return;
+    }
+
+    int startLine = afterLine + 1;
+    int numLines  = lines.size();
+    int numCols   = end_col - start_col + 1;
+
+    // Ensure we have enough lines
+    while ((int)target.size() <= startLine + numLines - 1) {
+        target.push_back("");
+    }
+
+    // Insert the rectangular block
+    for (int i = 0; i < numLines; ++i) {
+        std::string &targetLine = target[startLine + i];
+
+        // Expand line if necessary
+        if ((int)targetLine.size() < atCol + numCols) {
+            targetLine.resize(atCol + numCols, ' ');
+        }
+
+        // Copy the block content
+        if (i < (int)lines.size()) {
+            const std::string &src = lines[i];
+            for (int j = 0; j < numCols && j < (int)src.size(); ++j) {
+                targetLine[atCol + j] = src[j];
             }
         }
     }
-    build_segment_chain_from_lines();
-    ensure_cursor_visible();
 }
 
-//
-// Insert spaces into rectangular area.
-//
-void Editor::openspaces(int line, int col, int number, int nl)
+void Clipboard::serialize(std::ostream &out) const
 {
-    // Insert spaces in rectangular area
-    for (int i = 0; i < nl; ++i) {
-        if (line + i < (int)lines.size()) {
-            std::string &ln = lines[line + i];
-            if (col <= (int)ln.size()) {
-                ln.insert(col, number, ' ');
-            } else {
-                // Extend line with spaces if needed
-                ln.resize(col, ' ');
-                ln.insert(col, number, ' ');
-            }
-        } else {
-            // Create new line if needed
-            while ((int)lines.size() <= line + i) {
-                lines.push_back("");
-            }
-            lines[line + i].resize(col, ' ');
-            lines[line + i].insert(col, number, ' ');
-        }
+    out << m_is_rectangular << '\n';
+    out << start_line << '\n';
+    out << end_line << '\n';
+    out << start_col << '\n';
+    out << end_col << '\n';
+    out << lines.size() << '\n';
+    for (const std::string &line : lines) {
+        out << line << '\n';
     }
-    build_segment_chain_from_lines();
-    ensure_cursor_visible();
 }
 
-//
-// Define text area using stored tag position.
-//
-bool Editor::mdeftag(char tag_name)
+void Clipboard::deserialize(std::istream &in)
 {
-    auto it = macros.find(tag_name);
-    if (it == macros.end() || !it->second.isPosition()) {
-        status = "Tag not found";
-        return false;
+    in >> m_is_rectangular >> start_line >> end_line;
+    in >> start_col >> end_col;
+    size_t clip_count;
+    in >> clip_count;
+    lines.clear();
+    for (size_t i = 0; i < clip_count; ++i) {
+        std::string line;
+        std::getline(in, line); // consume newline
+        std::getline(in, line);
+        lines.push_back(line);
     }
-
-    // Get current cursor position
-    int curLine = wksp.topline() + cursor_line;
-    int curCol  = wksp.basecol() + cursor_col;
-
-    // Get tag position
-    auto pos    = it->second.getPosition();
-    int tagLine = pos.first;
-    int tagCol  = pos.second;
-
-    // Set up area between current cursor and tag
-    param_type = -2;
-    param_r0   = curLine;
-    param_c0   = curCol;
-    param_r1   = tagLine;
-    param_c1   = tagCol;
-
-    // Normalize bounds (swap if needed)
-    int f = 0;
-    if (param_r0 > param_r1) {
-        std::swap(param_r0, param_r1);
-        f++;
-    }
-    if (param_c0 > param_c1) {
-        std::swap(param_c0, param_c1);
-        f++;
-    }
-
-    // Determine message based on selection type
-    if (param_r1 == param_r0) {
-        status = "*** Columns defined by tag ***";
-    } else if (param_c1 == param_c0) {
-        status = "*** Lines defined by tag ***";
-    } else {
-        status = "*** Area defined by tag ***";
-    }
-
-    // Move cursor to start if swapped
-    if (f) {
-        goto_line(param_r0);
-        wksp.set_basecol(param_c0);
-        cursor_col = 0;
-        ensure_cursor_visible();
-    }
-
-    return true;
 }

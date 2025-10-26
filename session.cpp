@@ -31,15 +31,7 @@ void Editor::save_state()
             pair.second.serialize(out);
         }
         // Save clipboard
-        out << clipboard.is_rectangular << '\n';
-        out << clipboard.start_line << '\n';
-        out << clipboard.end_line << '\n';
-        out << clipboard.start_col << '\n';
-        out << clipboard.end_col << '\n';
-        out << clipboard.lines.size() << '\n';
-        for (const std::string &line : clipboard.lines) {
-            out << line << '\n';
-        }
+        clipboard.serialize(out);
     }
 }
 
@@ -79,17 +71,7 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
             }
 
             // Load clipboard
-            in >> clipboard.is_rectangular >> clipboard.start_line >> clipboard.end_line;
-            in >> clipboard.start_col >> clipboard.end_col;
-            size_t clip_count;
-            in >> clip_count;
-            clipboard.lines.clear();
-            for (size_t i = 0; i < clip_count; ++i) {
-                std::string line;
-                std::getline(in, line); // consume newline
-                std::getline(in, line);
-                clipboard.lines.push_back(line);
-            }
+            clipboard.deserialize(in);
         }
     }
 }

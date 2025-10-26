@@ -549,11 +549,8 @@ void Editor::handle_key_edit(int ch)
     if (ch == KEY_F(5)) {
         // Copy current line to clipboard
         int curLine = wksp.topline() + cursor_line;
-        clipboard.clear();
         if (curLine >= 0 && curLine < (int)lines.size()) {
-            clipboard.lines.push_back(lines[curLine]);
-            clipboard.start_line = curLine;
-            clipboard.end_line   = curLine;
+            clipboard.copy_lines(lines, curLine, 1);
         }
         status = "Copied";
         return;
@@ -592,10 +589,7 @@ void Editor::handle_key_edit(int ch)
     if (ch == 25) { // Ctrl-Y
         int curLine = wksp.topline() + cursor_line;
         if (curLine >= 0 && curLine < (int)lines.size()) {
-            clipboard.clear();
-            clipboard.lines.push_back(lines[curLine]);
-            clipboard.start_line = curLine;
-            clipboard.end_line   = curLine;
+            clipboard.copy_lines(lines, curLine, 1);
             lines.erase(lines.begin() + curLine);
             if (lines.empty())
                 lines.push_back("");
@@ -612,12 +606,9 @@ void Editor::handle_key_edit(int ch)
     // ^C - Copy current line to clipboard
     if (ch == 3) { // Ctrl-C
         int curLine = wksp.topline() + cursor_line;
-        clipboard.clear();
         if (curLine >= 0 && curLine < (int)lines.size()) {
-            clipboard.lines.push_back(lines[curLine]);
-            clipboard.start_line = curLine;
-            clipboard.end_line   = curLine;
-            status               = "Copied line";
+            clipboard.copy_lines(lines, curLine, 1);
+            status = "Copied line";
         }
         return;
     }

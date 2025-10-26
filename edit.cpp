@@ -289,14 +289,7 @@ void Editor::deletelines(int from, int number)
     ensure_segments_up_to_date();
 
     // Save to clipboard (delete buffer)
-    clipboard.clear();
-    clipboard.is_rectangular = false;
-    clipboard.start_line     = from;
-    clipboard.end_line       = from + number - 1;
-
-    for (int i = 0; i < number && (from + i) < (int)lines.size(); ++i) {
-        clipboard.lines.push_back(lines[from + i]);
-    }
+    clipboard.copy_lines(lines, from, number);
 
     // Delete the lines
     int end_line = std::min(from + number, (int)lines.size());

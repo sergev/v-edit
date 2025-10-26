@@ -17,9 +17,8 @@ protected:
     {
         editor = std::make_unique<Editor>();
         // Manually initialize editor state needed for tests
-        editor->open_files.clear();
-        editor->current_file_index     = 0;
-        editor->alternative_file_index = -1;
+        editor->wksp     = Workspace{};
+        editor->alt_wksp = Workspace{};
     }
 
     void TearDown() override { editor.reset(); }

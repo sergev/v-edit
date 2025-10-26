@@ -236,9 +236,10 @@ void Editor::handle_key_cmd(int ch)
                 std::string new_filename = cmd.substr(1);
                 save_as(new_filename);
             } else if (cmd.size() > 1 && cmd[0] == 'o') {
-                // Open file: o<filename>
+                // Open file: o<filename> - now opens in current workspace
                 std::string file_to_open = cmd.substr(1);
-                if (open_file(file_to_open)) {
+                filename                 = file_to_open;
+                if (load_file_segments(file_to_open)) {
                     status = std::string("Opened: ") + file_to_open;
                 } else {
                     status = std::string("Failed to open: ") + file_to_open;
@@ -534,8 +535,8 @@ void Editor::handle_key_edit(int ch)
         return;
     }
     if (ch == KEY_F(3)) {
-        // Next file / Switch file
-        next_file();
+        // F3 - Switch to alternative workspace
+        switch_to_alternative_workspace();
         return;
     }
     if (ch == KEY_F(4)) {

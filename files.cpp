@@ -4,175 +4,6 @@
 
 #include "editor.h"
 
-//
-// Open file in editor buffer.
-//
-bool Editor::open_file(const std::string &file_to_open)
-{
-    // Check if file is already open
-    for (size_t i = 0; i < open_files.size(); ++i) {
-        if (open_files[i].filename == file_to_open) {
-            switch_to_file(i);
-            return true;
-        }
-    }
-
-    // Save current file state before switching
-    save_current_file_state();
-
-    // Create new file state
-    FileState new_file;
-    new_file.filename = file_to_open;
-
-    // Try to load the file
-    std::ifstream in(file_to_open.c_str());
-    if (in) {
-        std::string line;
-        while (std::getline(in, line)) {
-            new_file.lines.push_back(line);
-        }
-        if (new_file.lines.empty()) {
-            new_file.lines.push_back("");
-        }
-    } else {
-        // File doesn't exist, create empty file
-        new_file.lines.push_back("");
-    }
-
-    // Add to open files
-    open_files.push_back(new_file);
-    current_file_index = open_files.size() - 1;
-
-    // Update current state
-    load_current_file_state();
-
-    return true;
-}
-
-//
-// Switch to previously opened file.
-//
-void Editor::switch_to_file(int file_index)
-{
-    if (file_index < 0 || file_index >= (int)open_files.size()) {
-        return;
-    }
-
-    // Save current file state
-    save_current_file_state();
-
-    // Switch to new file
-    current_file_index = file_index;
-
-    // Load new file state
-    load_current_file_state();
-}
-
-//
-// Switch between current and alternative file.
-//
-void Editor::switch_to_alternative_file()
-{
-    if (alternative_file_index >= 0 && alternative_file_index < (int)open_files.size()) {
-        // Switch to alternative file
-        int temp               = current_file_index;
-        current_file_index     = alternative_file_index;
-        alternative_file_index = temp;
-
-        // Save and load states
-        save_current_file_state();
-        load_current_file_state();
-    } else {
-        // No alternative file, create new untitled file
-        open_file("untitled");
-        alternative_file_index = current_file_index;
-    }
-}
-
-//
-// Switch to next file in buffer list.
-//
-void Editor::next_file()
-{
-    if (open_files.size() <= 1) {
-        return; // No other files to switch to
-    }
-
-    int next_index = (current_file_index + 1) % open_files.size();
-    switch_to_file(next_index);
-}
-
-//
-// Get index of currently active file.
-//
-int Editor::get_current_file_index() const
-{
-    return current_file_index;
-}
-
-//
-// Get total number of open files.
-//
-int Editor::get_file_count() const
-{
-    return open_files.size();
-}
-
-//
-// Get filename of current file.
-//
-std::string Editor::get_current_filename() const
-{
-    if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
-        return open_files[current_file_index].filename;
-    }
-    return "untitled";
-}
-
-//
-// Check if file has unsaved changes.
-//
-bool Editor::is_file_modified(int file_index) const
-{
-    if (file_index >= 0 && file_index < (int)open_files.size()) {
-        return open_files[file_index].modified;
-    }
-    return false;
-}
-
-//
-// Save current buffer state to file descriptor.
-//
-void Editor::save_current_file_state()
-{
-    if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
-        FileState &file  = open_files[current_file_index];
-        file.filename    = filename;
-        file.lines       = lines;
-        file.wksp        = wksp;
-        file.backup_done = backup_done;
-        file.modified    = true; // Mark as modified when we save state
-    }
-}
-
-//
-// Load buffer state from file descriptor.
-//
-void Editor::load_current_file_state()
-{
-    if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
-        const FileState &file = open_files[current_file_index];
-        filename              = file.filename;
-        lines                 = file.lines;
-        wksp                  = file.wksp;
-        backup_done           = file.backup_done;
-
-        // Update segments
-        build_segment_chain_from_lines();
-        ensure_cursor_visible();
-    }
-}
-
 // Alternative workspace operations
 //
 // Switch between main and alternative workspace views.
@@ -183,25 +14,23 @@ void Editor::switch_to_alternative_workspace()
         create_alternative_workspace();
     }
 
-    // We now definitely have an alternative workspace
-    // But we need to also save the current file state before switching
-    save_current_file_state();
-
-    // Save current workspace state
-    save_current_workspace_state();
-
     // Swap workspaces
     Workspace temp_wksp = wksp;
     wksp                = alt_wksp;
     alt_wksp            = temp_wksp;
 
-    // Swap file indices
-    int temp_file_index = current_file_index;
-    current_file_index  = alt_file_index;
-    alt_file_index      = temp_file_index;
+    // Swap filename and lines
+    std::string temp_filename = filename;
+    filename                  = alt_filename;
+    alt_filename              = temp_filename;
 
-    // Load the new current file state (which is now the alternative workspace)
-    load_current_file_state();
+    std::vector<std::string> temp_lines = lines;
+    lines                               = alt_lines;
+    alt_lines                           = temp_lines;
+
+    // Rebuild segments from swapped lines
+    build_segment_chain_from_lines();
+    ensure_cursor_visible();
 }
 
 //
@@ -209,29 +38,22 @@ void Editor::switch_to_alternative_workspace()
 //
 void Editor::create_alternative_workspace()
 {
-    // Save current file state first
-    save_current_file_state();
+    // Save current workspace state to alt_wksp
+    alt_wksp     = wksp;
+    alt_filename = filename;
+    alt_lines    = lines;
 
-    // Save current workspace state
-    save_current_workspace_state();
-
-    // Initialize alternative workspace with current workspace state
-    alt_wksp = wksp;
-
-    // Try to open the help file first
-    if (open_help_file()) {
-        // Help file was created successfully, alt_file_index is now set
-        return;
+    // Try to open the help file in alternative workspace
+    if (!open_help_file()) {
+        // If help file fails, create a new empty workspace
+        alt_filename = "untitled_alt";
+        alt_lines.clear();
+        alt_lines.push_back("");
+        alt_wksp = Workspace{};
     }
 
-    // If help file fails, create a new untitled file for the alternative workspace
-    FileState new_file;
-    new_file.filename = "untitled_alt";
-    new_file.lines.push_back("");
-
-    // Add to open files
-    open_files.push_back(new_file);
-    alt_file_index = open_files.size() - 1;
+    // Rebuild segments for alternative workspace
+    alt_wksp.build_segment_chain_from_lines(alt_lines);
 }
 
 //
@@ -239,40 +61,13 @@ void Editor::create_alternative_workspace()
 //
 bool Editor::has_alternative_workspace() const
 {
-    return alt_file_index >= 0;
-}
-
-//
-// Persist current workspace state.
-//
-void Editor::save_current_workspace_state()
-{
-    if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
-        FileState &file = open_files[current_file_index];
-        file.wksp       = wksp;
-    }
-}
-
-//
-// Restore alternative workspace state.
-//
-void Editor::load_alternative_workspace_state()
-{
-    if (alt_file_index >= 0 && alt_file_index < (int)open_files.size()) {
-        const FileState &file = open_files[alt_file_index];
-        filename              = file.filename;
-        lines                 = file.lines;
-        backup_done           = file.backup_done;
-
-        // Update segments
-        build_segment_chain_from_lines();
-        ensure_cursor_visible();
-    }
+    // We have an alternative workspace if we have at least something stored
+    return !alt_filename.empty() || !alt_lines.empty();
 }
 
 // Help file operations
 //
-// Load help file into buffer.
+// Load help file into alternative workspace.
 //
 bool Editor::open_help_file()
 {
@@ -295,15 +90,11 @@ bool Editor::open_help_file()
         help_lines.push_back("");
     }
 
-    // Create a help file state
-    FileState help_file_state;
-    help_file_state.filename = DEFAULT_HELP_FILE;
-    help_file_state.lines    = help_lines;
-    help_file_state.wksp     = Workspace{};
-
-    // Add to open files
-    open_files.push_back(help_file_state);
-    alt_file_index = open_files.size() - 1;
+    // Set alternative workspace to help file
+    alt_filename = DEFAULT_HELP_FILE;
+    alt_lines    = help_lines;
+    alt_wksp     = Workspace{};
+    alt_wksp.build_segment_chain_from_lines(help_lines);
 
     return true;
 }
@@ -346,28 +137,11 @@ bool Editor::create_builtin_help()
                                             "",
                                             "Press ^N to return to your file." };
 
-    // Create a help file state
-    FileState help_file_state;
-    help_file_state.filename = "Built-in Help";
-    help_file_state.lines    = help_lines;
-    help_file_state.wksp     = Workspace{};
+    // Set alternative workspace to built-in help
+    alt_filename = "Built-in Help";
+    alt_lines    = help_lines;
+    alt_wksp     = Workspace{};
+    alt_wksp.build_segment_chain_from_lines(help_lines);
 
-    // Add to open files
-    open_files.push_back(help_file_state);
-    alt_file_index = open_files.size() - 1;
-
-    return true;
-}
-
-//
-// Load file content into segment chain structure.
-//
-bool Editor::load_file_to_segments(const std::string &path)
-{
-    wksp.load_file_to_segments(path);
-    if (!wksp.chain()) {
-        status = std::string("Cannot open file: ") + path;
-        return false;
-    }
     return true;
 }

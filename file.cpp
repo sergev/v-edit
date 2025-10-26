@@ -100,17 +100,14 @@ void Editor::ensure_segments_up_to_date()
 void Editor::open_initial(int argc, char **argv)
 {
     if (argc > 1 && argv[1][0] != '-') {
-        // Open the specified file as the first file
-        std::string file_to_open = argv[1];
-        open_file(file_to_open);
+        // Open the specified file
+        filename = argv[1];
+        load_file_segments(filename);
     } else {
         // No file specified, create untitled file
-        FileState untitled_file;
-        untitled_file.filename = "untitled";
-        untitled_file.lines.push_back("");
-        open_files.push_back(untitled_file);
-        current_file_index = 0;
-        load_current_file_state();
+        filename = "untitled";
+        lines.clear();
+        lines.push_back("");
     }
     status = "Cmd: ";
     build_segment_chain_from_lines();
@@ -137,12 +134,25 @@ bool Editor::load_file_segments(const std::string &path)
 }
 
 //
+// Load file content into workspace's segment chain.
+//
+bool Editor::load_file_to_segments(const std::string &path)
+{
+    wksp.load_file_to_segments(path);
+    if (!wksp.chain()) {
+        status = std::string("Cannot open file: ") + path;
+        return false;
+    }
+    return true;
+}
+
+//
 // Write current buffer to file and create backup.
 //
 void Editor::save_file()
 {
     // Create backup file if not already done and file exists
-    if (!backup_done && filename != "untitled") {
+    if (!wksp.backup_done() && filename != "untitled") {
         std::string backup_name = filename + "~";
         // Remove existing backup
         unlink(backup_name.c_str());
@@ -151,7 +161,7 @@ void Editor::save_file()
             // Backup failed, but continue with save
             status = std::string("Backup failed, continuing save");
         } else {
-            backup_done = true;
+            wksp.set_backup_done(true);
         }
     }
 

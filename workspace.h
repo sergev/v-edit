@@ -83,6 +83,12 @@ public:
     // Line count
     int get_line_count(int fallback_count) const;
 
+    // File state tracking
+    bool modified() const { return modified_; }
+    void set_modified(bool modified) { modified_ = modified; }
+    bool backup_done() const { return backup_done_; }
+    void set_backup_done(bool backup_done) { backup_done_ = backup_done; }
+
     // Segment manipulation (from prototype)
     // Split segment at given line number (breaksegm from prototype)
     int breaksegm(int line_no, bool realloc_flag = true);
@@ -133,6 +139,8 @@ private:
     int segmline_{ 0 };           // first line in current segment
     int cursorcol_{ 0 };          // saved cursor column
     int cursorrow_{ 0 };          // saved cursor row
+    bool modified_{ false };      // track if file has been modified
+    bool backup_done_{ false };   // track if backup file has been created
 
     // Helper to update current segment pointer
     void update_current_segment(Segment *seg) { cursegm_ = seg; }

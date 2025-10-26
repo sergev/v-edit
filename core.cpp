@@ -96,13 +96,9 @@ void Editor::startup(int restart)
 //
 void Editor::model_init()
 {
-    // Initialize workspace
-    wksp = Workspace{};
-
-    // Initialize multiple file support - start with empty list
-    open_files.clear();
-    current_file_index     = 0;
-    alternative_file_index = -1;
+    // Initialize workspaces
+    wksp     = Workspace{};
+    alt_wksp = Workspace{};
 }
 
 //

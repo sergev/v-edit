@@ -29,7 +29,6 @@ private:
     std::string filename{ "untitled" };
     bool cmd_mode{ false };
     bool quit_flag{ false };
-    bool backup_done{ false };         // track if backup file has been created
     bool segments_dirty{ false };      // track if segments need rebuilding
     bool filter_mode{ false };         // track if we're in filter command mode
     bool area_selection_mode{ false }; // track if we're in area selection mode
@@ -51,34 +50,20 @@ private:
     // Signal handling
     bool interrupt_flag{ false }; // interrupt signal occurred
 
-    // Macros (position markers and text buffers)
-    std::map<char, Macro> macros; // char -> macro data
-
-    // Multiple file support
-    struct FileState {
-        std::string filename;
-        std::vector<std::string> lines;
-        Workspace wksp;
-        bool modified{ false };
-        bool backup_done{ false };
-
-        FileState() : filename("untitled"), wksp{} {}
-    };
-    std::vector<FileState> open_files;
-    int current_file_index{ 0 };
-    int alternative_file_index{ -1 }; // -1 means no alternative file
-
-    // Alternative workspace support
+    // Two workspaces: main workspace (wksp) and alternative workspace (alt_wksp)
+    Workspace wksp;
     Workspace alt_wksp;
-    int alt_file_index{ -1 }; // -1 means no file attached
+    std::string alt_filename;
+    std::vector<std::string> alt_lines;
 
-    // Help file system
+    // Help file installed in a public place
     static const std::string DEFAULT_HELP_FILE;
 
     // Enhanced clipboard (supports line ranges)
     Clipboard clipboard;
 
-    Workspace wksp{};
+    // Macros (position markers and text buffers)
+    std::map<char, Macro> macros; // char -> macro data
 
     // Journaling
     int journal_fd{ -1 };
@@ -151,26 +136,10 @@ private:
     void splitline(int line, int col);
     void combineline(int line, int col);
 
-    // Multiple file operations
-    bool open_file(const std::string &file_to_open);
-    void switch_to_file(int file_index);
-    void switch_to_alternative_file();
-    void next_file();
-    int get_current_file_index() const;
-    int get_file_count() const;
-    std::string get_current_filename() const;
-    bool is_file_modified(int file_index) const;
-
-    // Helper functions for file state management
-    void save_current_file_state();
-    void load_current_file_state();
-
     // Alternative workspace operations
     void switch_to_alternative_workspace();
     void create_alternative_workspace();
     bool has_alternative_workspace() const;
-    void save_current_workspace_state();
-    void load_alternative_workspace_state();
 
     // Help file operations
     bool open_help_file();

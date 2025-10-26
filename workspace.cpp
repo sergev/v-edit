@@ -28,15 +28,17 @@ Workspace &Workspace::operator=(const Workspace &other)
     cleanup_segments();
 
     // Copy simple fields
-    path_      = other.path_;
-    writable_  = other.writable_;
-    nlines_    = other.nlines_;
-    topline_   = other.topline_;
-    basecol_   = other.basecol_;
-    line_      = other.line_;
-    segmline_  = other.segmline_;
-    cursorcol_ = other.cursorcol_;
-    cursorrow_ = other.cursorrow_;
+    path_        = other.path_;
+    writable_    = other.writable_;
+    nlines_      = other.nlines_;
+    topline_     = other.topline_;
+    basecol_     = other.basecol_;
+    line_        = other.line_;
+    segmline_    = other.segmline_;
+    cursorcol_   = other.cursorcol_;
+    cursorrow_   = other.cursorrow_;
+    modified_    = other.modified_;
+    backup_done_ = other.backup_done_;
 
     // Copy segment chain (deep copy)
     if (other.chain_) {
@@ -88,14 +90,16 @@ void Workspace::reset()
 {
     cleanup_segments();
     path_.clear();
-    writable_  = 0;
-    nlines_    = 0;
-    topline_   = 0;
-    basecol_   = 0;
-    line_      = 0;
-    segmline_  = 0;
-    cursorcol_ = 0;
-    cursorrow_ = 0;
+    writable_    = 0;
+    nlines_      = 0;
+    topline_     = 0;
+    basecol_     = 0;
+    line_        = 0;
+    segmline_    = 0;
+    cursorcol_   = 0;
+    cursorrow_   = 0;
+    modified_    = false;
+    backup_done_ = false;
 }
 
 //

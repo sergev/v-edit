@@ -21,7 +21,7 @@ set(TEST_SOURCES
     smoke_tmux_test.cpp
     exit_without_save_test.cpp
     save_and_exit_test.cpp
-#   scroll_vertical_test.cpp
+    scroll_vertical_test.cpp
     session_restore_test.cpp
     search_test.cpp
     filter_test.cpp

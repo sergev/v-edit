@@ -103,15 +103,21 @@ void Editor::wksp_redraw()
 
 void Editor::ensure_cursor_visible()
 {
-    // Adjust wksp.topline so that the cursor line is visible in 0..nlines-2
-    int absLine = wksp.topline + cursor_line;
+    // First clamp cursor_line to visible range
     if (cursor_line < 0)
         cursor_line = 0;
     if (cursor_line > nlines - 2)
         cursor_line = nlines - 2;
+    
+    // Now adjust wksp.topline so that the absolute line is visible
+    int absLine = wksp.topline + cursor_line;
+    int visible_rows = nlines - 1;
+    
     if (absLine < wksp.topline) {
+        // Scroll up to show cursor
         wksp.topline = absLine;
-    } else if (absLine > wksp.topline + (nlines - 2)) {
-        wksp.topline = absLine - (nlines - 2);
+    } else if (absLine > wksp.topline + (visible_rows - 1)) {
+        // Scroll down to show cursor
+        wksp.topline = absLine - (visible_rows - 1);
     }
 }

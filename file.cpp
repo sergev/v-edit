@@ -59,10 +59,10 @@ void Editor::build_segment_chain_from_lines()
     wksp.cursegm  = seg;
     wksp.segmline = 0;
 
-    // Initialize workspace defaults
-    wksp.topline = 0;
-    wksp.offset  = 0;
-    wksp.line    = 0;
+    // Don't reset wksp.topline here as it's called during editing and would reset scroll position
+    // Only reset offset and line
+    wksp.offset = 0;
+    wksp.line   = 0;
 }
 
 void Editor::build_segment_chain_from_text(const std::string &text)

@@ -7,7 +7,7 @@
 
 #include "TmuxDriver.h"
 
-TEST_F(TmuxDriver, DISABLED_VerticalScrollingShowsLaterLines)
+TEST_F(TmuxDriver, VerticalScrollingShowsLaterLines)
 {
     const std::string sessionName = "v-edit_scroll_vert";
     const std::string appPath     = V_EDIT_BIN_PATH;
@@ -78,32 +78,30 @@ TEST_F(TmuxDriver, DISABLED_VerticalScrollingShowsLaterLines)
         std::cout << i << ": '" << lines[i] << "'\n";
     }
 
-    // Build expected content rows dynamically: top should be max(1, total-9) => 7 when total=15
+    // Build expected content rows dynamically: for total=15 lines with 9 visible rows,
+    // we expect to show the last 9 lines (L07-L15)
+    // The window has 10 total rows (9 content + 1 status)
     std::vector<std::string> expected;
     expected.reserve(10);
     const int total = 15;
-    const int top   = std::max(1, total - 9);
-    for (int i = top; i < top + 10; ++i) {
+    const int visible_rows = 9; // 9 content rows in a 10-row window
+    const int top   = std::max(1, total - visible_rows + 1); // top = 15 - 9 + 1 = 7
+    for (int i = top; i <= total; ++i) {
         char buf[8];
         std::snprintf(buf, sizeof(buf), "L%02d", i);
         expected.emplace_back(buf);
-    }
-    // Clip to L10..L15, rest are tildes
-    for (auto &s : expected) {
-        if (s > std::string("L15"))
-            s = "~";
     }
     for (auto &l : expected)
         rtrim(l);
 
     // Debug: print expected lines
-    std::cout << "--- Expected (10 lines) ---\n";
+    std::cout << "--- Expected (" << expected.size() << " content lines) ---\n";
     for (size_t i = 0; i < expected.size(); ++i) {
         std::cout << i << ": '" << expected[i] << "'\n";
     }
 
-    // Compare whole screen (content rows only)
-    ASSERT_EQ(lines.size(), expected.size());
+    // Compare content rows only (excluding status line which is last)
+    ASSERT_GE(lines.size(), expected.size()) << "Not enough captured lines";
     for (size_t i = 0; i < expected.size(); ++i) {
         EXPECT_EQ(lines[i], expected[i])
             << "Mismatch at row " << i << " got='" << lines[i] << "' exp='" << expected[i] << "'";

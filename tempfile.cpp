@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <vector>
 
 Tempfile::Tempfile() = default;
 
@@ -79,40 +80,45 @@ Segment *Tempfile::write_line_to_temp(const std::string &line_content)
 }
 
 //
-// Write line content and return the segment (for workspace internal use).
-// Updates out_seek with the seek position.
+// Write multiple lines to temporary file and return a segment for them.
 //
-Segment *Tempfile::write_line_internal(const std::string &line, long *out_seek)
+Segment *Tempfile::write_lines_to_temp(const std::vector<std::string> &lines)
 {
     if (tempfile_fd_ < 0 && !open_temp_file()) {
         return nullptr;
     }
 
-    std::string line_content = line;
-    // Add newline if not present
-    if (line_content.empty() || line_content.back() != '\n') {
-        line_content += '\n';
-    }
-
-    long seek_pos = tempseek_;
-    int nbytes    = line_content.size();
-    if (write(tempfile_fd_, line_content.c_str(), nbytes) != nbytes) {
+    if (lines.empty()) {
         return nullptr;
     }
 
-    tempseek_ += nbytes;
+    int nlines = lines.size();
 
-    if (out_seek) {
-        *out_seek = seek_pos;
-    }
-
+    // Write all lines to temp file
     Segment *seg = new Segment();
     seg->prev    = nullptr;
     seg->next    = nullptr;
-    seg->nlines  = 1;
+    seg->nlines  = nlines;
     seg->fdesc   = tempfile_fd_;
-    seg->seek    = seek_pos;
-    seg->sizes.push_back(nbytes);
+    seg->seek    = tempseek_;
+
+    // Write lines and record their sizes
+    for (const std::string &ln : lines) {
+        std::string line = ln;
+        // Add newline if not present
+        if (line.empty() || line.back() != '\n') {
+            line += '\n';
+        }
+
+        int nbytes = line.size();
+        if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
+            delete seg;
+            return nullptr;
+        }
+
+        seg->sizes.push_back(nbytes);
+        tempseek_ += nbytes;
+    }
 
     return seg;
 }

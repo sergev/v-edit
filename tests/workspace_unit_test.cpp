@@ -590,15 +590,8 @@ TEST_F(WorkspaceTest, WriteLineToTempAndSave)
     EXPECT_EQ(wksp->nlines(), 3);
 
     // Create a temp segment with modified line content
-    // Note: write_line_to_temp is now in Editor, not Workspace
-    // For this test, we'll create a manual segment instead
-    Segment *temp_seg = new Segment();
-    temp_seg->prev    = nullptr;
-    temp_seg->next    = nullptr;
-    temp_seg->nlines  = 1;
-    temp_seg->fdesc   = 1; // Use stdout as placeholder
-    temp_seg->seek    = 0;
-    temp_seg->sizes.push_back(16); // "modified_line2\n" length
+    // Use tempfile to write the modified line
+    Segment *temp_seg = tempfile->write_line_to_temp("modified_line2");
     ASSERT_NE(temp_seg, nullptr);
     EXPECT_EQ(temp_seg->nlines, 1);
     EXPECT_NE(temp_seg->fdesc, 0); // Should not be 0

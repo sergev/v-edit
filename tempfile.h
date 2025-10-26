@@ -10,8 +10,6 @@
 // Shared by all workspaces in an editor instance.
 //
 class Tempfile {
-    friend class Workspace; // Allow Workspace to access private members
-
 public:
     Tempfile();
     ~Tempfile();
@@ -29,14 +27,11 @@ public:
     // Write a line to the temporary file and return a segment for it
     Segment *write_line_to_temp(const std::string &line_content);
 
-    // Write line content and return the segment (for workspace internal use)
-    Segment *write_line_internal(const std::string &line, long *out_seek);
+    // Write multiple lines to temporary file and return a segment for them
+    Segment *write_lines_to_temp(const std::vector<std::string> &lines);
 
     // Get current file descriptor
     int fd() const { return tempfile_fd_; }
-
-    // Get current seek position
-    long seek() const { return tempseek_; }
 
 private:
     int tempfile_fd_{ -1 }; // file descriptor for temporary file

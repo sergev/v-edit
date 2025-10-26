@@ -31,9 +31,15 @@ This document tracks the implementation of segment-based editing, migrating from
 
 ## Test Results
 
-**Last run**: 77 tests
+**Current Status**: 77 tests
 - **Passing**: 72 tests ✅
 - **Failing**: 5 tests ❌
+
+**Progress**:
+- ✅ Fixed WorkspaceTest.WriteLineToTempAndSave by using tempfile->write_line_to_temp()
+- ✅ Added Tempfile class to encapsulate temp file management
+- ✅ Refactored build_segment_chain_from_lines to use Tempfile method
+- 🚧 Investigating empty file handling issues
 
 ## Key Design Decisions
 

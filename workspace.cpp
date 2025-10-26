@@ -60,40 +60,25 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
     cleanup_segments();
 
     if (nlines_ == 0) {
-        // Empty file - just set up pointers
-        basecol_ = 0;
-        line_    = 0;
+        // Empty file - create an empty segment
+        Segment *seg = new Segment();
+        seg->prev    = nullptr;
+        seg->next    = nullptr;
+        seg->nlines  = 0;
+        seg->fdesc   = 0; // Tail marker
+        seg->seek    = 0;
+        chain_       = seg;
+        cursegm_     = seg;
+        segmline_    = 0;
+        basecol_     = 0;
+        line_        = 0;
         return;
     }
 
-    // Ask Tempfile for temp file access
-    int tempfile_fd = tempfile_.tempfile_fd_;
-    long tempseek   = tempfile_.tempseek_;
-
-    // Write all lines to temp file
-    Segment *seg = new Segment();
-    seg->prev    = nullptr;
-    seg->next    = nullptr;
-    seg->nlines  = nlines_;
-    seg->fdesc   = tempfile_fd;
-    seg->seek    = tempseek;
-
-    // Write lines and record their sizes
-    for (const std::string &ln : lines) {
-        std::string line = ln;
-        // Add newline if not present
-        if (line.empty() || line.back() != '\n') {
-            line += '\n';
-        }
-
-        int nbytes = line.size();
-        if (write(tempfile_fd, line.c_str(), nbytes) != nbytes) {
-            delete seg;
-            return;
-        }
-
-        seg->sizes.push_back(nbytes);
-        tempfile_.tempseek_ += nbytes;
+    // Use Tempfile to write lines and get a segment
+    Segment *seg = tempfile_.write_lines_to_temp(lines);
+    if (!seg) {
+        return;
     }
 
     chain_    = seg;

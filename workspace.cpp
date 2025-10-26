@@ -691,21 +691,34 @@ Segment *Workspace::delete_segments(int from, int to)
     if (!chain_ || from > to)
         return nullptr;
 
-    // Break at end line + 1
-    int result = breaksegm(to + 1, true);
+    // Break at line 'to' (not to+1) to get the segment containing line 'to'
+    // After this, cursegm_ points to the segment containing line 'to'
+    int result = breaksegm(to, true);
     if (result != 0) {
         // Line doesn't exist - allow deletion to last line
         if (to + 1 > nlines_) {
             // Just move to the last line position
             position(nlines_);
         } else {
-            // Debug: log what went wrong
             return nullptr;
         }
     }
 
+    // After breaksegm(to), cursegm_ points to the segment starting at line 'to'
+    // We want to delete up to and including 'to', so we need to go to 'to+1'
+    // Find the segment AFTER 'to'
     Segment *end_seg = cursegm_;
     Segment *after   = end_seg->next; // Save pointer to what comes after
+
+    // Now position to 'to+1' to get the segment after the deletion range
+    if (to + 1 < nlines_) {
+        if (breaksegm(to + 1, true) == 0) {
+            after = cursegm_;
+        }
+    } else {
+        // We're deleting to the end
+        after = nullptr;
+    }
 
     // Break at start line
     result = breaksegm(from, true);

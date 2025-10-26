@@ -5,8 +5,21 @@
 //
 void Editor::picklines(int startLine, int count)
 {
-    // TODO: Implement clipboard with workspace segments
-    // clipboard.copy_lines(lines, startLine, count);
+    if (count <= 0 || startLine < 0) {
+        return;
+    }
+
+    ensure_line_saved(); // Save any unsaved modifications
+
+    // Read lines from workspace segments
+    std::vector<std::string> lines;
+    for (int i = 0; i < count && (startLine + i) < wksp.nlines(); ++i) {
+        std::string line = read_line_from_wksp(startLine + i);
+        lines.push_back(line);
+    }
+
+    // Store in clipboard
+    clipboard.copy_lines(lines, 0, lines.size());
 }
 
 //
@@ -18,16 +31,37 @@ void Editor::paste(int afterLine, int atCol)
         return;
     }
 
-    // TODO: Implement clipboard with workspace segments
-    /*
-    if (!clipboard.is_rectangular()) {
-        // Paste as lines
-        clipboard.paste_into_lines(lines, afterLine);
+    ensure_line_saved(); // Save any unsaved modifications
+
+    const std::vector<std::string> &clip_lines = clipboard.get_lines();
+
+    if (clipboard.is_rectangular()) {
+        // Paste as rectangular block - insert at column position
+        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp.nlines(); ++i) {
+            get_line(afterLine + i);
+            if (atCol < (int)current_line.size()) {
+                current_line.insert(atCol, clip_lines[i]);
+            } else {
+                // Extend line with spaces if needed
+                current_line.resize(atCol, ' ');
+                current_line += clip_lines[i];
+            }
+            current_line_modified = true;
+            put_line();
+        }
     } else {
-        // Paste as rectangular block
-        clipboard.paste_into_rectangular(lines, afterLine, atCol);
+        // Paste as lines
+        for (const auto &line : clip_lines) {
+            // Create a segment for this line
+            Segment *new_seg = wksp.write_line_to_temp(line);
+            if (new_seg) {
+                wksp.insert_segments(new_seg, afterLine + 1);
+                afterLine++;
+                wksp.set_nlines(wksp.nlines() + 1);
+            }
+        }
     }
-    */
+
     ensure_cursor_visible();
 }
 
@@ -36,8 +70,28 @@ void Editor::paste(int afterLine, int atCol)
 //
 void Editor::pickspaces(int line, int col, int number, int nl)
 {
-    // TODO: Implement clipboard with workspace segments
-    // clipboard.copy_rectangular_block(lines, line, col, number, nl);
+    if (number <= 0 || nl <= 0 || line < 0 || col < 0) {
+        return;
+    }
+
+    ensure_line_saved(); // Save any unsaved modifications
+
+    // Read lines from workspace and extract rectangular block
+    std::vector<std::string> lines;
+    for (int i = 0; i < nl && (line + i) < wksp.nlines(); ++i) {
+        std::string full_line = read_line_from_wksp(line + i);
+        std::string block;
+
+        if (col < (int)full_line.size()) {
+            int end_col = std::min(col + number, (int)full_line.size());
+            block       = full_line.substr(col, end_col - col);
+        }
+
+        lines.push_back(block);
+    }
+
+    // Store rectangular block in clipboard
+    clipboard.copy_rectangular_block(lines, 0, col, number, lines.size());
 }
 
 //

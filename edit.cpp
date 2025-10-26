@@ -285,9 +285,8 @@ void Editor::deletelines(int from, int number)
 
     ensure_line_saved();
 
-    // TODO: clipboard with segments
     // Save to clipboard (delete buffer)
-    // clipboard.copy_lines(lines, from, number);
+    picklines(from, number);
 
     // Delete the lines using workspace segments
     wksp.delete_segments(from, from + number - 1);
@@ -333,9 +332,16 @@ void Editor::splitline(int line, int col)
     current_line_modified = true;
     put_line();
 
-    // Insert new line with tail - TODO: need proper way to insert non-blank line
-    insertlines(line + 1, 1);
-    wksp.set_nlines(wksp.nlines() + 1);
+    // Insert new line with tail content
+    Segment *tail_seg = wksp.write_line_to_temp(tail);
+    if (tail_seg) {
+        wksp.insert_segments(tail_seg, line + 1);
+        wksp.set_nlines(wksp.nlines() + 1);
+    } else {
+        // Fallback: insert blank line
+        insertlines(line + 1, 1);
+        wksp.set_nlines(wksp.nlines() + 1);
+    }
 
     ensure_cursor_visible();
 }

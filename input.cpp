@@ -550,7 +550,8 @@ void Editor::handle_key_edit(int ch)
     }
     if (ch == KEY_F(5)) {
         // Copy current line to clipboard
-        // TODO: Implement clipboard with segments
+        int curLine = wksp.topline() + cursor_line;
+        picklines(curLine, 1);
         status = "Copied";
         return;
     }
@@ -589,8 +590,9 @@ void Editor::handle_key_edit(int ch)
     if (ch == 25) { // Ctrl-Y
         int curLine = wksp.topline() + cursor_line;
         if (curLine >= 0 && curLine < wksp.nlines()) {
-            // TODO: clipboard with segments
+            picklines(curLine, 1); // Copy to clipboard before deleting
             wksp.delete_segments(curLine, curLine);
+            wksp.set_nlines(wksp.nlines() - 1);
             if (cursor_line >= wksp.nlines() - 1) {
                 cursor_line = wksp.nlines() - 2;
                 if (cursor_line < 0)
@@ -602,7 +604,8 @@ void Editor::handle_key_edit(int ch)
     }
     // ^C - Copy current line to clipboard
     if (ch == 3) { // Ctrl-C
-        // TODO: clipboard with segments
+        int curLine = wksp.topline() + cursor_line;
+        picklines(curLine, 1);
         status = "Copied line";
         return;
     }
@@ -835,10 +838,20 @@ void Editor::handle_key_edit(int ch)
         }
         current_line_modified = true;
         put_line();
-        // Insert new line with tail
-        Segment *blank = wksp.create_blank_lines(1);
-        // TODO: Need to set the content of this blank line to tail
-        wksp.insert_segments(blank, curLine + 1);
+        // Insert new line with tail content
+        if (!tail.empty()) {
+            Segment *tail_seg = wksp.write_line_to_temp(tail);
+            if (tail_seg) {
+                wksp.insert_segments(tail_seg, curLine + 1);
+            } else {
+                // Fallback: insert blank line
+                Segment *blank = wksp.create_blank_lines(1);
+                wksp.insert_segments(blank, curLine + 1);
+            }
+        } else {
+            Segment *blank = wksp.create_blank_lines(1);
+            wksp.insert_segments(blank, curLine + 1);
+        }
         if (cursor_line + 1 < nlines - 1) {
             cursor_line++;
         } else {

@@ -808,3 +808,98 @@ void Workspace::cleanup_segments(Segment *seg)
         seg = next;
     }
 }
+
+//
+// Scroll workspace by nl lines (based on wksp_forward from prototype).
+// nl: negative for up, positive for down
+//
+void Workspace::scroll_vertical(int nl, int max_rows, int total_lines)
+{
+    if (nl < 0) {
+        // Scroll up (toward beginning)
+        if (topline_ == 0) {
+            // Already at top
+            return;
+        }
+    } else {
+        // Scroll down (toward end)
+        int last_line = total_lines - topline_;
+        if (last_line <= max_rows) {
+            // Already showing the end
+            return;
+        }
+    }
+
+    topline_ += nl;
+
+    // Clamp topline to valid range
+    if (topline_ > total_lines - max_rows)
+        topline_ = total_lines - max_rows;
+    if (topline_ < 0)
+        topline_ = 0;
+
+    // Update current line to stay in visible range
+    if (line_ > topline_ + max_rows - 1)
+        line_ = topline_ + max_rows - 1;
+    if (line_ < topline_)
+        line_ = topline_;
+}
+
+//
+// Shift horizontal view by nc columns (based on wksp_offset from prototype).
+// nc: negative for left, positive for right
+//
+void Workspace::scroll_horizontal(int nc, int max_cols)
+{
+    // Adjust offset with bounds checking
+    if ((basecol_ + nc) < 0)
+        nc = -basecol_;
+
+    basecol_ += nc;
+
+    // Clamp to non-negative
+    if (basecol_ < 0)
+        basecol_ = 0;
+}
+
+//
+// Go to a specific line in the file (based on gtfcn from prototype).
+//
+void Workspace::goto_line(int target_line, int max_rows)
+{
+    if (target_line < 0)
+        return;
+
+    // Calculate where to position topline to show target_line near middle
+    int half_screen = max_rows / 2;
+
+    // Position to show target_line around middle of screen
+    scroll_vertical(target_line - topline_ - half_screen, max_rows, nlines_);
+
+    // Ensure target_line is in visible range
+    if (target_line < topline_)
+        topline_ = target_line;
+    else if (target_line >= topline_ + max_rows)
+        topline_ = target_line - max_rows + 1;
+
+    // Update current position
+    line_ = target_line;
+    position(line_);
+}
+
+//
+// Update topline when file changes (used by wksp_redraw from prototype).
+//
+void Workspace::update_topline_after_edit(int from, int to, int delta)
+{
+    // Adjust topline when lines are inserted/deleted
+    int j = (delta >= 0) ? to : from;
+
+    if (topline_ > j) {
+        topline_ += delta;
+
+        // Ensure topline doesn't go negative
+        if (topline_ < 0)
+            topline_ = 0;
+    }
+}

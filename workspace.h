@@ -105,6 +105,22 @@ public:
     // Cleanup a segment chain (static helper)
     static void cleanup_segments(Segment *seg);
 
+    // View management methods (from prototype)
+    // Scroll workspace by nl lines (negative for up, positive for down)
+    // max_rows: maximum visible rows in display
+    // total_lines: total lines in file
+    void scroll_vertical(int nl, int max_rows, int total_lines);
+
+    // Shift horizontal view by nc columns (negative for left, positive for right)
+    // max_cols: maximum visible columns in display
+    void scroll_horizontal(int nc, int max_cols);
+
+    // Go to a specific line in the file (gtfcn from prototype)
+    void goto_line(int target_line, int max_rows);
+
+    // Update topline when file changes (used by wksp_redraw)
+    void update_topline_after_edit(int from, int to, int delta);
+
 private:
     Segment *cursegm_{ nullptr }; // current segment in chain
     Segment *chain_{ nullptr };   // file's segment chain (direct access)

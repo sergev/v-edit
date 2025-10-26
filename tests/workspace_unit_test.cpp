@@ -427,3 +427,140 @@ TEST_F(WorkspaceTest, LargeFileSegmentOperations)
         Workspace::cleanup_segments(deleted);
     cleanupTestFile(filename);
 }
+
+//
+// Test view management methods
+//
+TEST_F(WorkspaceTest, ScrollVerticalDown)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(0);
+
+    // Scroll down by 10 lines
+    wksp->scroll_vertical(10, 20, 100);
+
+    EXPECT_EQ(wksp->topline(), 10);
+}
+
+TEST_F(WorkspaceTest, ScrollVerticalUp)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(20);
+
+    // Scroll up by 10 lines
+    wksp->scroll_vertical(-10, 20, 100);
+
+    EXPECT_EQ(wksp->topline(), 10);
+}
+
+TEST_F(WorkspaceTest, ScrollVerticalClampTop)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(10);
+
+    // Try to scroll up beyond top
+    wksp->scroll_vertical(-20, 20, 100);
+
+    EXPECT_GE(wksp->topline(), 0);
+}
+
+TEST_F(WorkspaceTest, ScrollVerticalClampBottom)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(80);
+
+    // Try to scroll down beyond bottom
+    wksp->scroll_vertical(30, 20, 100);
+
+    // Should clamp to last valid position
+    EXPECT_LE(wksp->topline(), 100 - 20);
+}
+
+TEST_F(WorkspaceTest, ScrollHorizontalRight)
+{
+    wksp->set_basecol(0);
+
+    // Scroll right by 10 columns
+    wksp->scroll_horizontal(10, 80);
+
+    EXPECT_EQ(wksp->basecol(), 10);
+}
+
+TEST_F(WorkspaceTest, ScrollHorizontalLeft)
+{
+    wksp->set_basecol(20);
+
+    // Scroll left by 10 columns
+    wksp->scroll_horizontal(-10, 80);
+
+    EXPECT_EQ(wksp->basecol(), 10);
+}
+
+TEST_F(WorkspaceTest, ScrollHorizontalClamp)
+{
+    wksp->set_basecol(10);
+
+    // Try to scroll left beyond 0
+    wksp->scroll_horizontal(-20, 80);
+
+    EXPECT_GE(wksp->basecol(), 0);
+}
+
+TEST_F(WorkspaceTest, GotoLine)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(0);
+
+    // Go to line 50
+    wksp->goto_line(50, 20);
+
+    EXPECT_EQ(wksp->line(), 50);
+    EXPECT_LE(wksp->topline(), 50);
+}
+
+TEST_F(WorkspaceTest, GotoLineNearEnd)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(0);
+
+    // Go to line 95 (near end)
+    wksp->goto_line(95, 20);
+
+    EXPECT_EQ(wksp->line(), 95);
+}
+
+TEST_F(WorkspaceTest, UpdateToplineAfterInsert)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(80);
+
+    // Insert 5 lines at position 50
+    wksp->update_topline_after_edit(50, 55, 5);
+
+    // Since topline > edit position, should shift down
+    EXPECT_GE(wksp->topline(), 85);
+}
+
+TEST_F(WorkspaceTest, UpdateToplineAfterDelete)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(80);
+
+    // Delete 5 lines starting at position 50
+    wksp->update_topline_after_edit(50, 55, -5);
+
+    // Since topline > edit position, should shift up
+    EXPECT_LE(wksp->topline(), 75);
+}
+
+TEST_F(WorkspaceTest, UpdateToplineBeforeEdit)
+{
+    wksp->set_nlines(100);
+    wksp->set_topline(60);
+
+    // Edit happens at position 80 (below topline)
+    wksp->update_topline_after_edit(80, 85, 5);
+
+    // Since topline < edit position, should not change
+    EXPECT_EQ(wksp->topline(), 60);
+}

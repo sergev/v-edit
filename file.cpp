@@ -21,15 +21,8 @@ void Editor::build_segment_chain_from_text(const std::string &text)
 void Editor::get_line(int lno)
 {
     current_line_modified = false;
-    current_line_no        = lno;
-    
-    // Check cache first
-    auto it = line_cache.find(lno);
-    if (it != line_cache.end()) {
-        current_line = it->second;
-        return;
-    }
-    
+    current_line_no       = lno;
+
     if (!wksp.has_segments()) {
         if (current_line.empty()) {
             current_line = "";
@@ -38,7 +31,7 @@ void Editor::get_line(int lno)
         }
         return;
     }
-    
+
     current_line = read_line_from_wksp(lno);
 }
 
@@ -51,12 +44,62 @@ void Editor::put_line()
         current_line_no = -1;
         return;
     }
-    
-    // Cache the modified line
-    line_cache[current_line_no] = current_line;
-    
+
+    if (wksp.nlines() <= current_line_no) {
+        wksp.set_nlines(current_line_no + 1);
+    }
+
     current_line_modified = false;
-    current_line_no        = -1;
+
+    // Write the modified line to temp file and get a segment for it
+    Segment *new_seg = wksp.write_line_to_temp(current_line);
+    if (!new_seg) {
+        current_line_no = -1;
+        return;
+    }
+
+    int line_no     = current_line_no;
+    current_line_no = -1;
+
+    // Break segment at line_no position
+    if (wksp.breaksegm(line_no, true) == 0) {
+        Segment *old_seg = wksp.cursegm();
+        Segment *prev    = old_seg ? old_seg->prev : nullptr;
+
+        // Break at line_no + 1 to isolate the line
+        if (wksp.breaksegm(line_no + 1, false) == 0) {
+            Segment *after = wksp.cursegm();
+
+            // Link new segment in place of old line
+            new_seg->prev = prev;
+            new_seg->next = after;
+
+            if (prev) {
+                prev->next = new_seg;
+            } else {
+                wksp.set_chain(new_seg);
+            }
+
+            if (after) {
+                after->prev = new_seg;
+            }
+
+            // Update workspace position
+            wksp.set_cursegm(new_seg);
+            wksp.set_segmline(line_no);
+
+            // Free old segment
+            if (old_seg) {
+                delete old_seg;
+            }
+
+            // Try to merge adjacent segments
+            wksp.catsegm();
+
+            // Mark workspace as modified
+            wksp.set_modified(true);
+        }
+    }
 }
 
 //
@@ -74,16 +117,10 @@ void Editor::ensure_line_saved()
 //
 std::string Editor::read_line_from_wksp(int lno)
 {
-    // Check cache first
-    auto it = line_cache.find(lno);
-    if (it != line_cache.end()) {
-        return it->second;
-    }
-    
     if (!wksp.has_segments()) {
         return std::string();
     }
-    
+
     // Use workspace's read_line_from_segment
     return wksp.read_line_from_segment(lno);
 }
@@ -110,19 +147,8 @@ void Editor::open_initial(int argc, char **argv)
 //
 bool Editor::load_file_segments(const std::string &path)
 {
-    std::ifstream in(path.c_str(), std::ios::binary);
-    if (!in)
-        return false;
-    std::string text;
-    in.seekg(0, std::ios::end);
-    std::streampos sz = in.tellg();
-    if (sz > 0) {
-        text.resize((size_t)sz);
-        in.seekg(0, std::ios::beg);
-        in.read(&text[0], sz);
-    }
-    build_segment_chain_from_text(text);
-    return true;
+    // Use workspace's load_file_to_segments to properly set up path and segments
+    return load_file_to_segments(path);
 }
 
 //
@@ -143,8 +169,8 @@ bool Editor::load_file_to_segments(const std::string &path)
 //
 void Editor::save_file()
 {
-    ensure_line_saved();  // Save any unsaved line modifications
-    
+    ensure_line_saved(); // Save any unsaved line modifications
+
     // Create backup file if not already done and file exists
     if (!wksp.backup_done() && filename != "untitled") {
         std::string backup_name = filename + "~";
@@ -167,6 +193,7 @@ void Editor::save_file()
     // Use workspace's write_segments_to_file
     if (wksp.write_segments_to_file(filename)) {
         status = std::string("Saved: ") + filename;
+        wksp.set_modified(false); // Clear modified flag after save
     } else {
         status = std::string("Cannot write: ") + filename;
     }
@@ -177,8 +204,8 @@ void Editor::save_file()
 //
 void Editor::save_as(const std::string &new_filename)
 {
-    ensure_line_saved();  // Save any unsaved line modifications
-    
+    ensure_line_saved(); // Save any unsaved line modifications
+
     // Unlink the original file to ensure backup is not affected by the write
     unlink(new_filename.c_str());
 

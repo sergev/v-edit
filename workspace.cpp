@@ -373,9 +373,6 @@ void Workspace::build_segment_chain_from_file(int fd)
 //
 std::string Workspace::read_line_from_segment(int line_no)
 {
-    if (path_.empty())
-        return std::string();
-
     if (position(line_no))
         return std::string();
 
@@ -400,13 +397,24 @@ std::string Workspace::read_line_from_segment(int line_no)
     // Read line from file
     char *buffer = new char[line_len];
 
-    // Open file and read
-    int fd = open(path_.c_str(), O_RDONLY);
+    // Determine which file to read from
+    int fd = -1;
+    if (seg->fdesc == tempfile_fd_) {
+        // Reading from temp file
+        fd = tempfile_fd_;
+    } else if (!path_.empty()) {
+        // Reading from original file
+        fd = open(path_.c_str(), O_RDONLY);
+    }
+
     if (fd >= 0) {
         if (lseek(fd, seek_pos, SEEK_SET) >= 0) {
             read(fd, buffer, line_len);
         }
-        close(fd);
+        // Close file if we opened it (not temp file)
+        if (fd != tempfile_fd_) {
+            close(fd);
+        }
     }
 
     std::string result(buffer, line_len - 1); // exclude newline
@@ -420,19 +428,12 @@ std::string Workspace::read_line_from_segment(int line_no)
 //
 bool Workspace::write_segments_to_file(const std::string &path)
 {
-    if (!chain_ || path_.empty())
+    if (!chain_)
         return false;
 
     int out_fd = creat(path.c_str(), 0664);
     if (out_fd < 0)
         return false;
-
-    // Open source file
-    int in_fd = open(path_.c_str(), O_RDONLY);
-    if (in_fd < 0) {
-        close(out_fd);
-        return false;
-    }
 
     Segment *seg = chain_;
     char buffer[8192];
@@ -442,21 +443,43 @@ bool Workspace::write_segments_to_file(const std::string &path)
             // Calculate total bytes for this segment
             long total_bytes = seg->get_total_bytes();
 
+            // Determine which file to read from
+            int read_fd;
+            if (seg->fdesc == tempfile_fd_) {
+                // Reading from temp file
+                read_fd = tempfile_fd_;
+            } else if (!path_.empty()) {
+                // Reading from original file
+                read_fd = open(path_.c_str(), O_RDONLY);
+                if (read_fd < 0) {
+                    close(out_fd);
+                    return false;
+                }
+            } else {
+                // No valid source file
+                close(out_fd);
+                return false;
+            }
+
             // Read from source file and write to output
-            lseek(in_fd, seg->seek, SEEK_SET);
+            lseek(read_fd, seg->seek, SEEK_SET);
             while (total_bytes > 0) {
                 int to_read = (total_bytes < (long)sizeof(buffer)) ? total_bytes : sizeof(buffer);
-                int nread   = read(in_fd, buffer, to_read);
+                int nread   = read(read_fd, buffer, to_read);
                 if (nread <= 0)
                     break;
                 write(out_fd, buffer, nread);
                 total_bytes -= nread;
             }
+
+            // Close file if we opened it (not temp file)
+            if (read_fd != tempfile_fd_) {
+                close(read_fd);
+            }
         }
         seg = seg->next;
     }
 
-    close(in_fd);
     close(out_fd);
     return true;
 }
@@ -906,4 +929,79 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
         if (topline_ < 0)
             topline_ = 0;
     }
+}
+
+//
+// Open temporary file for writing modified lines.
+//
+bool Workspace::open_temp_file()
+{
+    if (tempfile_fd_ >= 0) {
+        return true; // Already open
+    }
+
+    // Create temporary file
+    char tmpname[] = "/tmp/v-edit-XXXXXX";
+    tempfile_fd_   = mkstemp(tmpname);
+    if (tempfile_fd_ < 0) {
+        return false;
+    }
+
+    // Remove the file from filesystem but keep fd open
+    unlink(tmpname);
+    tempseek_ = 0;
+    return true;
+}
+
+//
+// Close temporary file.
+//
+void Workspace::close_temp_file()
+{
+    if (tempfile_fd_ >= 0) {
+        close(tempfile_fd_);
+        tempfile_fd_ = -1;
+        tempseek_    = 0;
+    }
+}
+
+//
+// Write a line to temporary file and return a segment for it.
+// Based on prototype's writemp() function.
+//
+Segment *Workspace::write_line_to_temp(const std::string &line_content)
+{
+    if (tempfile_fd_ < 0 && !open_temp_file()) {
+        return nullptr;
+    }
+
+    // Add newline if not present
+    std::string line = line_content;
+    if (line.empty() || line.back() != '\n') {
+        line += '\n';
+    }
+
+    // Convert to external format (handle binary/control chars if needed)
+    // For now, just write as-is
+    int nbytes = line.size();
+
+    // Write to temp file
+    if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
+        return nullptr;
+    }
+
+    // Create segment for this line
+    Segment *seg = new Segment();
+    seg->prev    = nullptr;
+    seg->next    = nullptr;
+    seg->nlines  = 1;
+    seg->fdesc   = tempfile_fd_;
+    seg->seek    = tempseek_;
+
+    // Store line length in data
+    seg->add_line_length(nbytes);
+
+    tempseek_ += nbytes;
+
+    return seg;
 }

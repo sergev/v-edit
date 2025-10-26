@@ -43,6 +43,8 @@ public:
     void set_segmline(int segmline) { segmline_ = segmline; }
     void set_cursorcol(int cursorcol) { cursorcol_ = cursorcol; }
     void set_cursorrow(int cursorrow) { cursorrow_ = cursorrow; }
+    void set_chain(Segment *chain) { chain_ = chain; }
+    void set_cursegm(Segment *seg) { cursegm_ = seg; }
 
     // Segment chain operations
     // Build segment chain from in-memory lines vector
@@ -127,6 +129,11 @@ public:
     // Update topline when file changes (used by wksp_redraw)
     void update_topline_after_edit(int from, int to, int delta);
 
+    // Temporary file operations for writing modified lines
+    bool open_temp_file();
+    void close_temp_file();
+    Segment *write_line_to_temp(const std::string &line_content);
+
 private:
     Segment *cursegm_{ nullptr }; // current segment in chain
     Segment *chain_{ nullptr };   // file's segment chain (direct access)
@@ -141,6 +148,8 @@ private:
     int cursorrow_{ 0 };          // saved cursor row
     bool modified_{ false };      // track if file has been modified
     bool backup_done_{ false };   // track if backup file has been created
+    int tempfile_fd_{ -1 };       // file descriptor for temporary file
+    long tempseek_{ 0 };          // seek position for temporary file
 
     // Helper to update current segment pointer
     void update_current_segment(Segment *seg) { cursegm_ = seg; }

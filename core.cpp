@@ -99,6 +99,10 @@ void Editor::model_init()
     // Initialize workspaces
     wksp     = Workspace{};
     alt_wksp = Workspace{};
+
+    // Open temp files for workspaces
+    wksp.open_temp_file();
+    alt_wksp.open_temp_file();
 }
 
 //

@@ -85,13 +85,13 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     // Replace the selected lines with the output
     // Delete old lines
     wksp.delete_segments(start_line, start_line + num_lines - 1);
-    
+
     // Insert new content
     wksp.build_segment_chain_from_text(output_text);
-    
+
     // Update line count - TODO: need better integration
     int new_num_lines = 0;
-    Segment *seg = wksp.chain();
+    Segment *seg      = wksp.chain();
     while (seg && seg->fdesc) {
         new_num_lines += seg->nlines;
         seg = seg->next;

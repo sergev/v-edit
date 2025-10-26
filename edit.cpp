@@ -96,12 +96,12 @@ void Editor::move_down()
 int Editor::current_line_length() const
 {
     int curLine = wksp.topline() + cursor_line;
-    
+
     // Load the line if not already loaded or if it's a different line
     if (current_line_no != curLine) {
-        const_cast<Editor*>(this)->get_line(curLine);
+        const_cast<Editor *>(this)->get_line(curLine);
     }
-    
+
     return (int)current_line.size();
 }
 
@@ -271,7 +271,7 @@ void Editor::insertlines(int from, int number)
     Segment *blank = wksp.create_blank_lines(number);
     wksp.insert_segments(blank, from);
     wksp.set_nlines(wksp.nlines() + number);
-    
+
     ensure_cursor_visible();
 }
 
@@ -328,8 +328,8 @@ void Editor::splitline(int line, int col)
     ln.erase(col);
 
     // Update current line
-    current_line = ln;
-    current_line_no = line;
+    current_line          = ln;
+    current_line_no       = line;
     current_line_modified = true;
     put_line();
 
@@ -368,8 +368,8 @@ void Editor::combineline(int line, int col)
     current += next;
 
     // Update line
-    current_line = current;
-    current_line_no = line;
+    current_line          = current;
+    current_line_no       = line;
     current_line_modified = true;
     put_line();
 

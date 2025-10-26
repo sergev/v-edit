@@ -475,8 +475,7 @@ void Editor::handle_area_selection(int ch)
     case KEY_HOME:
         cursor_col = 0;
         break;
-    case KEY_END:
-    {
+    case KEY_END: {
         int curLine = wksp.topline() + cursor_line;
         get_line(curLine);
         cursor_col = current_line.length();
@@ -577,7 +576,7 @@ void Editor::handle_key_edit(int ch)
             // Join with next line
             get_line(curLine + 1);
             current_line += current_line;
-            current_line_no = curLine;
+            current_line_no       = curLine;
             current_line_modified = true;
             put_line();
             // Delete next line
@@ -618,7 +617,7 @@ void Editor::handle_key_edit(int ch)
     }
     // ^O - Insert blank line
     if (ch == 15) { // Ctrl-O
-        int curLine = wksp.topline() + cursor_line;
+        int curLine    = wksp.topline() + cursor_line;
         Segment *blank = wksp.create_blank_lines(1);
         wksp.insert_segments(blank, curLine + 1);
         wksp.set_nlines(wksp.nlines() + 1);
@@ -779,7 +778,8 @@ void Editor::handle_key_edit(int ch)
 
     // --- Basic editing operations using current_line buffer ---
     int curLine = wksp.topline() + cursor_line;
-    if (curLine < 0) curLine = 0;
+    if (curLine < 0)
+        curLine = 0;
     get_line(curLine);
 
     if (ch == KEY_BACKSPACE || ch == 127) {
@@ -795,14 +795,14 @@ void Editor::handle_key_edit(int ch)
             std::string prev = current_line;
             get_line(curLine);
             prev += current_line;
-            current_line = prev;
-            current_line_no = curLine - 1;
+            current_line          = prev;
+            current_line_no       = curLine - 1;
             current_line_modified = true;
             put_line();
             // Delete current line
             wksp.delete_segments(curLine, curLine);
             cursor_line = cursor_line > 0 ? cursor_line - 1 : 0;
-            cursor_col = prev.size();
+            cursor_col  = prev.size();
         }
         put_line();
         ensure_cursor_visible();
@@ -817,7 +817,7 @@ void Editor::handle_key_edit(int ch)
             // Join with next line
             get_line(curLine + 1);
             current_line += current_line;
-            current_line_no = curLine;
+            current_line_no       = curLine;
             current_line_modified = true;
             put_line();
             wksp.delete_segments(curLine + 1, curLine + 1);

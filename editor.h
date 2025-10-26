@@ -27,14 +27,12 @@ private:
     std::string filename{ "untitled" };
     bool cmd_mode{ false };
     bool quit_flag{ false };
-    
+
     // Current line buffer (prototype's cline pattern)
     std::string current_line;
     int current_line_no{ -1 };
     bool current_line_modified{ false };
-    
-    // Cache for in-memory line modifications (until segments are rebuilt)
-    std::map<int, std::string> line_cache;
+
     bool filter_mode{ false };         // track if we're in filter command mode
     bool area_selection_mode{ false }; // track if we're in area selection mode
     std::string cmd;
@@ -111,10 +109,10 @@ private:
     bool load_file_to_segments(const std::string &path);
 
     // Current line buffer operations (prototype's getlin/putline pattern)
-    void get_line(int lno);          // load line from workspace into current_line buffer
-    void put_line();                  // write current_line back to workspace if modified
-    void ensure_line_saved();         // flush current line if modified
-    
+    void get_line(int lno);   // load line from workspace into current_line buffer
+    void put_line();          // write current_line back to workspace if modified
+    void ensure_line_saved(); // flush current line if modified
+
     // Helper to read line from workspace (replaces get_line_from_model/segs)
     std::string read_line_from_wksp(int lno);
 

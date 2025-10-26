@@ -191,26 +191,91 @@ Commands entered with Enter:
 - **Description**: Immediate quit without save
 - **Example**: `qa`
 
+## Function Keys (Work in Edit Mode)
+
+- **F1** or **^A** - Enter command mode
+- **F2** - Save file
+- **F3** - Switch to next file
+- **F4** - Enter filter command mode (for external filters)
+- **F5** - Copy current line to clipboard
+- **F6** - Paste clipboard at current position
+- **F7** - Search forward dialog (same as ^F)
+- **F8** - Goto line dialog
+
+## Edit Mode Shortcuts
+
+These shortcuts work directly in edit mode without entering command mode:
+
+- **^C** - Copy current line to clipboard
+- **^V** - Paste clipboard at current position
+- **^Y** - Delete current line
+- **^O** - Insert blank line below cursor
+- **^D** - Delete character under cursor
+- **^P** - Quote next character (insert literally)
+- **^N** - Switch to alternative workspace
+- **^F** - Search forward dialog
+- **^B** - Search backward dialog
+
 ## Command Mode Indicators
 
 When in command mode, the status bar shows "Cmd: " followed by your input.
 
 Area selection mode shows: "*** Area defined by cursor ***"
 
+Filter command mode shows: "Filter command: "
+
+## Examples
+
+### Example 1: Search and Replace Pattern
+1. Press **F1** to enter command mode
+2. Type `/searchterm` and press Enter
+3. Press **n** to find next matches
+4. Press **N** to find previous matches
+
+### Example 2: Rectangular Block Copy
+1. Move cursor to top-left corner of block
+2. Press **F1** to enter command mode
+3. Move cursor to bottom-right corner
+4. Press **^C** to copy the rectangular block
+5. Press **^V** to paste it elsewhere
+
+### Example 3: Multiple File Editing
+1. Open first file: `ve file1.txt`
+2. Press **F1** and type `ofile2.txt` and Enter
+3. Press **F3** to switch between files
+4. Press **F2** to save current file
+
+### Example 4: Using Filters
+1. Select lines in area selection mode (move cursor with F1)
+2. Press **F4** to enter filter mode
+3. Type `|sort` and press Enter
+4. Selected lines are sorted
+
+### Example 5: Alternative Workspace
+1. Press **^N** to create alternative workspace (opens help)
+2. Press **^N** again to return to your file
+3. Both workspaces maintain independent state
+
 ## Implementation Status
 
-Not all prototype commands are implemented in the current ve C++ version. Implemented commands include:
+All major features from the prototype are implemented, including:
 
-- Basic file operations (open, save, quit)
-- Search (/ and ?)
-- Goto line (g, :)
-- Area selection and block operations
-- Clipboard copy/paste
-- Line/block delete and insert
-- Some macro support (position markers, named buffers)
+- ✅ Basic file operations (open, save, quit)
+- ✅ Search (/ and ? with n/N navigation)
+- ✅ Goto line (g, :)
+- ✅ Area selection and rectangular block operations
+- ✅ Clipboard copy/paste (line and block)
+- ✅ Line/block delete and insert
+- ✅ Macro support (position markers, named buffers)
+- ✅ Multiple file support
+- ✅ Alternative workspace switching
+- ✅ External filter execution
+- ✅ Session save/restore
+- ✅ Help file system
 
 ## See Also
 
 - [README.md](../README.md) - General editor usage
+- [Rectangular_Blocks.md](Rectangular_Blocks.md) - Rectangular block operations guide
 - [Testing.md](Testing.md) - Test suite documentation
 - [AI_Prompt.md](AI_Prompt.md) - Developer documentation

@@ -50,10 +50,25 @@ Rectangular blocks are defined by selecting a rectangular area of text using the
 
 ## Differences from Line Operations
 
-- **Line operations** (F5/F6 or ^C/^V without area selection): Work on entire lines
+- **Line operations** (F5/F6 or ^C/^V without area selection in edit mode): Work on entire lines
 - **Rectangular operations**: Work on specific column ranges across multiple lines
 
 The clipboard tracks whether it contains a rectangular block or lines, allowing the paste operation to behave appropriately.
+
+## Quick Access from Edit Mode
+
+Even though rectangular block operations require entering command mode, there are equivalent operations that work in edit mode:
+
+- **F5** - Copy current line (works in edit mode)
+- **F6** - Paste clipboard (works in edit mode)
+- **^C** - Copy line or rectangular block (context-dependent)
+- **^V** - Paste clipboard (works in edit mode)
+
+For rectangular blocks specifically, you must:
+1. Enter command mode (F1 or ^A)
+2. Move cursor to define rectangular area
+3. Press ^C, ^Y, or ^O to perform the operation
+4. Press ^V to paste (works in edit mode)
 
 ## Implementation Details
 

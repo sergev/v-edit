@@ -43,28 +43,47 @@ The editor maintains both representations with a dirty flag system to keep them 
 - **Insert mode** (default): Characters inserted at cursor
 - **Overwrite mode**: Characters replace existing text (toggle with `^X i`)
 - **Command mode**: `F1` or `^A` to enter commands
+- **Area selection mode**: For selecting rectangular blocks
+- **Filter mode**: For executing external shell commands
 
 ### Editing Operations
 - **Character edit**: Insert/overwrite characters, tabs
-- **Line operations**: Copy (`^C`), paste (`^V`), delete (`^Y`), insert blank (`^O`)
+- **Line operations**: Copy (`^C`, `F5`), paste (`^V`, `F6`), delete (`^Y`), insert blank (`^O`)
 - **Rectangular block operations**: Copy (`^C` in area selection), delete (`^Y`), insert spaces (`^O`)
 - **Clipboard**: Line ranges and rectangular blocks
+- **Function keys**: F1-F8 for quick access to common operations
 
 ### File Operations
 - **Open**: `o<filename>` or `F3` (next file)
 - **Save**: `F2`, `^A s`, or `:w`
 - **Exit**: `qa` (no save), `^X ^C` (save and exit), `:wq`
+- **Multiple files**: Support for multiple files, switching with F3
+- **Alternative workspace**: `^N` to switch between two workspaces
 
 ### Navigation
-- **Search**: `/text` (forward), `?text` (backward), `n` (next)
+- **Search**: `/text` (forward), `?text` (backward), `n` (next), `N` (previous)
+- **Search dialogs**: `^F` or `F7` (forward), `^B` (backward), `F8` (goto line)
 - **Goto line**: `g<number>` or `:<number>`
 - **Scroll**: `^X f/b` (shift view), Page Up/Down, Home/End
+- **Cursor movement**: Arrow keys, Home/End for line navigation
 
 ### Advanced Features
 - **External filters**: `F4` to run shell commands on selected lines
-- **Macros**: Position markers (`>>x`) and buffers (`>x`, use with `$x`)
+- **Macros**: Position markers (`>x`) and buffers (use with `$x`)
 - **Session restore**: Automatically saves/restores editing position
 - **Help file**: Built-in help accessible via `^N` (alternative workspace)
+- **Quote mode**: `^P` to insert literal characters
+- **Overwrite mode**: Toggle with `^X i`
+
+### Function Keys
+- **F1** or **^A**: Enter command mode
+- **F2**: Save file
+- **F3**: Switch to next file
+- **F4**: Filter mode (execute external commands)
+- **F5**: Copy current line
+- **F6**: Paste clipboard
+- **F7**: Search forward dialog
+- **F8**: Goto line dialog
 
 ### UI
 - **Status bar**: Shows line/column, mode, filename (cyan background, black text if colors supported)
@@ -104,12 +123,19 @@ cmake --install build
 - `input.cpp` - Key handling (edit mode, command mode, area selection)
 - `edit.cpp` - File operations, search, navigation
 - `file.cpp` - File I/O operations
-- `files.cpp` - Multiple file management
-- `clipboard.cpp` - Clipboard operations
+- `files.cpp` - Multiple file management, alternative workspace, help file
+- `clipboard.cpp` - Clipboard operations (line and rectangular blocks)
 - `session.cpp` - Session save/restore, journaling
 - `filter.cpp` - External filter execution
 - `segments.cpp` - Segment chain model implementation
 - `signal_handler.cpp` - Signal handling, crash recovery
+
+**Key Features by File**:
+- `input.cpp` - Handles all keyboard input, modes, and shortcuts
+- `files.cpp` - Manages multiple files and alternative workspace (^N)
+- `clipboard.cpp` - Supports both line-based and rectangular block clipboards
+- `edit.cpp` - Search, navigation, goto line
+- `filter.cpp` - External command execution (F4 filter mode)
 
 ## Tests
 

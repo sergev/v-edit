@@ -7,7 +7,7 @@ void Editor::goto_line(int lineNumber)
 {
     if (lineNumber < 0)
         lineNumber = 0;
-    int total = wksp.get_line_count((int)lines.size());
+    int total = wksp.nlines();
     if (lineNumber >= total)
         lineNumber = total - 1;
     if (lineNumber < 0)
@@ -75,7 +75,7 @@ void Editor::move_up()
 //
 void Editor::move_down()
 {
-    int total = wksp.get_line_count((int)lines.size());
+    int total = wksp.nlines();
     if (cursor_line < nlines - 2) {
         int absLine = wksp.topline() + cursor_line + 1;
         if (absLine < total) {
@@ -96,10 +96,13 @@ void Editor::move_down()
 int Editor::current_line_length() const
 {
     int curLine = wksp.topline() + cursor_line;
-    if (curLine >= 0 && curLine < (int)lines.size()) {
-        return (int)lines[curLine].size();
+    
+    // Load the line if not already loaded or if it's a different line
+    if (current_line_no != curLine) {
+        const_cast<Editor*>(this)->get_line(curLine);
     }
-    return 0;
+    
+    return (int)current_line.size();
 }
 
 //
@@ -109,10 +112,11 @@ bool Editor::search_forward(const std::string &needle)
 {
     int startLine = wksp.topline() + cursor_line;
     int startCol  = wksp.basecol() + cursor_col;
+    int total     = wksp.nlines();
 
     // Search from current position forward
-    for (int i = startLine; i < (int)lines.size(); ++i) {
-        std::string line = get_line_from_model(i);
+    for (int i = startLine; i < total; ++i) {
+        std::string line = read_line_from_wksp(i);
         size_t pos       = (i == startLine) ? (size_t)startCol : 0;
         pos              = line.find(needle, pos);
         if (pos != std::string::npos) {
@@ -134,7 +138,7 @@ bool Editor::search_forward(const std::string &needle)
 
     // Wrap around to beginning
     for (int i = 0; i <= startLine; ++i) {
-        std::string line = get_line_from_model(i);
+        std::string line = read_line_from_wksp(i);
         size_t pos       = 0;
         if (i == startLine) {
             pos = line.find(needle, (size_t)startCol);
@@ -170,10 +174,11 @@ bool Editor::search_backward(const std::string &needle)
 {
     int startLine = wksp.topline() + cursor_line;
     int startCol  = wksp.basecol() + cursor_col;
+    int total     = wksp.nlines();
 
     // Search from current position backward
     for (int i = startLine; i >= 0; --i) {
-        std::string line = get_line_from_model(i);
+        std::string line = read_line_from_wksp(i);
         size_t pos       = std::string::npos;
         if (i == startLine) {
             pos = line.rfind(needle, (size_t)startCol);
@@ -197,8 +202,8 @@ bool Editor::search_backward(const std::string &needle)
     }
 
     // Wrap around to end
-    for (int i = (int)lines.size() - 1; i > startLine; --i) {
-        std::string line = get_line_from_model(i);
+    for (int i = total - 1; i > startLine; --i) {
+        std::string line = read_line_from_wksp(i);
         size_t pos       = line.rfind(needle);
         if (pos != std::string::npos) {
             wksp.set_topline(i);
@@ -260,21 +265,13 @@ void Editor::insertlines(int from, int number)
     if (from < 0 || number < 1)
         return;
 
-    ensure_segments_up_to_date();
+    ensure_line_saved();
 
-    // Insert blank lines
-    for (int i = 0; i < number; ++i) {
-        if (from >= (int)lines.size()) {
-            lines.push_back("");
-        } else {
-            lines.insert(lines.begin() + from + i, "");
-        }
-    }
-
+    // Insert blank lines using workspace segments
+    Segment *blank = wksp.create_blank_lines(number);
+    wksp.insert_segments(blank, from);
     wksp.set_nlines(wksp.nlines() + number);
-
-    build_segment_chain_from_lines();
-    segments_dirty = true;
+    
     ensure_cursor_visible();
 }
 
@@ -286,26 +283,23 @@ void Editor::deletelines(int from, int number)
     if (from < 0 || number < 1)
         return;
 
-    ensure_segments_up_to_date();
+    ensure_line_saved();
 
+    // TODO: clipboard with segments
     // Save to clipboard (delete buffer)
-    clipboard.copy_lines(lines, from, number);
+    // clipboard.copy_lines(lines, from, number);
 
-    // Delete the lines
-    int end_line = std::min(from + number, (int)lines.size());
-    if (from < (int)lines.size()) {
-        lines.erase(lines.begin() + from, lines.begin() + end_line);
-    }
-
-    // Ensure at least one line exists
-    if (lines.empty()) {
-        lines.push_back("");
-    }
-
+    // Delete the lines using workspace segments
+    wksp.delete_segments(from, from + number - 1);
     wksp.set_nlines(std::max(0, wksp.nlines() - number));
 
-    build_segment_chain_from_lines();
-    segments_dirty = true;
+    // Ensure at least one line exists
+    if (wksp.nlines() == 0) {
+        Segment *blank = wksp.create_blank_lines(1);
+        wksp.insert_segments(blank, 0);
+        wksp.set_nlines(1);
+    }
+
     ensure_cursor_visible();
 }
 
@@ -317,15 +311,11 @@ void Editor::splitline(int line, int col)
     if (line < 0 || col < 0)
         return;
 
-    ensure_segments_up_to_date();
+    ensure_line_saved();
 
-    // Get the line
-    std::string ln;
-    if (line < (int)lines.size()) {
-        ln = lines[line];
-    } else {
-        ln = "";
-    }
+    // Get the line using current_line buffer
+    get_line(line);
+    std::string ln = current_line;
 
     // Split at column
     if (col >= (int)ln.size()) {
@@ -338,21 +328,15 @@ void Editor::splitline(int line, int col)
     ln.erase(col);
 
     // Update current line
-    if (line < (int)lines.size()) {
-        lines[line] = ln;
-    }
+    current_line = ln;
+    current_line_no = line;
+    current_line_modified = true;
+    put_line();
 
-    // Insert new line with tail
-    if (line + 1 < (int)lines.size()) {
-        lines.insert(lines.begin() + line + 1, tail);
-    } else {
-        lines.push_back(tail);
-    }
-
+    // Insert new line with tail - TODO: need proper way to insert non-blank line
+    insertlines(line + 1, 1);
     wksp.set_nlines(wksp.nlines() + 1);
 
-    build_segment_chain_from_lines();
-    segments_dirty = true;
     ensure_cursor_visible();
 }
 
@@ -364,14 +348,16 @@ void Editor::combineline(int line, int col)
     if (line < 0 || col < 0)
         return;
 
-    if (line + 1 >= (int)lines.size())
+    if (line + 1 >= wksp.nlines())
         return; // No next line to combine
 
-    ensure_segments_up_to_date();
+    ensure_line_saved();
 
     // Get both lines
-    std::string current = (line < (int)lines.size()) ? lines[line] : "";
-    std::string next    = (line + 1 < (int)lines.size()) ? lines[line + 1] : "";
+    get_line(line);
+    std::string current = current_line;
+    get_line(line + 1);
+    std::string next = current_line;
 
     // Combine at column
     // Pad current line to col if needed
@@ -382,14 +368,14 @@ void Editor::combineline(int line, int col)
     current += next;
 
     // Update line
-    lines[line] = current;
+    current_line = current;
+    current_line_no = line;
+    current_line_modified = true;
+    put_line();
 
     // Delete the next line
-    lines.erase(lines.begin() + line + 1);
-
+    wksp.delete_segments(line + 1, line + 1);
     wksp.set_nlines(std::max(1, wksp.nlines() - 1));
 
-    build_segment_chain_from_lines();
-    segments_dirty = true;
     ensure_cursor_visible();
 }

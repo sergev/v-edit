@@ -7,91 +7,85 @@
 #include "editor.h"
 
 //
-// Rebuild segment chain from in-memory lines vector.
-//
-void Editor::build_segment_chain_from_lines()
-{
-    wksp.build_segment_chain_from_lines(lines);
-}
-
-//
 // Parse text and build segment chain from it.
 //
 void Editor::build_segment_chain_from_text(const std::string &text)
 {
-    // Split by '\n' into lines and build chain
-    lines.clear();
-    std::string cur;
-    lines.reserve(64);
-    for (char c : text) {
-        if (c == '\n') {
-            lines.push_back(cur);
-            cur.clear();
-        } else {
-            cur.push_back(c);
-        }
+    // Build segment chain directly from text in workspace
+    wksp.build_segment_chain_from_text(text);
+}
+
+//
+// Load line from workspace into current line buffer.
+//
+void Editor::get_line(int lno)
+{
+    current_line_modified = false;
+    current_line_no        = lno;
+    
+    // Check cache first
+    auto it = line_cache.find(lno);
+    if (it != line_cache.end()) {
+        current_line = it->second;
+        return;
     }
-    // In case text doesn't end with newline, keep the last line
-    if (!cur.empty() || lines.empty())
-        lines.push_back(cur);
-    build_segment_chain_from_lines();
-}
-
-//
-// Retrieve line text from lines vector.
-//
-std::string Editor::get_line_from_model(int lno)
-{
-    // For now, fallback to lines vector
-    if (lno >= 0 && lno < (int)lines.size())
-        return lines[lno];
-    return std::string();
-}
-
-//
-// Retrieve line text from segment chain.
-//
-std::string Editor::get_line_from_segments(int lno)
-{
-    // Try segment-based reading first
+    
     if (!wksp.has_segments()) {
-        return get_line_from_model(lno); // fallback to lines vector
+        if (current_line.empty()) {
+            current_line = "";
+        } else {
+            current_line.resize(0);
+        }
+        return;
     }
-
-    // Check if we have file-based segments
-    if (wksp.is_file_based()) {
-        // Use segment-based reading
-        return wksp.read_line_from_segment(lno);
-    }
-
-    // Fallback to lines vector
-    return get_line_from_model(lno);
+    
+    current_line = read_line_from_wksp(lno);
 }
 
 //
-// Update line content in segment chain.
+// Write current line buffer back to workspace if modified.
 //
-void Editor::update_line_in_segments(int lno, const std::string &new_content)
+void Editor::put_line()
 {
-    // For now, update the lines vector and rebuild segments
-    // In a full implementation, we'd update the segment chain directly
-    if (lno >= 0 && lno < (int)lines.size()) {
-        lines[lno] = new_content;
-    } else if (lno == (int)lines.size()) {
-        lines.push_back(new_content);
+    if (!current_line_modified || current_line_no < 0) {
+        current_line_no = -1;
+        return;
     }
-    build_segment_chain_from_lines();
+    
+    // Cache the modified line
+    line_cache[current_line_no] = current_line;
+    
+    current_line_modified = false;
+    current_line_no        = -1;
 }
 
 //
-// Rebuild segments if they are marked as modified.
+// Ensure current line is saved before operations.
 //
-void Editor::ensure_segments_up_to_date()
+void Editor::ensure_line_saved()
 {
-    if (segments_dirty) {
-        build_segment_chain_from_lines();
-        segments_dirty = false;
+    if (current_line_modified && current_line_no >= 0) {
+        put_line();
     }
+}
+
+//
+// Read line from workspace segments.
+//
+std::string Editor::read_line_from_wksp(int lno)
+{
+    // Check cache first
+    auto it = line_cache.find(lno);
+    if (it != line_cache.end()) {
+        return it->second;
+    }
+    
+    if (!wksp.has_segments()) {
+        return std::string();
+    }
+    
+    // Use workspace's read_line_from_segment
+    return wksp.read_line_from_segment(lno);
 }
 
 //
@@ -104,13 +98,11 @@ void Editor::open_initial(int argc, char **argv)
         filename = argv[1];
         load_file_segments(filename);
     } else {
-        // No file specified, create untitled file
+        // No file specified, create untitled file with one empty line
         filename = "untitled";
-        lines.clear();
-        lines.push_back("");
+        build_segment_chain_from_text("");
     }
     status = "Cmd: ";
-    build_segment_chain_from_lines();
 }
 
 //
@@ -151,6 +143,8 @@ bool Editor::load_file_to_segments(const std::string &path)
 //
 void Editor::save_file()
 {
+    ensure_line_saved();  // Save any unsaved line modifications
+    
     // Create backup file if not already done and file exists
     if (!wksp.backup_done() && filename != "untitled") {
         std::string backup_name = filename + "~";
@@ -170,24 +164,12 @@ void Editor::save_file()
         unlink(filename.c_str());
     }
 
-    std::ofstream out(filename.c_str());
-    if (!out) {
+    // Use workspace's write_segments_to_file
+    if (wksp.write_segments_to_file(filename)) {
+        status = std::string("Saved: ") + filename;
+    } else {
         status = std::string("Cannot write: ") + filename;
-        return;
     }
-    for (size_t i = 0; i < lines.size(); ++i) {
-        out << lines[i];
-        if (i + 1 != lines.size())
-            out << '\n';
-    }
-    out.flush();
-    // Ensure data hits disk for test stability
-    int fd = ::open(filename.c_str(), O_WRONLY);
-    if (fd >= 0) {
-        ::fsync(fd);
-        ::close(fd);
-    }
-    status = std::string("Saved: ") + filename;
 }
 
 //
@@ -195,28 +177,17 @@ void Editor::save_file()
 //
 void Editor::save_as(const std::string &new_filename)
 {
+    ensure_line_saved();  // Save any unsaved line modifications
+    
     // Unlink the original file to ensure backup is not affected by the write
     unlink(new_filename.c_str());
 
-    std::ofstream out(new_filename.c_str());
-    if (!out) {
+    // Use workspace's write_segments_to_file
+    if (wksp.write_segments_to_file(new_filename)) {
+        // Update filename
+        filename = new_filename;
+        status   = std::string("Saved as: ") + new_filename;
+    } else {
         status = std::string("Cannot write: ") + new_filename;
-        return;
     }
-    for (size_t i = 0; i < lines.size(); ++i) {
-        out << lines[i];
-        if (i + 1 != lines.size())
-            out << '\n';
-    }
-    out.flush();
-    // Ensure data hits disk for test stability
-    int fd = ::open(new_filename.c_str(), O_WRONLY);
-    if (fd >= 0) {
-        ::fsync(fd);
-        ::close(fd);
-    }
-
-    // Update filename
-    filename = new_filename;
-    status   = std::string("Saved as: ") + new_filename;
 }

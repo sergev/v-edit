@@ -44,7 +44,6 @@ void Editor::draw_status(const std::string &msg)
 //
 void Editor::draw()
 {
-    ensure_segments_up_to_date(); // rebuild segments if needed
     wksp_redraw();
     move(cursor_line, cursor_col);
     // Build status line dynamically
@@ -74,7 +73,7 @@ void Editor::wksp_redraw()
         mvhline(r, 0, ' ', ncols);
         std::string lineText;
         if (wksp.chain() != nullptr && r + wksp.topline() < wksp.nlines()) {
-            lineText = get_line_from_model(r + wksp.topline());
+            lineText = read_line_from_wksp(r + wksp.topline());
             // horizontal offset and continuation markers
             bool truncated = false;
             if (wksp.basecol() > 0 && (int)lineText.size() > wksp.basecol()) {
@@ -93,22 +92,6 @@ void Editor::wksp_redraw()
             if (wksp.basecol() > 0 && !lineText.empty()) {
                 mvaddch(r, 0, '<');
             }
-        } else if (r < (int)lines.size()) {
-            std::string t  = lines[r];
-            bool truncated = false;
-            if (wksp.basecol() > 0 && (int)t.size() > wksp.basecol())
-                t.erase(0, (size_t)wksp.basecol());
-            else if (wksp.basecol() > 0)
-                t.clear();
-            if ((int)t.size() > ncols - 1) {
-                truncated = true;
-                t.resize((size_t)(ncols - 1));
-            }
-            mvaddnstr(r, 0, t.c_str(), ncols - 1);
-            if (truncated)
-                mvaddch(r, ncols - 2, '~');
-            if (wksp.basecol() > 0 && !t.empty())
-                mvaddch(r, 0, '<');
         } else {
             mvaddch(r, 0, '~');
         }

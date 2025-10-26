@@ -23,7 +23,6 @@ void Editor::save_state()
         out << last_search << '\n';
         out << last_search_forward << '\n';
         out << wksp.backup_done() << '\n';
-        out << segments_dirty << '\n';
         // Save macro positions
         out << macros.size() << '\n';
         for (const auto &pair : macros) {
@@ -59,7 +58,7 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
             std::getline(in, cmd);
             std::getline(in, last_search);
             bool backup_done;
-            in >> last_search_forward >> backup_done >> segments_dirty;
+            in >> last_search_forward >> backup_done;
             wksp.set_backup_done(backup_done);
 
             // Load macros

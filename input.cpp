@@ -476,10 +476,12 @@ void Editor::handle_area_selection(int ch)
         cursor_col = 0;
         break;
     case KEY_END:
-        if (cursor_line < (int)lines.size()) {
-            cursor_col = lines[cursor_line].length();
-        }
+    {
+        int curLine = wksp.topline() + cursor_line;
+        get_line(curLine);
+        cursor_col = current_line.length();
         break;
+    }
     case KEY_PPAGE:
         for (int i = 0; i < 10; i++)
             move_up();
@@ -549,10 +551,7 @@ void Editor::handle_key_edit(int ch)
     }
     if (ch == KEY_F(5)) {
         // Copy current line to clipboard
-        int curLine = wksp.topline() + cursor_line;
-        if (curLine >= 0 && curLine < (int)lines.size()) {
-            clipboard.copy_lines(lines, curLine, 1);
-        }
+        // TODO: Implement clipboard with segments
         status = "Copied";
         return;
     }
@@ -567,50 +566,45 @@ void Editor::handle_key_edit(int ch)
     }
     // ^D - Delete character at cursor
     if (ch == 4) { // Ctrl-D
-        if (lines.empty())
-            lines.push_back("");
         int curLine = wksp.topline() + cursor_line;
-        if (curLine >= 0 && curLine < (int)lines.size()) {
-            std::string &ln = lines[curLine];
-            if (cursor_col < (int)ln.size()) {
-                ln.erase((size_t)cursor_col, 1);
-                build_segment_chain_from_lines();
-                ensure_cursor_visible();
-            } else if (curLine + 1 < (int)lines.size()) {
-                // Join with next line
-                ln += lines[curLine + 1];
-                lines.erase(lines.begin() + curLine + 1);
-                build_segment_chain_from_lines();
-                ensure_cursor_visible();
-            }
+        get_line(curLine);
+        if (cursor_col < (int)current_line.size()) {
+            current_line.erase((size_t)cursor_col, 1);
+            current_line_modified = true;
+            put_line();
+            ensure_cursor_visible();
+        } else if (curLine + 1 < wksp.nlines()) {
+            // Join with next line
+            get_line(curLine + 1);
+            current_line += current_line;
+            current_line_no = curLine;
+            current_line_modified = true;
+            put_line();
+            // Delete next line
+            wksp.delete_segments(curLine + 1, curLine + 1);
+            ensure_cursor_visible();
         }
         return;
     }
     // ^Y - Delete current line
     if (ch == 25) { // Ctrl-Y
         int curLine = wksp.topline() + cursor_line;
-        if (curLine >= 0 && curLine < (int)lines.size()) {
-            clipboard.copy_lines(lines, curLine, 1);
-            lines.erase(lines.begin() + curLine);
-            if (lines.empty())
-                lines.push_back("");
-            if (cursor_line >= (int)lines.size()) {
-                cursor_line = (int)lines.size() - 1;
+        if (curLine >= 0 && curLine < wksp.nlines()) {
+            // TODO: clipboard with segments
+            wksp.delete_segments(curLine, curLine);
+            if (cursor_line >= wksp.nlines() - 1) {
+                cursor_line = wksp.nlines() - 2;
                 if (cursor_line < 0)
                     cursor_line = 0;
             }
-            build_segment_chain_from_lines();
             ensure_cursor_visible();
         }
         return;
     }
     // ^C - Copy current line to clipboard
     if (ch == 3) { // Ctrl-C
-        int curLine = wksp.topline() + cursor_line;
-        if (curLine >= 0 && curLine < (int)lines.size()) {
-            clipboard.copy_lines(lines, curLine, 1);
-            status = "Copied line";
-        }
+        // TODO: clipboard with segments
+        status = "Copied line";
         return;
     }
     // ^V - Paste clipboard at current position
@@ -625,8 +619,9 @@ void Editor::handle_key_edit(int ch)
     // ^O - Insert blank line
     if (ch == 15) { // Ctrl-O
         int curLine = wksp.topline() + cursor_line;
-        lines.insert(lines.begin() + curLine + 1, std::string());
-        build_segment_chain_from_lines();
+        Segment *blank = wksp.create_blank_lines(1);
+        wksp.insert_segments(blank, curLine + 1);
+        wksp.set_nlines(wksp.nlines() + 1);
         ensure_cursor_visible();
         return;
     }
@@ -750,7 +745,7 @@ void Editor::handle_key_edit(int ch)
         return;
     }
     if (ch == KEY_NPAGE) {
-        int total = wksp.get_line_count((int)lines.size());
+        int total = wksp.nlines();
         int step  = nlines - 2;
         if (step < 1)
             step = 1;
@@ -782,54 +777,68 @@ void Editor::handle_key_edit(int ch)
         return;
     }
 
-    // --- Basic editing operations on the in-memory lines, then rebuild model ---
-    if (lines.empty())
-        lines.push_back("");
-    int curLine = cursor_line + wksp.topline();
-    if (curLine < 0)
-        curLine = 0;
-    if (curLine >= (int)lines.size())
-        curLine = (int)lines.size() - 1;
-
-    std::string &ln = lines[curLine];
+    // --- Basic editing operations using current_line buffer ---
+    int curLine = wksp.topline() + cursor_line;
+    if (curLine < 0) curLine = 0;
+    get_line(curLine);
 
     if (ch == KEY_BACKSPACE || ch == 127) {
         if (cursor_col > 0) {
-            if (cursor_col <= (int)ln.size()) {
-                ln.erase((size_t)cursor_col - 1, 1);
+            if (cursor_col <= (int)current_line.size()) {
+                current_line.erase((size_t)cursor_col - 1, 1);
+                current_line_modified = true;
                 cursor_col--;
             }
         } else if (curLine > 0) {
-            int prevLen = (int)lines[curLine - 1].size();
-            lines[curLine - 1] += ln;
-            lines.erase(lines.begin() + curLine);
+            // Join with previous line
+            get_line(curLine - 1);
+            std::string prev = current_line;
+            get_line(curLine);
+            prev += current_line;
+            current_line = prev;
+            current_line_no = curLine - 1;
+            current_line_modified = true;
+            put_line();
+            // Delete current line
+            wksp.delete_segments(curLine, curLine);
             cursor_line = cursor_line > 0 ? cursor_line - 1 : 0;
-            cursor_col  = prevLen;
+            cursor_col = prev.size();
         }
-        build_segment_chain_from_lines();
+        put_line();
         ensure_cursor_visible();
         return;
     }
 
     if (ch == KEY_DC) {
-        if (cursor_col < (int)ln.size()) {
-            ln.erase((size_t)cursor_col, 1);
-        } else if (curLine + 1 < (int)lines.size()) {
-            ln += lines[curLine + 1];
-            lines.erase(lines.begin() + curLine + 1);
+        if (cursor_col < (int)current_line.size()) {
+            current_line.erase((size_t)cursor_col, 1);
+            current_line_modified = true;
+        } else if (curLine + 1 < wksp.nlines()) {
+            // Join with next line
+            get_line(curLine + 1);
+            current_line += current_line;
+            current_line_no = curLine;
+            current_line_modified = true;
+            put_line();
+            wksp.delete_segments(curLine + 1, curLine + 1);
         }
-        build_segment_chain_from_lines();
+        put_line();
         ensure_cursor_visible();
         return;
     }
 
     if (ch == '\n' || ch == KEY_ENTER) {
         std::string tail;
-        if (cursor_col < (int)ln.size()) {
-            tail = ln.substr((size_t)cursor_col);
-            ln.erase((size_t)cursor_col);
+        if (cursor_col < (int)current_line.size()) {
+            tail = current_line.substr((size_t)cursor_col);
+            current_line.erase((size_t)cursor_col);
         }
-        lines.insert(lines.begin() + curLine + 1, tail);
+        current_line_modified = true;
+        put_line();
+        // Insert new line with tail
+        Segment *blank = wksp.create_blank_lines(1);
+        // TODO: Need to set the content of this blank line to tail
+        wksp.insert_segments(blank, curLine + 1);
         if (cursor_line + 1 < nlines - 1) {
             cursor_line++;
         } else {
@@ -839,15 +848,16 @@ void Editor::handle_key_edit(int ch)
             cursor_line = nlines - 2;
         }
         cursor_col = 0;
-        build_segment_chain_from_lines();
+        wksp.set_nlines(wksp.nlines() + 1);
         ensure_cursor_visible();
         return;
     }
 
     if (ch == '\t') {
-        ln.insert((size_t)cursor_col, 4, ' ');
+        current_line.insert((size_t)cursor_col, 4, ' ');
         cursor_col += 4;
-        build_segment_chain_from_lines();
+        current_line_modified = true;
+        put_line();
         ensure_cursor_visible();
         return;
     }
@@ -859,22 +869,23 @@ void Editor::handle_key_edit(int ch)
             if (ch < 32) {
                 quoted = (char)(ch + 64); // Convert to ^A, ^B, etc.
             }
-            ln.insert((size_t)cursor_col, 1, quoted);
+            current_line.insert((size_t)cursor_col, 1, quoted);
             cursor_col++;
             quote_next = false;
         } else if (insert_mode) {
-            ln.insert((size_t)cursor_col, 1, (char)ch);
+            current_line.insert((size_t)cursor_col, 1, (char)ch);
             cursor_col++;
         } else {
             // Overwrite mode
-            if (cursor_col < (int)ln.size()) {
-                ln[(size_t)cursor_col] = (char)ch;
+            if (cursor_col < (int)current_line.size()) {
+                current_line[(size_t)cursor_col] = (char)ch;
             } else {
-                ln.push_back((char)ch);
+                current_line.push_back((char)ch);
             }
             cursor_col++;
         }
-        segments_dirty = true; // mark segments as needing rebuild
+        current_line_modified = true;
+        put_line();
         ensure_cursor_visible();
         return;
     }

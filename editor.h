@@ -3,7 +3,6 @@
 
 #include <map>
 #include <string>
-#include <vector>
 
 #include "clipboard.h"
 #include "macro.h"
@@ -25,11 +24,17 @@ private:
     int cursor_col{};
     int cursor_line{};
     std::string status;
-    std::vector<std::string> lines; // temporary backing store for display
     std::string filename{ "untitled" };
     bool cmd_mode{ false };
     bool quit_flag{ false };
-    bool segments_dirty{ false };      // track if segments need rebuilding
+    
+    // Current line buffer (prototype's cline pattern)
+    std::string current_line;
+    int current_line_no{ -1 };
+    bool current_line_modified{ false };
+    
+    // Cache for in-memory line modifications (until segments are rebuilt)
+    std::map<int, std::string> line_cache;
     bool filter_mode{ false };         // track if we're in filter command mode
     bool area_selection_mode{ false }; // track if we're in area selection mode
     std::string cmd;
@@ -54,7 +59,6 @@ private:
     Workspace wksp;
     Workspace alt_wksp;
     std::string alt_filename;
-    std::vector<std::string> alt_lines;
 
     // Help file installed in a public place
     static const std::string DEFAULT_HELP_FILE;
@@ -102,17 +106,17 @@ private:
 
     // --- Segment-based reading skeleton ---
     void model_init();
-    void build_segment_chain_from_lines();
     void build_segment_chain_from_text(const std::string &text);
     bool load_file_segments(const std::string &path);
     bool load_file_to_segments(const std::string &path);
 
-    // helpers
-    std::string get_line_from_model(int lno);
-    std::string get_line_from_segments(int lno); // get line directly from segment chain
-    void update_line_in_segments(int lno,
-                                 const std::string &new_content); // update line in segment chain
-    void ensure_segments_up_to_date();                            // rebuild segments only if dirty
+    // Current line buffer operations (prototype's getlin/putline pattern)
+    void get_line(int lno);          // load line from workspace into current_line buffer
+    void put_line();                  // write current_line back to workspace if modified
+    void ensure_line_saved();         // flush current line if modified
+    
+    // Helper to read line from workspace (replaces get_line_from_model/segs)
+    std::string read_line_from_wksp(int lno);
 
     // Session state
     void save_state();

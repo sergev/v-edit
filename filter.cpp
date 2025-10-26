@@ -15,17 +15,19 @@
 bool Editor::execute_external_filter(const std::string &command, int start_line, int num_lines)
 {
     // Validate parameters
-    if (start_line < 0 || start_line >= (int)lines.size()) {
+    if (start_line < 0 || start_line >= wksp.nlines()) {
         return false;
     }
 
     // Limit num_lines to available lines
-    int end_line = std::min(start_line + num_lines, (int)lines.size());
+    int end_line = std::min(start_line + num_lines, wksp.nlines());
     num_lines    = end_line - start_line;
 
     if (num_lines <= 0) {
         return false;
     }
+
+    ensure_line_saved();
 
     // Create temporary files for input and output
     std::string input_file  = "/tmp/v-edit_filter_input_" + std::to_string(getpid());
@@ -38,7 +40,8 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     }
 
     for (int i = start_line; i < end_line; ++i) {
-        input_stream << lines[i];
+        std::string line = read_line_from_wksp(i);
+        input_stream << line;
         if (i < end_line - 1) {
             input_stream << '\n';
         }
@@ -68,23 +71,33 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
         return false;
     }
 
-    std::vector<std::string> new_lines;
+    std::string output_text;
     std::string line;
     while (std::getline(output_stream, line)) {
-        new_lines.push_back(line);
+        output_text += line + "\n";
     }
 
     // If no output, add empty line
-    if (new_lines.empty()) {
-        new_lines.push_back("");
+    if (output_text.empty()) {
+        output_text = "\n";
     }
 
     // Replace the selected lines with the output
-    lines.erase(lines.begin() + start_line, lines.begin() + end_line);
-    lines.insert(lines.begin() + start_line, new_lines.begin(), new_lines.end());
+    // Delete old lines
+    wksp.delete_segments(start_line, start_line + num_lines - 1);
+    
+    // Insert new content
+    wksp.build_segment_chain_from_text(output_text);
+    
+    // Update line count - TODO: need better integration
+    int new_num_lines = 0;
+    Segment *seg = wksp.chain();
+    while (seg && seg->fdesc) {
+        new_num_lines += seg->nlines;
+        seg = seg->next;
+    }
+    wksp.set_nlines(wksp.nlines() - num_lines + new_num_lines);
 
-    // Update segments
-    build_segment_chain_from_lines();
     ensure_cursor_visible();
 
     // Clean up temporary files

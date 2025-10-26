@@ -5,7 +5,8 @@
 //
 void Editor::picklines(int startLine, int count)
 {
-    clipboard.copy_lines(lines, startLine, count);
+    // TODO: Implement clipboard with workspace segments
+    // clipboard.copy_lines(lines, startLine, count);
 }
 
 //
@@ -17,6 +18,8 @@ void Editor::paste(int afterLine, int atCol)
         return;
     }
 
+    // TODO: Implement clipboard with workspace segments
+    /*
     if (!clipboard.is_rectangular()) {
         // Paste as lines
         clipboard.paste_into_lines(lines, afterLine);
@@ -24,8 +27,7 @@ void Editor::paste(int afterLine, int atCol)
         // Paste as rectangular block
         clipboard.paste_into_rectangular(lines, afterLine, atCol);
     }
-
-    build_segment_chain_from_lines();
+    */
     ensure_cursor_visible();
 }
 
@@ -34,7 +36,8 @@ void Editor::paste(int afterLine, int atCol)
 //
 void Editor::pickspaces(int line, int col, int number, int nl)
 {
-    clipboard.copy_rectangular_block(lines, line, col, number, nl);
+    // TODO: Implement clipboard with workspace segments
+    // clipboard.copy_rectangular_block(lines, line, col, number, nl);
 }
 
 //
@@ -45,17 +48,19 @@ void Editor::closespaces(int line, int col, int number, int nl)
     // Delete rectangular area and save to clipboard
     pickspaces(line, col, number, nl); // copy first
 
-    // Now delete the rectangular area
+    // Now delete the rectangular area using get_line/put_line pattern
+    ensure_line_saved();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < (int)lines.size()) {
-            std::string &ln = lines[line + i];
-            if (col < (int)ln.size()) {
-                int end_pos = std::min(col + number, (int)ln.size());
-                ln.erase(col, end_pos - col);
+        if (line + i < wksp.nlines()) {
+            get_line(line + i);
+            if (col < (int)current_line.size()) {
+                int end_pos = std::min(col + number, (int)current_line.size());
+                current_line.erase(col, end_pos - col);
+                current_line_modified = true;
+                put_line();
             }
         }
     }
-    build_segment_chain_from_lines();
     ensure_cursor_visible();
 }
 
@@ -64,27 +69,26 @@ void Editor::closespaces(int line, int col, int number, int nl)
 //
 void Editor::openspaces(int line, int col, int number, int nl)
 {
-    // Insert spaces in rectangular area
+    // Insert spaces in rectangular area using get_line/put_line pattern
+    ensure_line_saved();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < (int)lines.size()) {
-            std::string &ln = lines[line + i];
-            if (col <= (int)ln.size()) {
-                ln.insert(col, number, ' ');
+        if (line + i < wksp.nlines()) {
+            get_line(line + i);
+            if (col <= (int)current_line.size()) {
+                current_line.insert(col, number, ' ');
             } else {
                 // Extend line with spaces if needed
-                ln.resize(col, ' ');
-                ln.insert(col, number, ' ');
+                current_line.resize(col, ' ');
+                current_line.insert(col, number, ' ');
             }
+            current_line_modified = true;
+            put_line();
         } else {
-            // Create new line if needed
-            while ((int)lines.size() <= line + i) {
-                lines.push_back("");
-            }
-            lines[line + i].resize(col, ' ');
-            lines[line + i].insert(col, number, ' ');
+            // Create new line if needed - TODO: need proper implementation
+            Segment *blank = wksp.create_blank_lines(1);
+            wksp.insert_segments(blank, line + i);
         }
     }
-    build_segment_chain_from_lines();
     ensure_cursor_visible();
 }
 
@@ -141,17 +145,16 @@ bool Editor::paste_macro_buffer(char name)
 
     // Paste the buffer
     if (!clipboard.is_empty()) {
-        int curLine = wksp.topline() + cursor_line;
-        int curCol  = wksp.basecol() + cursor_col;
-
+        // TODO: Implement clipboard paste with segments
         // Use the clipboard's paste method
+        /*
         if (!clipboard.is_rectangular()) {
             clipboard.paste_into_lines(lines, curLine);
         } else {
             clipboard.paste_into_rectangular(lines, curLine, curCol);
         }
+        */
 
-        build_segment_chain_from_lines();
         ensure_cursor_visible();
     }
     return true;

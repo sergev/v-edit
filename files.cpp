@@ -19,17 +19,11 @@ void Editor::switch_to_alternative_workspace()
     wksp                = alt_wksp;
     alt_wksp            = temp_wksp;
 
-    // Swap filename and lines
+    // Swap filename
     std::string temp_filename = filename;
     filename                  = alt_filename;
     alt_filename              = temp_filename;
 
-    std::vector<std::string> temp_lines = lines;
-    lines                               = alt_lines;
-    alt_lines                           = temp_lines;
-
-    // Rebuild segments from swapped lines
-    build_segment_chain_from_lines();
     ensure_cursor_visible();
 }
 
@@ -41,19 +35,14 @@ void Editor::create_alternative_workspace()
     // Save current workspace state to alt_wksp
     alt_wksp     = wksp;
     alt_filename = filename;
-    alt_lines    = lines;
 
     // Try to open the help file in alternative workspace
     if (!open_help_file()) {
         // If help file fails, create a new empty workspace
         alt_filename = "untitled_alt";
-        alt_lines.clear();
-        alt_lines.push_back("");
-        alt_wksp = Workspace{};
+        alt_wksp     = Workspace{};
+        alt_wksp.build_segment_chain_from_text("");
     }
-
-    // Rebuild segments for alternative workspace
-    alt_wksp.build_segment_chain_from_lines(alt_lines);
 }
 
 //
@@ -62,7 +51,7 @@ void Editor::create_alternative_workspace()
 bool Editor::has_alternative_workspace() const
 {
     // We have an alternative workspace if we have at least something stored
-    return !alt_filename.empty() || !alt_lines.empty();
+    return !alt_filename.empty();
 }
 
 // Help file operations
@@ -78,23 +67,22 @@ bool Editor::open_help_file()
         return create_builtin_help();
     }
 
-    // Read the help file content
-    std::vector<std::string> help_lines;
+    // Read the help file content into a single string
+    std::string help_content;
     std::string line;
     while (std::getline(help_file, line)) {
-        help_lines.push_back(line);
+        help_content += line + "\n";
     }
     help_file.close();
 
-    if (help_lines.empty()) {
-        help_lines.push_back("");
+    if (help_content.empty()) {
+        help_content = "\n";
     }
 
     // Set alternative workspace to help file
     alt_filename = DEFAULT_HELP_FILE;
-    alt_lines    = help_lines;
     alt_wksp     = Workspace{};
-    alt_wksp.build_segment_chain_from_lines(help_lines);
+    alt_wksp.build_segment_chain_from_text(help_content);
 
     return true;
 }
@@ -105,43 +93,42 @@ bool Editor::open_help_file()
 bool Editor::create_builtin_help()
 {
     // Create built-in help content
-    std::vector<std::string> help_lines = { "V-EDIT - Minimal Text Editor",
-                                            "",
-                                            "BASIC COMMANDS:",
-                                            "  ^A (F1)     - Enter command mode",
-                                            "  ^N          - Switch to alternative workspace/help",
-                                            "  F2          - Save file",
-                                            "  F3          - Next file",
-                                            "  F4          - External filter",
-                                            "  F5          - Copy line",
-                                            "  F6          - Paste line",
-                                            "  F7          - Search",
-                                            "  F8          - Go to line",
-                                            "",
-                                            "COMMAND MODE:",
-                                            "  qa          - Quit all",
-                                            "  o<file>     - Open file",
-                                            "  <number>    - Go to line",
-                                            "",
-                                            "MOVEMENT:",
-                                            "  Arrow keys  - Move cursor",
-                                            "  Home/End    - Line start/end",
-                                            "  Page Up/Dn  - Page up/down",
-                                            "",
-                                            "EDITING:",
-                                            "  ^D          - Delete character",
-                                            "  ^Y          - Delete line",
-                                            "  ^C          - Copy line",
-                                            "  ^V          - Paste line",
-                                            "  ^O          - Insert line",
-                                            "",
-                                            "Press ^N to return to your file." };
+    const char* help_text = "V-EDIT - Minimal Text Editor\n"
+                            "\n"
+                            "BASIC COMMANDS:\n"
+                            "  ^A (F1)     - Enter command mode\n"
+                            "  ^N          - Switch to alternative workspace/help\n"
+                            "  F2          - Save file\n"
+                            "  F3          - Next file\n"
+                            "  F4          - External filter\n"
+                            "  F5          - Copy line\n"
+                            "  F6          - Paste line\n"
+                            "  F7          - Search\n"
+                            "  F8          - Go to line\n"
+                            "\n"
+                            "COMMAND MODE:\n"
+                            "  qa          - Quit all\n"
+                            "  o<file>     - Open file\n"
+                            "  <number>    - Go to line\n"
+                            "\n"
+                            "MOVEMENT:\n"
+                            "  Arrow keys  - Move cursor\n"
+                            "  Home/End    - Line start/end\n"
+                            "  Page Up/Dn  - Page up/down\n"
+                            "\n"
+                            "EDITING:\n"
+                            "  ^D          - Delete character\n"
+                            "  ^Y          - Delete line\n"
+                            "  ^C          - Copy line\n"
+                            "  ^V          - Paste line\n"
+                            "  ^O          - Insert line\n"
+                            "\n"
+                            "Press ^N to return to your file.\n";
 
     // Set alternative workspace to built-in help
     alt_filename = "Built-in Help";
-    alt_lines    = help_lines;
     alt_wksp     = Workspace{};
-    alt_wksp.build_segment_chain_from_lines(help_lines);
+    alt_wksp.build_segment_chain_from_text(help_text);
 
     return true;
 }

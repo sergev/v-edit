@@ -4,6 +4,9 @@
 
 #include "editor.h"
 
+//
+// Open file in editor buffer.
+//
 bool Editor::open_file(const std::string &file_to_open)
 {
     // Check if file is already open
@@ -46,6 +49,9 @@ bool Editor::open_file(const std::string &file_to_open)
     return true;
 }
 
+//
+// Switch to previously opened file.
+//
 void Editor::switch_to_file(int file_index)
 {
     if (file_index < 0 || file_index >= (int)open_files.size()) {
@@ -62,6 +68,9 @@ void Editor::switch_to_file(int file_index)
     load_current_file_state();
 }
 
+//
+// Switch between current and alternative file.
+//
 void Editor::switch_to_alternative_file()
 {
     if (alternative_file_index >= 0 && alternative_file_index < (int)open_files.size()) {
@@ -80,6 +89,9 @@ void Editor::switch_to_alternative_file()
     }
 }
 
+//
+// Switch to next file in buffer list.
+//
 void Editor::next_file()
 {
     if (open_files.size() <= 1) {
@@ -90,16 +102,25 @@ void Editor::next_file()
     switch_to_file(next_index);
 }
 
+//
+// Get index of currently active file.
+//
 int Editor::get_current_file_index() const
 {
     return current_file_index;
 }
 
+//
+// Get total number of open files.
+//
 int Editor::get_file_count() const
 {
     return open_files.size();
 }
 
+//
+// Get filename of current file.
+//
 std::string Editor::get_current_filename() const
 {
     if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
@@ -108,6 +129,9 @@ std::string Editor::get_current_filename() const
     return "untitled";
 }
 
+//
+// Check if file has unsaved changes.
+//
 bool Editor::is_file_modified(int file_index) const
 {
     if (file_index >= 0 && file_index < (int)open_files.size()) {
@@ -116,6 +140,9 @@ bool Editor::is_file_modified(int file_index) const
     return false;
 }
 
+//
+// Save current buffer state to file descriptor.
+//
 void Editor::save_current_file_state()
 {
     if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
@@ -128,6 +155,9 @@ void Editor::save_current_file_state()
     }
 }
 
+//
+// Load buffer state from file descriptor.
+//
 void Editor::load_current_file_state()
 {
     if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
@@ -144,6 +174,9 @@ void Editor::load_current_file_state()
 }
 
 // Alternative workspace operations
+//
+// Switch between main and alternative workspace views.
+//
 void Editor::switch_to_alternative_workspace()
 {
     if (!has_alternative_workspace()) {
@@ -171,6 +204,9 @@ void Editor::switch_to_alternative_workspace()
     load_current_file_state();
 }
 
+//
+// Create new alternative workspace.
+//
 void Editor::create_alternative_workspace()
 {
     // Save current file state first
@@ -198,11 +234,17 @@ void Editor::create_alternative_workspace()
     alt_file_index = open_files.size() - 1;
 }
 
+//
+// Check if alternative workspace exists.
+//
 bool Editor::has_alternative_workspace() const
 {
     return alt_file_index >= 0;
 }
 
+//
+// Persist current workspace state.
+//
 void Editor::save_current_workspace_state()
 {
     if (current_file_index >= 0 && current_file_index < (int)open_files.size()) {
@@ -211,6 +253,9 @@ void Editor::save_current_workspace_state()
     }
 }
 
+//
+// Restore alternative workspace state.
+//
 void Editor::load_alternative_workspace_state()
 {
     if (alt_file_index >= 0 && alt_file_index < (int)open_files.size()) {
@@ -226,6 +271,9 @@ void Editor::load_alternative_workspace_state()
 }
 
 // Help file operations
+//
+// Load help file into buffer.
+//
 bool Editor::open_help_file()
 {
     // Try to open the help file
@@ -261,6 +309,9 @@ bool Editor::open_help_file()
     return true;
 }
 
+//
+// Create built-in help content if system help unavailable.
+//
 bool Editor::create_builtin_help()
 {
     // Create built-in help content

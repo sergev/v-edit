@@ -1,5 +1,8 @@
 #include "editor.h"
 
+//
+// Navigate to specified line number.
+//
 void Editor::goto_line(int lineNumber)
 {
     if (lineNumber < 0)
@@ -18,6 +21,9 @@ void Editor::goto_line(int lineNumber)
     ensure_cursor_visible();
 }
 
+//
+// Move cursor one position left.
+//
 void Editor::move_left()
 {
     if (cursor_col > 0) {
@@ -35,6 +41,9 @@ void Editor::move_left()
     }
 }
 
+//
+// Move cursor one position right.
+//
 void Editor::move_right()
 {
     int len = current_line_length();
@@ -49,6 +58,9 @@ void Editor::move_right()
     }
 }
 
+//
+// Move cursor one line up.
+//
 void Editor::move_up()
 {
     if (cursor_line > 0) {
@@ -59,6 +71,9 @@ void Editor::move_up()
     ensure_cursor_visible();
 }
 
+//
+// Move cursor one line down.
+//
 void Editor::move_down()
 {
     int total =
@@ -77,6 +92,9 @@ void Editor::move_down()
     ensure_cursor_visible();
 }
 
+//
+// Return length of current line in characters.
+//
 int Editor::current_line_length() const
 {
     int curLine = wksp.topline + cursor_line;
@@ -86,6 +104,9 @@ int Editor::current_line_length() const
     return 0;
 }
 
+//
+// Search forward for text pattern.
+//
 bool Editor::search_forward(const std::string &needle)
 {
     int startLine = wksp.topline + cursor_line;
@@ -144,6 +165,9 @@ bool Editor::search_forward(const std::string &needle)
     return false;
 }
 
+//
+// Search backward for text pattern.
+//
 bool Editor::search_backward(const std::string &needle)
 {
     int startLine = wksp.topline + cursor_line;
@@ -198,6 +222,9 @@ bool Editor::search_backward(const std::string &needle)
     return false;
 }
 
+//
+// Repeat last search in same direction.
+//
 bool Editor::search_next()
 {
     if (!last_search.empty()) {
@@ -210,6 +237,9 @@ bool Editor::search_next()
     return false;
 }
 
+//
+// Repeat last search in opposite direction.
+//
 bool Editor::search_prev()
 {
     if (!last_search.empty()) {
@@ -224,6 +254,9 @@ bool Editor::search_prev()
 
 // Core line operations matching prototype behavior
 
+//
+// Insert blank lines at specified position.
+//
 void Editor::insertlines(int from, int number)
 {
     if (from < 0 || number < 1)
@@ -249,6 +282,9 @@ void Editor::insertlines(int from, int number)
     ensure_cursor_visible();
 }
 
+//
+// Delete lines starting at specified position.
+//
 void Editor::deletelines(int from, int number)
 {
     if (from < 0 || number < 1)
@@ -286,6 +322,9 @@ void Editor::deletelines(int from, int number)
     ensure_cursor_visible();
 }
 
+//
+// Split line into two at cursor position.
+//
 void Editor::splitline(int line, int col)
 {
     if (line < 0 || col < 0)
@@ -332,6 +371,9 @@ void Editor::splitline(int line, int col)
     ensure_cursor_visible();
 }
 
+//
+// Combine current line with next line at cursor position.
+//
 void Editor::combineline(int line, int col)
 {
     if (line < 0 || col < 0)

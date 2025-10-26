@@ -1,5 +1,8 @@
 #include "editor.h"
 
+//
+// Save current cursor position to named macro.
+//
 void Editor::save_macro_position(char name)
 {
     int absLine           = wksp.topline + cursor_line;
@@ -8,6 +11,9 @@ void Editor::save_macro_position(char name)
     macros[name].position = std::make_pair(absLine, absCol);
 }
 
+//
+// Navigate to position stored in named macro.
+//
 bool Editor::goto_macro_position(char name)
 {
     auto it = macros.find(name);
@@ -20,6 +26,9 @@ bool Editor::goto_macro_position(char name)
     return true;
 }
 
+//
+// Save current clipboard to named buffer.
+//
 void Editor::save_macro_buffer(char name)
 {
     // Save current clipboard content to named macro buffer
@@ -32,6 +41,9 @@ void Editor::save_macro_buffer(char name)
     macros[name].is_rectangular = clipboard.is_rectangular;
 }
 
+//
+// Paste content from named buffer.
+//
 bool Editor::paste_macro_buffer(char name)
 {
     auto it = macros.find(name);
@@ -57,6 +69,9 @@ bool Editor::paste_macro_buffer(char name)
     return true;
 }
 
+//
+// Copy specified lines to clipboard.
+//
 void Editor::picklines(int startLine, int count)
 {
     clipboard.clear();
@@ -71,6 +86,9 @@ void Editor::picklines(int startLine, int count)
     }
 }
 
+//
+// Insert clipboard content at specified position.
+//
 void Editor::paste(int afterLine, int atCol)
 {
     if (clipboard.is_empty()) {
@@ -115,6 +133,9 @@ void Editor::paste(int afterLine, int atCol)
     ensure_cursor_visible();
 }
 
+//
+// Copy rectangular block to clipboard.
+//
 void Editor::pickspaces(int line, int col, int number, int nl)
 {
     // Copy rectangular area to clipboard
@@ -143,6 +164,9 @@ void Editor::pickspaces(int line, int col, int number, int nl)
     }
 }
 
+//
+// Delete rectangular block and save to clipboard.
+//
 void Editor::closespaces(int line, int col, int number, int nl)
 {
     // Delete rectangular area and save to clipboard
@@ -162,6 +186,9 @@ void Editor::closespaces(int line, int col, int number, int nl)
     ensure_cursor_visible();
 }
 
+//
+// Insert spaces into rectangular area.
+//
 void Editor::openspaces(int line, int col, int number, int nl)
 {
     // Insert spaces in rectangular area
@@ -188,6 +215,9 @@ void Editor::openspaces(int line, int col, int number, int nl)
     ensure_cursor_visible();
 }
 
+//
+// Define text area using stored tag position.
+//
 bool Editor::mdeftag(char tag_name)
 {
     auto it = macros.find(tag_name);

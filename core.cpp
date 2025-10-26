@@ -16,6 +16,9 @@ Editor::Editor()
 {
 }
 
+//
+// Get current user's name.
+//
 static std::string getUserName()
 {
     const char *u = getenv("USER");
@@ -25,6 +28,9 @@ static std::string getUserName()
     return pw ? std::string(pw->pw_name) : std::string("user");
 }
 
+//
+// Generate TTY suffix for temporary file names.
+//
 static std::string ttySuffix()
 {
     const char *tty = ttyname(0);
@@ -38,6 +44,9 @@ static std::string ttySuffix()
     return s.substr(s.size() > 2 ? s.size() - 2 : 0);
 }
 
+//
+// Initialize ncurses and set up terminal for editing.
+//
 void Editor::startup(int restart)
 {
     restart_mode = restart;
@@ -82,6 +91,9 @@ void Editor::startup(int restart)
     }
 }
 
+//
+// Initialize core data structures for segment-based operations.
+//
 void Editor::model_init()
 {
     // Initialize minimal file/segment/workspace tables to enable future port
@@ -96,6 +108,9 @@ void Editor::model_init()
     alternative_file_index = -1;
 }
 
+//
+// Main event loop and program flow coordinator.
+//
 int Editor::run(int argc, char **argv)
 {
     int restart = 0;

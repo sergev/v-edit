@@ -5,6 +5,9 @@
 
 #include "editor.h"
 
+//
+// Persist current editor state to disk.
+//
 void Editor::save_state()
 {
     std::ofstream out(tmpname.c_str());
@@ -54,6 +57,9 @@ void Editor::save_state()
     }
 }
 
+//
+// Restore previous editor state if requested.
+//
 void Editor::load_state_if_requested(int restart, int argc, char **argv)
 {
     if (restart == 1) {
@@ -118,6 +124,9 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
     }
 }
 
+//
+// Read next key from input or journal.
+//
 int Editor::journal_read_key()
 {
     if (inputfile > 0) {
@@ -134,6 +143,9 @@ int Editor::journal_read_key()
     }
 }
 
+//
+// Record key press to journal file.
+//
 void Editor::journal_write_key(int ch)
 {
     if (journal_fd >= 0) {

@@ -2,6 +2,9 @@
 
 #include "editor.h"
 
+//
+// Start status line color highlighting.
+//
 void Editor::start_status_color()
 {
     // Use colors if available, otherwise use reverse video
@@ -12,6 +15,9 @@ void Editor::start_status_color()
     }
 }
 
+//
+// End status line color highlighting.
+//
 void Editor::end_status_color()
 {
     // Turn off status line coloring
@@ -22,6 +28,9 @@ void Editor::end_status_color()
     }
 }
 
+//
+// Display status message at bottom of screen.
+//
 void Editor::draw_status(const std::string &msg)
 {
     start_status_color();
@@ -30,6 +39,9 @@ void Editor::draw_status(const std::string &msg)
     end_status_color();
 }
 
+//
+// Redraw entire screen and status bar.
+//
 void Editor::draw()
 {
     ensure_segments_up_to_date(); // rebuild segments if needed
@@ -53,6 +65,9 @@ void Editor::draw()
     refresh();
 }
 
+//
+// Refresh visible lines in the workspace.
+//
 void Editor::wksp_redraw()
 {
     for (int r = 0; r < nlines - 1; ++r) {
@@ -101,6 +116,9 @@ void Editor::wksp_redraw()
     }
 }
 
+//
+// Ensure cursor position is within visible area.
+//
 void Editor::ensure_cursor_visible()
 {
     // First clamp cursor_line to visible range

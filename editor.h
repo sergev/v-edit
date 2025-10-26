@@ -147,6 +147,9 @@ private:
     int restart_mode{ 0 }; // 0=normal, 1=restore, 2=replay
 
     // Startup and display
+    //
+    // Initialize ncurses terminal.
+    //
     void startup(int restart);
     void draw();
     void draw_status(const std::string &msg);
@@ -155,6 +158,9 @@ private:
     void end_status_color();
 
     // Basic editing/input
+    //
+    // Open file from command line arguments.
+    //
     void open_initial(int argc, char **argv);
     void save_file();
     void save_as(const std::string &filename);

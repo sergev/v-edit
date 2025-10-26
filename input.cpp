@@ -4,6 +4,9 @@
 
 #include "editor.h"
 
+//
+// Route key to appropriate handler based on mode.
+//
 void Editor::handle_key(int ch)
 {
     if (cmd_mode) {
@@ -13,6 +16,9 @@ void Editor::handle_key(int ch)
     handle_key_edit(ch);
 }
 
+//
+// Process key input in command mode.
+//
 void Editor::handle_key_cmd(int ch)
 {
     // Handle rectangular block operations if area is being selected
@@ -435,6 +441,9 @@ void Editor::handle_key_cmd(int ch)
 }
 
 // Enhanced parameter system functions
+//
+// Check if key is a cursor movement key.
+//
 bool Editor::is_movement_key(int ch) const
 {
     return (ch == KEY_LEFT || ch == KEY_RIGHT || ch == KEY_UP || ch == KEY_DOWN || ch == KEY_HOME ||
@@ -442,6 +451,9 @@ bool Editor::is_movement_key(int ch) const
            ch != '\n' && ch != '\r' && ch != KEY_ENTER;
 }
 
+//
+// Handle cursor movement during area selection.
+//
 void Editor::handle_area_selection(int ch)
 {
     // Move cursor based on key
@@ -493,6 +505,9 @@ void Editor::handle_area_selection(int ch)
     }
 }
 
+//
+// Switch to command input mode.
+//
 void Editor::enter_command_mode()
 {
     cmd_mode            = true;
@@ -504,6 +519,9 @@ void Editor::enter_command_mode()
     status = "Cmd: ";
 }
 
+//
+// Process key input in edit mode.
+//
 void Editor::handle_key_edit(int ch)
 {
     if (ch == KEY_F(1) || ch == 1) { // F1 or ^A

@@ -3,6 +3,9 @@
 
 #include "editor.h"
 
+//
+// Display editor usage information.
+//
 static void print_usage(const char *progname)
 {
     std::cout << "ve - A terminal-based text editor" << std::endl;

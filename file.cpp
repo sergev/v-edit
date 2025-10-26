@@ -6,6 +6,9 @@
 
 #include "editor.h"
 
+//
+// Rebuild segment chain from in-memory lines vector.
+//
 void Editor::build_segment_chain_from_lines()
 {
     if (files.empty())
@@ -65,6 +68,9 @@ void Editor::build_segment_chain_from_lines()
     wksp.line   = 0;
 }
 
+//
+// Parse text and build segment chain from it.
+//
 void Editor::build_segment_chain_from_text(const std::string &text)
 {
     // Split by '\n' into lines and build chain
@@ -85,6 +91,9 @@ void Editor::build_segment_chain_from_text(const std::string &text)
     build_segment_chain_from_lines();
 }
 
+//
+// Decode line length from segment data array.
+//
 int Editor::decode_line_len(const Segment *seg, size_t &idx) const
 {
     if (idx >= seg->data.size())
@@ -100,6 +109,9 @@ int Editor::decode_line_len(const Segment *seg, size_t &idx) const
     return (int)b;
 }
 
+//
+// Set workspace to segment containing specified line.
+//
 int Editor::wksp_position(int lno)
 {
     if (!wksp.cursegm)
@@ -122,6 +134,9 @@ int Editor::wksp_position(int lno)
     return 0;
 }
 
+//
+// Compute byte offset of specified line in file.
+//
 int Editor::wksp_seek(int lno, long &outSeek)
 {
     if (wksp_position(lno))
@@ -138,6 +153,9 @@ int Editor::wksp_seek(int lno, long &outSeek)
     return 0;
 }
 
+//
+// Retrieve line text from lines vector.
+//
 std::string Editor::get_line_from_model(int lno)
 {
     // For now, fallback to lines vector
@@ -146,6 +164,9 @@ std::string Editor::get_line_from_model(int lno)
     return std::string();
 }
 
+//
+// Retrieve line text from segment chain.
+//
 std::string Editor::get_line_from_segments(int lno)
 {
     // Try segment-based reading first
@@ -164,6 +185,9 @@ std::string Editor::get_line_from_segments(int lno)
     return get_line_from_model(lno);
 }
 
+//
+// Update line content in segment chain.
+//
 void Editor::update_line_in_segments(int lno, const std::string &new_content)
 {
     // For now, update the lines vector and rebuild segments
@@ -176,6 +200,9 @@ void Editor::update_line_in_segments(int lno, const std::string &new_content)
     build_segment_chain_from_lines();
 }
 
+//
+// Rebuild segments if they are marked as modified.
+//
 void Editor::ensure_segments_up_to_date()
 {
     if (segments_dirty) {
@@ -184,6 +211,9 @@ void Editor::ensure_segments_up_to_date()
     }
 }
 
+//
+// Open initial file from command line arguments.
+//
 void Editor::open_initial(int argc, char **argv)
 {
     if (argc > 1 && argv[1][0] != '-') {
@@ -203,6 +233,9 @@ void Editor::open_initial(int argc, char **argv)
     build_segment_chain_from_lines();
 }
 
+//
+// Load file content into segment chain.
+//
 bool Editor::load_file_segments(const std::string &path)
 {
     std::ifstream in(path.c_str(), std::ios::binary);
@@ -220,6 +253,9 @@ bool Editor::load_file_segments(const std::string &path)
     return true;
 }
 
+//
+// Write current buffer to file and create backup.
+//
 void Editor::save_file()
 {
     // Create backup file if not already done and file exists
@@ -261,6 +297,9 @@ void Editor::save_file()
     status = std::string("Saved: ") + filename;
 }
 
+//
+// Save buffer to specified filename.
+//
 void Editor::save_as(const std::string &new_filename)
 {
     // Unlink the original file to ensure backup is not affected by the write

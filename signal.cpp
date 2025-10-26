@@ -9,6 +9,9 @@
 // Static instance pointer for signal handlers
 Editor *Editor::instance_ = nullptr;
 
+//
+// Register signal handlers for graceful shutdown.
+//
 void Editor::setup_signal_handlers()
 {
     // Store instance pointer for signal handlers
@@ -28,6 +31,9 @@ void Editor::setup_signal_handlers()
     signal(SIGINT, handle_sigint);
 }
 
+//
+// Handle fatal signals by saving state before exit.
+//
 void Editor::handle_fatal_signal(int sig)
 {
     // Close ncurses cleanly
@@ -44,6 +50,9 @@ void Editor::handle_fatal_signal(int sig)
     std::exit(1);
 }
 
+//
+// Handle interrupt signal to allow graceful cancel.
+//
 void Editor::handle_sigint(int sig)
 {
     if (instance_ && instance_->interrupt_flag) {
@@ -64,6 +73,9 @@ void Editor::handle_sigint(int sig)
     signal(SIGINT, handle_sigint);
 }
 
+//
+// Process interrupt flag if set.
+//
 void Editor::check_interrupt()
 {
     if (interrupt_flag) {

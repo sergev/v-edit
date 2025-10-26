@@ -7,6 +7,9 @@
 
 #include "editor.h"
 
+//
+// Load file content into segment chain structure.
+//
 void Editor::load_file_to_segments(const std::string &path)
 {
     if (files.empty())
@@ -28,6 +31,9 @@ void Editor::load_file_to_segments(const std::string &path)
     close(fd);
 }
 
+//
+// Build segment chain from file descriptor.
+//
 void Editor::build_segment_chain_from_file(int fd)
 {
     if (files.empty())
@@ -183,6 +189,9 @@ void Editor::build_segment_chain_from_file(int fd)
     wksp.line     = 0;
 }
 
+//
+// Read line content from segment chain at specified index.
+//
 std::string Editor::read_line_from_segment(int line_no)
 {
     if (files.empty() || files[wksp.wfile].path.empty())
@@ -227,6 +236,9 @@ std::string Editor::read_line_from_segment(int line_no)
     return result;
 }
 
+//
+// Write segment chain content to file.
+//
 bool Editor::write_segments_to_file(const std::string &path)
 {
     if (files.empty() || !files[wksp.wfile].chain || files[wksp.wfile].path.empty())

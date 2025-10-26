@@ -9,6 +9,9 @@
 
 #include "editor.h"
 
+//
+// Execute external command as filter on selected lines.
+//
 bool Editor::execute_external_filter(const std::string &command, int start_line, int num_lines)
 {
     // Validate parameters

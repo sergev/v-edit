@@ -333,7 +333,7 @@ void Editor::splitline(int line, int col)
     put_line();
 
     // Insert new line with tail content
-    Segment *tail_seg = wksp->write_line_to_temp(tail);
+    Segment *tail_seg = write_line_to_temp(tail);
     if (tail_seg) {
         wksp->insert_segments(tail_seg, line + 1);
         wksp->set_nlines(wksp->nlines() + 1);

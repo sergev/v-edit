@@ -76,6 +76,13 @@ private:
     int inputfile{ 0 };    // 0=stdin, >=0=journal file fd for replay
     int restart_mode{ 0 }; // 0=normal, 1=restore, 2=replay
 
+public:
+    // Temporary file management (shared by all workspaces)
+    // Made public so Workspace can access them
+    int tempfile_fd_{ -1 }; // file descriptor for temporary file
+    long tempseek_{ 0 };    // seek position for temporary file
+
+private:
     // Startup and display
     //
     // Initialize ncurses terminal.
@@ -169,6 +176,11 @@ private:
     // Journaling
     void journal_write_key(int ch);
     int journal_read_key();
+
+    // Temporary file management
+    bool open_temp_file();
+    void close_temp_file();
+    Segment *write_line_to_temp(const std::string &line_content);
 
     // Clipboard operations
     void picklines(int startLine, int count);

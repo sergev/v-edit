@@ -8,6 +8,7 @@
 #include <fstream>
 
 #include "editor.h"
+#include "segment.h"
 
 // Help file system
 const std::string Editor::DEFAULT_HELP_FILE = "/usr/share/ve/help";
@@ -96,13 +97,12 @@ void Editor::startup(int restart)
 //
 void Editor::model_init()
 {
-    // Initialize workspaces
-    wksp     = std::make_unique<Workspace>();
-    alt_wksp = std::make_unique<Workspace>();
+    // Initialize workspaces (passing this for temp file access)
+    wksp     = std::make_unique<Workspace>(this);
+    alt_wksp = std::make_unique<Workspace>(this);
 
-    // Open temp files for workspaces
-    wksp->open_temp_file();
-    alt_wksp->open_temp_file();
+    // Open shared temp file
+    open_temp_file();
 }
 
 //
@@ -162,4 +162,71 @@ int Editor::run(int argc, char **argv)
     if (journal_fd >= 0)
         close(journal_fd);
     return 0;
+}
+
+//
+// Open temporary file for storing modified lines.
+//
+bool Editor::open_temp_file()
+{
+    if (tempfile_fd_ >= 0) {
+        return true; // Already open
+    }
+
+    char template_name[] = "/tmp/v-edit-XXXXXX";
+    tempfile_fd_         = mkstemp(template_name);
+    if (tempfile_fd_ < 0) {
+        return false;
+    }
+
+    // Unlink immediately so file is deleted when closed
+    unlink(template_name);
+    tempseek_ = 0;
+    return true;
+}
+
+//
+// Close temporary file.
+//
+void Editor::close_temp_file()
+{
+    if (tempfile_fd_ >= 0) {
+        close(tempfile_fd_);
+        tempfile_fd_ = -1;
+        tempseek_    = 0;
+    }
+}
+
+//
+// Write a line to the temporary file and return a segment for it.
+//
+Segment *Editor::write_line_to_temp(const std::string &line_content)
+{
+    if (tempfile_fd_ < 0 && !open_temp_file()) {
+        return nullptr;
+    }
+
+    std::string line = line_content;
+    // Add newline if not present
+    if (line.empty() || line.back() != '\n') {
+        line += '\n';
+    }
+
+    long seek_pos = tempseek_;
+    int nbytes    = line.size();
+    if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
+        return nullptr;
+    }
+
+    tempseek_ += nbytes;
+
+    Segment *seg = new Segment();
+    seg->prev    = nullptr;
+    seg->next    = nullptr;
+    seg->nlines  = 1;
+    seg->fdesc   = tempfile_fd_;
+    seg->seek    = seek_pos;
+    seg->sizes.push_back(nbytes);
+
+    return seg;
 }

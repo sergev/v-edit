@@ -7,13 +7,18 @@
 
 #include "segment.h"
 
+// Forward declaration
+class Editor;
+
 //
 // Workspace class - manages segment chain and file workspace state.
 // Encapsulates segment chain operations and positioning.
 //
 class Workspace {
+    friend class Editor; // Allow Editor to access private members
+
 public:
-    Workspace();
+    Workspace(Editor *editor = nullptr);
     ~Workspace();
 
     // Accessors
@@ -31,8 +36,6 @@ public:
     // Mutators
     void set_writable(int writable) { writable_ = writable; }
     void set_nlines(int nlines) { nlines_ = nlines; }
-    void set_tempfile_fd(int fd) { tempfile_fd_ = fd; }
-    void set_tempseek(long seek) { tempseek_ = seek; }
     void set_topline(int topline) { topline_ = topline; }
     void set_basecol(int basecol) { basecol_ = basecol; }
     void set_line(int line) { line_ = line; }
@@ -75,8 +78,6 @@ public:
 
     // Query methods
     bool has_segments() const { return chain_ != nullptr; }
-    int tempfile_fd() const { return tempfile_fd_; }
-    long tempseek() const { return tempseek_; }
 
     // Line count
     int get_line_count(int fallback_count) const;
@@ -125,12 +126,8 @@ public:
     // Update topline when file changes (used by wksp_redraw)
     void update_topline_after_edit(int from, int to, int delta);
 
-    // Temporary file operations for writing modified lines
-    bool open_temp_file();
-    void close_temp_file();
-    Segment *write_line_to_temp(const std::string &line_content);
-
 private:
+    Editor *editor_{ nullptr };   // reference to Editor for temp file access
     Segment *cursegm_{ nullptr }; // current segment in chain
     Segment *chain_{ nullptr };   // file's segment chain (direct access)
     int writable_{ 0 };           // write permission
@@ -143,8 +140,6 @@ private:
     int cursorrow_{ 0 };          // saved cursor row
     bool modified_{ false };      // track if file has been modified
     bool backup_done_{ false };   // track if backup file has been created
-    int tempfile_fd_{ -1 };       // file descriptor for temporary file
-    long tempseek_{ 0 };          // seek position for temporary file
     int original_fd_{ -1 };       // file descriptor for original file
 
     // Helper to update current segment pointer

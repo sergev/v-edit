@@ -7,7 +7,11 @@
 #include <cstring>
 #include <fstream>
 
-Workspace::Workspace() = default;
+#include "editor.h"
+
+Workspace::Workspace(Editor *editor) : editor_(editor)
+{
+}
 
 Workspace::~Workspace()
 {
@@ -62,19 +66,21 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
         return;
     }
 
-    // Open temp file if not already open
-    if (tempfile_fd_ < 0 && !open_temp_file()) {
+    if (!editor_) {
         return;
     }
 
+    // Ask Editor for temp file access
+    int tempfile_fd = editor_->tempfile_fd_;
+    long tempseek   = editor_->tempseek_;
+
     // Write all lines to temp file
-    long current_seek = tempseek_;
-    Segment *seg      = new Segment();
-    seg->prev         = nullptr;
-    seg->next         = nullptr;
-    seg->nlines       = nlines_;
-    seg->fdesc        = tempfile_fd_;
-    seg->seek         = current_seek;
+    Segment *seg = new Segment();
+    seg->prev    = nullptr;
+    seg->next    = nullptr;
+    seg->nlines  = nlines_;
+    seg->fdesc   = tempfile_fd;
+    seg->seek    = tempseek;
 
     // Write lines and record their sizes
     for (const std::string &ln : lines) {
@@ -85,13 +91,13 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
         }
 
         int nbytes = line.size();
-        if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
+        if (write(tempfile_fd, line.c_str(), nbytes) != nbytes) {
             delete seg;
             return;
         }
 
         seg->sizes.push_back(nbytes);
-        tempseek_ += nbytes;
+        editor_->tempseek_ += nbytes;
     }
 
     chain_    = seg;
@@ -907,79 +913,4 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
         if (topline_ < 0)
             topline_ = 0;
     }
-}
-
-//
-// Open temporary file for writing modified lines.
-//
-bool Workspace::open_temp_file()
-{
-    if (tempfile_fd_ >= 0) {
-        return true; // Already open
-    }
-
-    // Create temporary file
-    char tmpname[] = "/tmp/v-edit-XXXXXX";
-    tempfile_fd_   = mkstemp(tmpname);
-    if (tempfile_fd_ < 0) {
-        return false;
-    }
-
-    // Remove the file from filesystem but keep fd open
-    unlink(tmpname);
-    tempseek_ = 0;
-    return true;
-}
-
-//
-// Close temporary file.
-//
-void Workspace::close_temp_file()
-{
-    if (tempfile_fd_ >= 0) {
-        close(tempfile_fd_);
-        tempfile_fd_ = -1;
-        tempseek_    = 0;
-    }
-}
-
-//
-// Write a line to temporary file and return a segment for it.
-// Based on prototype's writemp() function.
-//
-Segment *Workspace::write_line_to_temp(const std::string &line_content)
-{
-    if (tempfile_fd_ < 0 && !open_temp_file()) {
-        return nullptr;
-    }
-
-    // Add newline if not present
-    std::string line = line_content;
-    if (line.empty() || line.back() != '\n') {
-        line += '\n';
-    }
-
-    // Convert to external format (handle binary/control chars if needed)
-    // For now, just write as-is
-    int nbytes = line.size();
-
-    // Write to temp file
-    if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
-        return nullptr;
-    }
-
-    // Create segment for this line
-    Segment *seg = new Segment();
-    seg->prev    = nullptr;
-    seg->next    = nullptr;
-    seg->nlines  = 1;
-    seg->fdesc   = tempfile_fd_;
-    seg->seek    = tempseek_;
-
-    // Store line length
-    seg->sizes.push_back(nbytes);
-
-    tempseek_ += nbytes;
-
-    return seg;
 }

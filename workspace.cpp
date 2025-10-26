@@ -29,7 +29,6 @@ Workspace &Workspace::operator=(const Workspace &other)
     cleanup_segments();
 
     // Copy simple fields
-    path_        = other.path_;
     writable_    = other.writable_;
     nlines_      = other.nlines_;
     topline_     = other.topline_;
@@ -90,7 +89,6 @@ void Workspace::cleanup_segments()
 void Workspace::reset()
 {
     cleanup_segments();
-    path_.clear();
     writable_    = 0;
     nlines_      = 0;
     topline_     = 0;
@@ -237,8 +235,6 @@ int Workspace::seek(int lno, long &outSeek)
 //
 void Workspace::load_file_to_segments(const std::string &path)
 {
-    path_ = path;
-
     // Open file for reading
     int fd = open(path.c_str(), O_RDONLY);
     if (fd < 0) {
@@ -486,19 +482,6 @@ bool Workspace::write_segments_to_file(const std::string &path)
 
     close(out_fd);
     return true;
-}
-
-//
-// Check if workspace is using file-based segments.
-// TODO: remove this function.
-//
-bool Workspace::is_file_based() const
-{
-    if (!chain_) {
-        return false;
-    }
-    Segment *seg = chain_;
-    return seg && seg->fdesc > 0;
 }
 
 //

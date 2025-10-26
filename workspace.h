@@ -23,7 +23,6 @@ public:
     // Accessors
     Segment *chain() const { return chain_; }
     Segment *cursegm() const { return cursegm_; }
-    const std::string &path() const { return path_; }
     int writable() const { return writable_; }
     int nlines() const { return nlines_; }
     int topline() const { return topline_; }
@@ -34,7 +33,6 @@ public:
     int cursorrow() const { return cursorrow_; }
 
     // Mutators
-    void set_path(const std::string &path) { path_ = path; }
     void set_writable(int writable) { writable_ = writable; }
     void set_nlines(int nlines) { nlines_ = nlines; }
     void set_topline(int topline) { topline_ = topline; }
@@ -79,8 +77,6 @@ public:
 
     // Query methods
     bool has_segments() const { return chain_ != nullptr; }
-    bool is_file_based() const;
-    bool has_file_path() const { return !path_.empty(); }
 
     // Line count
     int get_line_count(int fallback_count) const;
@@ -137,7 +133,6 @@ public:
 private:
     Segment *cursegm_{ nullptr }; // current segment in chain
     Segment *chain_{ nullptr };   // file's segment chain (direct access)
-    std::string path_;            // file path (for segment-based I/O)
     int writable_{ 0 };           // write permission
     int nlines_{ 0 };             // line count
     int topline_{ 0 };            // top line visible on screen

@@ -7,35 +7,6 @@ This document tracks the implementation of segment-based editing, migrating from
 
 ### Completed ✅
 
-1. **Removed temporary line cache**
-   - Removed `line_cache` from `editor.h`
-   - Removed all `line_cache` lookups from `file.cpp`
-
-2. **Modified `build_segment_chain_from_lines()`**
-   - Now writes lines to temp file instead of using `fdesc=0`
-   - No more "in-memory" segments
-   - All segments are either from original file, temp file, or contain empty lines (`fdesc == -1`)
-
-3. **Added assertions for `fdesc`**
-   - `assert(seg->fdesc != 0)` in critical paths
-   - Ensures segments always have valid file descriptors
-   - Empty lines use `fdesc == -1`
-
-4. **Fixed `insert_segments()`**
-   - Now updates `nlines_` correctly
-   - Fixed segment linking logic to insert BEFORE the target segment
-   - Properly handles insertion at beginning, middle, and end
-
-5. **Fixed `read_line_from_segment()`**
-   - Returns `""` for empty lines (length 1, just newline)
-   - Properly handles segments from original file, temp file, and empty lines
-
-6. **Fixed `delete_segments()`**
-   - Correctly deletes lines from `from` to `to` inclusive
-   - Updates `nlines_` correctly
-   - Properly handles segment breaking and unlinking
-   - All delete-related tests now passing
-
 7. **Added unit tests**
    - `BuildSegmentChainFromLines` - tests writing to temp file
    - `InsertSegmentsUpdatesNlines` - tests insert functionality

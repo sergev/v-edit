@@ -88,6 +88,57 @@ void Editor::handle_key_cmd(int ch)
             return;
         }
     }
+    
+    // Handle control characters in command mode (not in area selection)
+    if (ch == 3) { // ^C - Copy lines
+        int curLine = wksp.topline + cursor_line;
+        // Parse count from cmd if it's numeric
+        int count = 1;
+        if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
+            // Extract all leading digits
+            size_t i = 0;
+            while (i < cmd.size() && cmd[i] >= '0' && cmd[i] <= '9') {
+                i++;
+            }
+            if (i > 0) {
+                count = std::atoi(cmd.substr(0, i).c_str());
+                if (count < 1) count = 1;
+            }
+        }
+        picklines(curLine, count);
+        status = std::string("Copied ") + std::to_string(count) + " line(s)";
+        cmd_mode = false;
+        cmd.clear();
+        return;
+    }
+    if (ch == 25) { // ^Y - Delete lines
+        int curLine = wksp.topline + cursor_line;
+        // Parse count from cmd if it's numeric
+        int count = 1;
+        if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
+            count = std::atoi(cmd.c_str());
+            if (count < 1) count = 1;
+        }
+        deletelines(curLine, count);
+        status = std::string("Deleted ") + std::to_string(count) + " line(s)";
+        cmd_mode = false;
+        cmd.clear();
+        return;
+    }
+    if (ch == 15) { // ^O - Insert blank lines
+        int curLine = wksp.topline + cursor_line;
+        // Parse count from cmd if it's numeric
+        int count = 1;
+        if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
+            count = std::atoi(cmd.c_str());
+            if (count < 1) count = 1;
+        }
+        insertlines(curLine, count);
+        status = std::string("Inserted ") + std::to_string(count) + " line(s)";
+        cmd_mode = false;
+        cmd.clear();
+        return;
+    }
 
     // Check if this is a movement key (area selection)
     if (is_movement_key(ch)) {
@@ -163,13 +214,13 @@ void Editor::handle_key_cmd(int ch)
                 if (cmd.size() >= 3 && cmd[2] == '+') {
                     if (!files.empty() && wksp.wfile < (int)files.size()) {
                         files[wksp.wfile].writable = 1;
-                        status = "File marked writable";
                     }
+                    status = "File marked writable";
                 } else {
                     if (!files.empty() && wksp.wfile < (int)files.size()) {
                         files[wksp.wfile].writable = 0;
-                        status = "File marked read-only";
                     }
+                    status = "File marked read-only";
                 }
             } else if (cmd == "s") {
                 save_file();
@@ -334,43 +385,53 @@ void Editor::handle_key_cmd(int ch)
         return;
     }
     
-    // Handle control characters with potential count in command mode
-    if (cmd_mode && !area_selection_mode && !filter_mode) {
-        if (ch == 3) { // ^C - Copy
+    if (ch == KEY_BACKSPACE || ch == 127) {
+        if (!cmd.empty())
+            cmd.pop_back();
+        return;
+    }
+    
+    // Handle control characters immediately, even in command mode
+    if (ch == 3) { // ^C - Copy
+        if (cmd_mode && !area_selection_mode && !filter_mode) {
             int curLine = wksp.topline + cursor_line;
             int count = param_count > 0 ? param_count : 1;
             picklines(curLine, count);
             status = std::string("Copied ") + std::to_string(count) + " line(s)";
             cmd_mode = false;
             param_count = 0;
+            cmd.clear();
             return;
         }
-        if (ch == 25) { // ^Y - Delete
+    }
+    if (ch == 25) { // ^Y - Delete
+        if (cmd_mode && !area_selection_mode && !filter_mode) {
             int curLine = wksp.topline + cursor_line;
             int count = param_count > 0 ? param_count : 1;
             deletelines(curLine, count);
             status = std::string("Deleted ") + std::to_string(count) + " line(s)";
             cmd_mode = false;
             param_count = 0;
+            cmd.clear();
             return;
         }
-        if (ch == 15) { // ^O - Insert blank lines
+    }
+    if (ch == 15) { // ^O - Insert blank lines
+        if (cmd_mode && !area_selection_mode && !filter_mode) {
             int curLine = wksp.topline + cursor_line;
             int count = param_count > 0 ? param_count : 1;
             insertlines(curLine, count);
             status = std::string("Inserted ") + std::to_string(count) + " line(s)";
             cmd_mode = false;
             param_count = 0;
+            cmd.clear();
             return;
         }
     }
-    if (ch == KEY_BACKSPACE || ch == 127) {
-        if (!cmd.empty())
-            cmd.pop_back();
-        return;
-    }
-    if (ch >= 32 && ch < 127)
+    
+    if (ch >= 32 && ch < 127) {
         cmd.push_back((char)ch);
+    }
 }
 
 // Enhanced parameter system functions

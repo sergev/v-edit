@@ -46,9 +46,9 @@ TEST_F(WorkspaceTest, CreateBlankLines)
     EXPECT_EQ(seg->fdesc, -1);
 
     // Check data
-    EXPECT_EQ(seg->data.size(), 5);
+    EXPECT_EQ(seg->sizes.size(), 5);
     for (int i = 0; i < 5; ++i) {
-        EXPECT_EQ(seg->data[i], 1);
+        EXPECT_EQ(seg->sizes[i], 1);
     }
 
     // Cleanup
@@ -120,10 +120,10 @@ TEST_F(WorkspaceTest, CopySegmentChain)
 
     // Verify it's a deep copy (different pointers but same data)
     EXPECT_NE(copy, original);
-    EXPECT_EQ(copy->data.size(), original->data.size());
+    EXPECT_EQ(copy->sizes.size(), original->sizes.size());
 
-    for (size_t i = 0; i < copy->data.size(); ++i) {
-        EXPECT_EQ(copy->data[i], original->data[i]);
+    for (size_t i = 0; i < copy->sizes.size(); ++i) {
+        EXPECT_EQ(copy->sizes[i], original->sizes[i]);
     }
 
     // Cleanup
@@ -665,5 +665,65 @@ TEST_F(WorkspaceTest, WriteLineToTempAndSave)
 
     // Cleanup
     cleanupTestFile(filename);
+    cleanupTestFile(out_filename);
+}
+
+TEST_F(WorkspaceTest, BuildSegmentChainFromLines)
+{
+    // Test that build_segment_chain_from_lines writes to temp file
+    std::vector<std::string> lines = { "First line", "Second line", "Third line" };
+
+    wksp->build_segment_chain_from_lines(lines);
+
+    // Verify segments were created
+    EXPECT_TRUE(wksp->has_segments());
+    EXPECT_EQ(wksp->nlines(), 3);
+
+    // Verify fdesc is not 0 (should be temp file fd)
+    Segment *seg = wksp->chain();
+    ASSERT_NE(seg, nullptr);
+    EXPECT_GT(seg->fdesc, 0); // Should be tempfile_fd_
+    EXPECT_EQ(seg->nlines, 3);
+
+    // Verify all line sizes are stored
+    EXPECT_EQ(seg->sizes.size(), 3);
+    EXPECT_EQ(seg->sizes[0], 11); // "First line\n" = 11 bytes
+    EXPECT_EQ(seg->sizes[1], 12); // "Second line\n" = 12 bytes
+    EXPECT_EQ(seg->sizes[2], 11); // "Third line\n" = 11 bytes
+
+    // Verify we can read lines back
+    std::string line1 = wksp->read_line_from_segment(0);
+    std::string line2 = wksp->read_line_from_segment(1);
+    std::string line3 = wksp->read_line_from_segment(2);
+
+    EXPECT_EQ(line1, "First line");
+    EXPECT_EQ(line2, "Second line");
+    EXPECT_EQ(line3, "Third line");
+
+    // Verify we can save to file
+    std::string out_filename = "build_segment_test.txt";
+    cleanupTestFile(out_filename);
+
+    bool saved = wksp->write_segments_to_file(out_filename);
+    EXPECT_TRUE(saved);
+
+    // Verify output file content
+    std::ifstream in(out_filename);
+    EXPECT_TRUE(in.good());
+
+    std::vector<std::string> output_lines;
+    std::string line;
+    while (std::getline(in, line)) {
+        output_lines.push_back(line);
+    }
+    in.close();
+
+    EXPECT_EQ(output_lines.size(), 3);
+    if (output_lines.size() == 3) {
+        EXPECT_EQ(output_lines[0], "First line");
+        EXPECT_EQ(output_lines[1], "Second line");
+        EXPECT_EQ(output_lines[2], "Third line");
+    }
+
     cleanupTestFile(out_filename);
 }

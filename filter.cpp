@@ -1,6 +1,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -92,7 +93,8 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     // Update line count - TODO: need better integration
     int new_num_lines = 0;
     Segment *seg      = wksp.chain();
-    while (seg && seg->fdesc) {
+    while (seg) {
+        assert(seg->fdesc != 0); // fdesc should be present for segments with content
         new_num_lines += seg->nlines;
         seg = seg->next;
     }

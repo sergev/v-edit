@@ -6,24 +6,32 @@
 
 class Segment {
 public:
+    // Segments a linked in a list.
     Segment *prev{ nullptr };
     Segment *next{ nullptr };
+
+    // Each segment contains a non-zero number of text lines.
     int nlines{ 0 };
+
+    // Descriptor of the file, where these text lines are stored.
+    // There are three cases:
+    //  * fdesc == original_fd of the enclosing workspace
+    //      - when this segment holds unmodified lines of the original file.
+    //  * fdesc == tempfile_fd
+    //      - when this segment holds modified lines stored in temporary file.
+    //  * fdesc == -1
+    //      - when this segment holds empty lines (only newlines).
+    // Note: fdesc cannot be 0 in a valid segment.
     int fdesc{ 0 };
+
+    // Offset in fdesc for data of this segment.
     long seek{ 0 };
-    std::vector<unsigned char> data;
+
+    // Line lengths, including "\n"
+    std::vector<unsigned short> sizes;
 
     // Constructor
     Segment() = default;
-
-    // Decode line length from segment data array at given index
-    // Returns length including "\n"
-    // Updates idx to point to next entry
-    int decode_line_len(size_t &idx) const;
-
-    // Add line length to segment data in encoded format
-    // Handles both single-byte (length <= 127) and two-byte (length > 127) encoding
-    void add_line_length(int line_len);
 
     // Calculate total bytes represented by all line lengths in this segment
     long get_total_bytes() const;

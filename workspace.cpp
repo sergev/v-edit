@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <cstring>
 #include <fstream>
 
@@ -52,7 +53,7 @@ Workspace &Workspace::operator=(const Workspace &other)
             new_seg->nlines  = src->nlines;
             new_seg->fdesc   = src->fdesc;
             new_seg->seek    = src->seek;
-            new_seg->data    = src->data;
+            new_seg->sizes   = src->sizes;
 
             if (prev) {
                 prev->next = new_seg;
@@ -104,6 +105,7 @@ void Workspace::reset()
 
 //
 // Build segment chain from in-memory lines vector.
+// Writes lines into temp file.
 //
 void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &lines)
 {
@@ -113,29 +115,50 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
     // Clean up old chain if any
     cleanup_segments();
 
-    Segment *seg = new Segment();
-    seg->prev    = nullptr;
-    seg->next    = nullptr;
-    seg->nlines  = nlines_;
-    seg->fdesc   = 0;
-    seg->seek    = 0;
-
-    // Build segment chain with line length data
-    seg->data.reserve(lines.size() * 2);
-    for (const std::string &ln : lines) {
-        int n = (int)ln.size() + 1; // include newline
-        seg->add_line_length(n);
+    if (nlines_ == 0) {
+        // Empty file - just set up pointers
+        basecol_ = 0;
+        line_    = 0;
+        return;
     }
-    chain_ = seg;
 
-    // Set workspace pointer to first segment
+    // Open temp file if not already open
+    if (tempfile_fd_ < 0 && !open_temp_file()) {
+        return;
+    }
+
+    // Write all lines to temp file
+    long current_seek = tempseek_;
+    Segment *seg      = new Segment();
+    seg->prev         = nullptr;
+    seg->next         = nullptr;
+    seg->nlines       = nlines_;
+    seg->fdesc        = tempfile_fd_;
+    seg->seek         = current_seek;
+
+    // Write lines and record their sizes
+    for (const std::string &ln : lines) {
+        std::string line = ln;
+        // Add newline if not present
+        if (line.empty() || line.back() != '\n') {
+            line += '\n';
+        }
+
+        int nbytes = line.size();
+        if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
+            delete seg;
+            return;
+        }
+
+        seg->sizes.push_back(nbytes);
+        tempseek_ += nbytes;
+    }
+
+    chain_    = seg;
     cursegm_  = seg;
     segmline_ = 0;
-
-    // Don't reset topline here as it's called during editing and would reset scroll position
-    // Only reset offset and line
-    basecol_ = 0;
-    line_    = 0;
+    basecol_  = 0;
+    line_     = 0;
 }
 
 //
@@ -167,12 +190,18 @@ int Workspace::position(int lno)
 {
     if (!cursegm_)
         return 1;
+
     Segment *seg = cursegm_;
     int segStart = segmline_;
     // adjust forward
-    while (lno >= segStart + seg->nlines && seg->fdesc) {
+    while (lno >= segStart + seg->nlines) {
+        assert(seg->fdesc != 0); // fdesc should be present for segments with content
         segStart += seg->nlines;
         seg = seg->next;
+        if (!seg) {
+            // Went past end of chain
+            return 1;
+        }
     }
     // adjust backward
     while (lno < segStart && seg->prev) {
@@ -195,9 +224,8 @@ int Workspace::seek(int lno, long &outSeek)
     Segment *seg = cursegm_;
     long seek    = (long)seg->seek;
     int rel      = lno - segmline_;
-    size_t idx   = 0;
     for (int i = 0; i < rel; ++i) {
-        int len = seg->decode_line_len(idx);
+        int len = seg->sizes[i];
         seek += len;
     }
     outSeek = seek;
@@ -264,10 +292,7 @@ void Workspace::build_segment_chain_from_file(int fd)
                     seg->nlines  = lines_in_seg;
                     seg->fdesc   = fd;
                     seg->seek    = seg_seek;
-                    seg->data    = temp_seg.data;
-
-                    // Reset temp segment for next use
-                    temp_seg.data.clear();
+                    seg->sizes   = std::move(temp_seg.sizes);
 
                     if (last_seg)
                         last_seg->next = seg;
@@ -320,20 +345,20 @@ void Workspace::build_segment_chain_from_file(int fd)
             seg_seek = file_offset;
         }
 
-        temp_seg.add_line_length(line_len);
+        temp_seg.sizes.push_back(line_len);
 
         ++lines_in_seg;
         file_offset += line_len;
 
         // Create new segment if we've hit limits
-        if (lines_in_seg >= 127 || temp_seg.data.size() >= 4000) {
+        if (lines_in_seg >= 127 || temp_seg.sizes.size() >= 4000) {
             Segment *seg = new Segment();
             seg->prev    = last_seg;
             seg->next    = nullptr;
             seg->nlines  = lines_in_seg;
             seg->fdesc   = fd;
             seg->seek    = seg_seek;
-            seg->data    = temp_seg.data;
+            seg->sizes   = std::move(temp_seg.sizes);
 
             if (last_seg)
                 last_seg->next = seg;
@@ -343,8 +368,6 @@ void Workspace::build_segment_chain_from_file(int fd)
             last_seg = seg;
             nlines_ += lines_in_seg;
 
-            // Reset for next segment
-            temp_seg.data.clear();
             lines_in_seg = 0;
         }
     }
@@ -385,43 +408,28 @@ std::string Workspace::read_line_from_segment(int line_no)
     // Note: seg->seek points to the START of the first line in the segment
     // We need to skip 'rel_line' lines to get to the line we want
     long seek_pos = seg->seek;
-    size_t idx    = 0;
     for (int i = 0; i < rel_line; ++i) {
-        int len = seg->decode_line_len(idx);
+        int len = seg->sizes[i];
         seek_pos += len;
     }
 
     // Get line length
-    int line_len = seg->decode_line_len(idx);
+    int line_len = seg->sizes[rel_line];
     if (line_len <= 0)
-        return std::string();
+        return "";
+    if (line_len == 1 || seg->fdesc == -1) {
+        // Eempty line.
+        return "\n";
+    }
+
+    // Assert that fdesc is valid.
+    assert(seg->fdesc > 0);
 
     // Read line from file
-    char *buffer = new char[line_len];
-
-    // Determine which file to read from
-    int fd = -1;
-    if (seg->fdesc == tempfile_fd_) {
-        // Reading from temp file
-        fd = tempfile_fd_;
-    } else if (!path_.empty()) {
-        // Reading from original file
-        fd = open(path_.c_str(), O_RDONLY);
+    std::string result(line_len - 1, '\0'); // exclude newline
+    if (lseek(seg->fdesc, seek_pos, SEEK_SET) >= 0) {
+        read(seg->fdesc, result.data(), result.size());
     }
-
-    if (fd >= 0) {
-        if (lseek(fd, seek_pos, SEEK_SET) >= 0) {
-            read(fd, buffer, line_len);
-        }
-        // Close file if we opened it (not temp file)
-        if (fd != tempfile_fd_) {
-            close(fd);
-        }
-    }
-
-    std::string result(buffer, line_len - 1); // exclude newline
-    delete[] buffer;
-
     return result;
 }
 
@@ -446,56 +454,32 @@ bool Workspace::write_segments_to_file(const std::string &path)
     Segment *seg = chain_;
     char buffer[8192];
 
-    while (seg && seg->fdesc) {
-        if (seg->fdesc == 0) {
-            // In-memory segment - need to write data directly
-            // For segments with fdesc=0, we need to rebuild data from line lengths
-            // This is a fallback for segments that don't have file backing
-            // In most cases with put_line implementation, this should be rare
-            // as we now write to temp file. But for initialization or edge cases:
-            seg = seg->next;
-            continue;
-        } else if (seg->fdesc > 0) {
-            // Calculate total bytes for this segment
-            long total_bytes = seg->get_total_bytes();
+    while (seg) {
+        // Assert that fdesc is present for segments with content
+        // It may be -1 here though, meaning empty lines.
+        assert(seg->fdesc != 0);
 
-            // Determine which file to read from
-            int read_fd;
-            if (seg->fdesc == tempfile_fd_) {
-                // Reading from temp file (modified lines)
-                read_fd = tempfile_fd_;
-            } else if (seg->fdesc == original_fd_ && original_fd_ >= 0) {
-                // This is an original file segment (unchanged lines)
-                // Use the stored original_fd_ which is kept open
-                read_fd = original_fd_;
-            } else if (seg->fdesc > 0) {
-                // This segment has an fdesc but it doesn't match our known fds
-                // This shouldn't happen in normal operation, skip it
-                seg = seg->next;
-                continue;
-            } else {
-                // Invalid fdesc - skip this segment
-                seg = seg->next;
-                continue;
-            }
+        // Calculate total bytes for this segment
+        long total_bytes = seg->get_total_bytes();
 
+        if (seg->fdesc > 0) {
             // Read from source file and write to output
-            lseek(read_fd, seg->seek, SEEK_SET);
+            lseek(seg->fdesc, seg->seek, SEEK_SET);
             while (total_bytes > 0) {
                 int to_read = (total_bytes < (long)sizeof(buffer)) ? total_bytes : sizeof(buffer);
-                int nread   = read(read_fd, buffer, to_read);
+                int nread   = read(seg->fdesc, buffer, to_read);
                 if (nread <= 0)
                     break;
+
                 write(out_fd, buffer, nread);
                 total_bytes -= nread;
             }
-
-            // Close file if we opened it (not temp file)
-            // Note: tempfile_fd_ stays open for reuse
-            if (read_fd != tempfile_fd_) {
-                close(read_fd);
-            }
+        } else {
+            // Empty lines.
+            std::string newlines(total_bytes, '\n');
+            write(out_fd, newlines.data(), newlines.size());
         }
+
         seg = seg->next;
     }
 
@@ -505,6 +489,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
 
 //
 // Check if workspace is using file-based segments.
+// TODO: remove this function.
 //
 bool Workspace::is_file_based() const
 {
@@ -546,21 +531,18 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         return 0; // Already at the right position
     }
 
-    // Calculate file offset and find split point by walking through lines
-    size_t data_idx = 0;
-    long offs       = 0;
+    // Record where we are in the data after processing rel_line entries
+    size_t split_point = rel_line;
 
     // Walk through the first rel_line lines to calculate offset
+    long offs = 0;
     for (int i = 0; i < rel_line; ++i) {
-        if (data_idx >= seg->data.size())
+        if (i >= seg->nlines) {
+            split_point = seg->nlines;
             break;
-
-        int len = seg->decode_line_len(data_idx);
-        offs += len;
+        }
+        offs += seg->sizes[i];
     }
-
-    // Record where we are in the data after processing rel_line entries
-    size_t split_point = data_idx;
 
     // Create new segment for the remainder
     Segment *new_seg = new Segment();
@@ -569,8 +551,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     new_seg->seek    = seg->seek + offs;
 
     // Copy remaining data bytes from split_point to end
-    for (size_t i = split_point; i < seg->data.size(); ++i) {
-        new_seg->data.push_back(seg->data[i]);
+    for (size_t i = split_point; i < seg->nlines; ++i) {
+        new_seg->sizes.push_back(seg->sizes[i]);
     }
 
     // Link new segment
@@ -581,11 +563,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     seg->next = new_seg;
 
     // Truncate original segment data - keep only first rel_line data
-    std::vector<unsigned char> new_data;
+    std::vector<unsigned short> new_sizes;
     for (size_t i = 0; i < split_point; ++i) {
-        new_data.push_back(seg->data[i]);
+        new_sizes.push_back(seg->sizes[i]);
     }
-    seg->data   = new_data;
+    seg->sizes  = new_sizes;
     seg->nlines = rel_line;
 
     // Update workspace position
@@ -610,7 +592,7 @@ bool Workspace::catsegm()
 
     // Check if segments can be merged
     // They must be from the same file and together have < 127 lines
-    if (prev->fdesc > 0 && prev->fdesc == curr->fdesc && (prev->nlines + curr->nlines) < 127) {
+    if (prev->fdesc == curr->fdesc && (prev->nlines + curr->nlines) < 127) {
         // Calculate if they're adjacent
         long prev_bytes = prev->get_total_bytes();
         if (curr->seek == prev->seek + prev_bytes) {
@@ -623,9 +605,9 @@ bool Workspace::catsegm()
             merged->prev    = prev->prev;
 
             // Copy data from both segments
-            merged->data = prev->data;
-            for (unsigned char byte : curr->data)
-                merged->data.push_back(byte);
+            merged->sizes = prev->sizes;
+            for (unsigned char byte : curr->sizes)
+                merged->sizes.push_back(byte);
 
             // Update links
             if (prev->prev)
@@ -694,15 +676,27 @@ Segment *Workspace::delete_segments(int from, int to)
         return nullptr;
 
     // Break at end line + 1
-    if (breaksegm(to + 1, true) != 0)
-        return nullptr;
+    int result = breaksegm(to + 1, true);
+    if (result != 0) {
+        // Line doesn't exist - allow deletion to last line
+        if (to + 1 > nlines_) {
+            // Just move to the last line position
+            position(nlines_);
+        } else {
+            // Debug: log what went wrong
+            return nullptr;
+        }
+    }
 
     Segment *end_seg = cursegm_;
     Segment *after   = end_seg->next; // Save pointer to what comes after
 
     // Break at start line
-    if (breaksegm(from, true) != 0)
+    result = breaksegm(from, true);
+    if (result != 0) {
+        // Debug: could not break at start line
         return nullptr;
+    }
 
     Segment *start_seg = cursegm_;
     Segment *before    = start_seg->prev;
@@ -755,7 +749,7 @@ Segment *Workspace::copy_segment_chain(Segment *start, Segment *end)
         copy->nlines  = curr->nlines;
         copy->fdesc   = curr->fdesc;
         copy->seek    = curr->seek;
-        copy->data    = curr->data; // Copy vector
+        copy->sizes   = curr->sizes; // Copy vector
         copy->next    = nullptr;
         copy->prev    = copied_last;
 
@@ -805,11 +799,11 @@ Segment *Workspace::create_blank_lines(int n)
         seg->nlines  = lines_in_seg;
         seg->fdesc   = -1; // Empty lines not from file
         seg->seek    = 0;
-        seg->data.clear();
 
         // Add line length data: each empty line has length 1 (just newline)
+        seg->sizes.resize(lines_in_seg);
         for (int i = 0; i < lines_in_seg; ++i) {
-            seg->add_line_length(1);
+            seg->sizes[i] = 1;
         }
 
         // Link segments
@@ -1017,8 +1011,8 @@ Segment *Workspace::write_line_to_temp(const std::string &line_content)
     seg->fdesc   = tempfile_fd_;
     seg->seek    = tempseek_;
 
-    // Store line length in data
-    seg->add_line_length(nbytes);
+    // Store line length
+    seg->sizes.push_back(nbytes);
 
     tempseek_ += nbytes;
 

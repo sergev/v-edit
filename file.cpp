@@ -11,43 +11,7 @@
 //
 void Editor::build_segment_chain_from_lines()
 {
-    wksp.writable = 1;
-    wksp.nlines   = (int)lines.size();
-
-    // Create actual segment and initialize workspace pointer
-    if (wksp.chain) {
-        // Clean up old chain if any
-        Segment *seg = wksp.chain;
-        while (seg) {
-            Segment *next = seg->next;
-            delete seg;
-            seg = next;
-        }
-    }
-
-    Segment *seg = new Segment();
-    seg->prev    = nullptr;
-    seg->next    = nullptr;
-    seg->nlines  = (int)lines.size();
-    seg->fdesc   = 0;
-    seg->seek    = 0;
-
-    // Build segment chain with line length data
-    seg->data.reserve(lines.size() * 2);
-    for (const std::string &ln : lines) {
-        int n = (int)ln.size() + 1; // include newline
-        seg->add_line_length(n);
-    }
-    wksp.chain = seg;
-
-    // Set workspace pointer to first segment
-    wksp.cursegm  = seg;
-    wksp.segmline = 0;
-
-    // Don't reset wksp.topline here as it's called during editing and would reset scroll position
-    // Only reset offset and line
-    wksp.basecol = 0;
-    wksp.line    = 0;
+    wksp.build_segment_chain_from_lines(lines);
 }
 
 //
@@ -74,50 +38,6 @@ void Editor::build_segment_chain_from_text(const std::string &text)
 }
 
 //
-// Set workspace to segment containing specified line.
-//
-int Editor::wksp_position(int lno)
-{
-    if (!wksp.cursegm)
-        return 1;
-    Segment *seg = wksp.cursegm;
-    int segStart = wksp.segmline;
-    // adjust forward
-    while (lno >= segStart + seg->nlines && seg->fdesc) {
-        segStart += seg->nlines;
-        seg = seg->next;
-    }
-    // adjust backward
-    while (lno < segStart && seg->prev) {
-        seg = seg->prev;
-        segStart -= seg->nlines;
-    }
-    wksp.cursegm  = seg;
-    wksp.segmline = segStart;
-    wksp.line     = lno;
-    return 0;
-}
-
-//
-// Compute byte offset of specified line in file.
-//
-int Editor::wksp_seek(int lno, long &outSeek)
-{
-    if (wksp_position(lno))
-        return 1;
-    Segment *seg = wksp.cursegm;
-    long seek    = (long)seg->seek;
-    int rel      = lno - wksp.segmline;
-    size_t idx   = 0;
-    for (int i = 0; i < rel; ++i) {
-        int len = seg->decode_line_len(idx);
-        seek += len;
-    }
-    outSeek = seek;
-    return 0;
-}
-
-//
 // Retrieve line text from lines vector.
 //
 std::string Editor::get_line_from_model(int lno)
@@ -134,15 +54,14 @@ std::string Editor::get_line_from_model(int lno)
 std::string Editor::get_line_from_segments(int lno)
 {
     // Try segment-based reading first
-    if (!wksp.chain) {
+    if (!wksp.has_segments()) {
         return get_line_from_model(lno); // fallback to lines vector
     }
 
     // Check if we have file-based segments
-    Segment *seg = wksp.chain;
-    if (seg && seg->fdesc > 0) {
+    if (wksp.is_file_based()) {
         // Use segment-based reading
-        return read_line_from_segment(lno);
+        return wksp.read_line_from_segment(lno);
     }
 
     // Fallback to lines vector

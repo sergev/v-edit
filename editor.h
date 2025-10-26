@@ -6,28 +6,13 @@
 #include <vector>
 
 #include "segment.h"
+#include "workspace.h"
 
 class Editor {
 private:
     static Editor *instance_; // For signal handler access
 
 public:
-    // --- Core data model types (ported from prototype) ---
-
-    struct Workspace {
-        Segment *cursegm{ nullptr }; // current segment in chain
-        Segment *chain{ nullptr };   // file's segment chain (direct access)
-        std::string path;            // file path (for segment-based I/O)
-        int writable{ 0 };           // write permission
-        int nlines{ 0 };             // line count
-        int topline{ 0 };            // top line visible on screen
-        int basecol{ 0 };            // horizontal scroll base column
-        int line{ 0 };               // current line number
-        int segmline{ 0 };           // first line in current segment
-        int cursorcol{ 0 };          // saved cursor column
-        int cursorrow{ 0 };          // saved cursor row
-    };
-
     Editor();
     int run(int argc, char **argv);
 
@@ -162,8 +147,7 @@ private:
     void build_segment_chain_from_lines();
     void build_segment_chain_from_text(const std::string &text);
     bool load_file_segments(const std::string &path);
-    int wksp_position(int lno);            // set wksp.cursegm/segmline to segment containing lno
-    int wksp_seek(int lno, long &outSeek); // compute byte offset of line lno in file
+    bool load_file_to_segments(const std::string &path);
 
     // helpers
     std::string get_line_from_model(int lno);
@@ -171,12 +155,6 @@ private:
     void update_line_in_segments(int lno,
                                  const std::string &new_content); // update line in segment chain
     void ensure_segments_up_to_date();                            // rebuild segments only if dirty
-
-    // Segment-based file storage
-    void load_file_to_segments(const std::string &path);
-    void build_segment_chain_from_file(int fd);
-    std::string read_line_from_segment(int line_no);
-    bool write_segments_to_file(const std::string &path);
 
     // Session state
     void save_state();

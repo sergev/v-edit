@@ -29,6 +29,7 @@ set(CE_SOURCES
     signal.cpp
     segments.cpp
     segment.cpp
+    workspace.cpp
 )
 
 set(CE_MAIN

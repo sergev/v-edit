@@ -108,9 +108,9 @@ v_edit_tests         # Test suite linking v_edit_lib
 
 Typical build:
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-cmake --install build
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+make -C build
+make -C build install
 ```
 
 ### Source Files and Purposes
@@ -147,9 +147,9 @@ cmake --install build
 
 ### Running Tests
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-cd build
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+make -C build
+cd build/tests
 ctest -V
 ```
 
@@ -261,7 +261,7 @@ void start_status_color() {
 ### Code Style
 - **Indentation**: 4 spaces (C++ and CMake)
 - **Formatting**: Run `make reindent` for clang-format
-- **Naming**: 
+- **Naming**:
   - Member variables in camelCase
   - Functions in snake_case
   - Structs in PascalCase

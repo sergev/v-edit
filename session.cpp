@@ -13,8 +13,8 @@ void Editor::save_state()
     std::ofstream out(tmpname.c_str());
     if (out) {
         out << filename << '\n';
-        out << wksp.topline << '\n';
-        out << wksp.basecol << '\n';
+        out << wksp.topline() << '\n';
+        out << wksp.basecol() << '\n';
         out << cursor_line << '\n';
         out << cursor_col << '\n';
         out << insert_mode << '\n';
@@ -72,7 +72,10 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
                 filename    = nm;
                 backup_done = false; // reset backup flag for restored file
             }
-            in >> wksp.topline >> wksp.basecol >> cursor_line >> cursor_col;
+            int topline, basecol;
+            in >> topline >> basecol >> cursor_line >> cursor_col;
+            wksp.set_topline(topline);
+            wksp.set_basecol(basecol);
             in >> insert_mode >> cmd_mode;
             std::getline(in, cmd); // consume newline
             std::getline(in, cmd);

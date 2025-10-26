@@ -14,64 +14,6 @@ Workspace::~Workspace()
     cleanup_segments();
 }
 
-Workspace::Workspace(const Workspace &other)
-{
-    *this = other;
-}
-
-Workspace &Workspace::operator=(const Workspace &other)
-{
-    if (this == &other) {
-        return *this;
-    }
-
-    // Clean up existing segments
-    cleanup_segments();
-
-    // Copy simple fields
-    writable_    = other.writable_;
-    nlines_      = other.nlines_;
-    topline_     = other.topline_;
-    basecol_     = other.basecol_;
-    line_        = other.line_;
-    segmline_    = other.segmline_;
-    cursorcol_   = other.cursorcol_;
-    cursorrow_   = other.cursorrow_;
-    modified_    = other.modified_;
-    backup_done_ = other.backup_done_;
-
-    // Copy segment chain (deep copy)
-    if (other.chain_) {
-        Segment *src  = other.chain_;
-        Segment *prev = nullptr;
-
-        while (src) {
-            Segment *new_seg = new Segment();
-            new_seg->prev    = prev;
-            new_seg->next    = nullptr;
-            new_seg->nlines  = src->nlines;
-            new_seg->fdesc   = src->fdesc;
-            new_seg->seek    = src->seek;
-            new_seg->sizes   = src->sizes;
-
-            if (prev) {
-                prev->next = new_seg;
-            } else {
-                chain_ = new_seg;
-            }
-
-            if (src == other.cursegm_) {
-                cursegm_ = new_seg;
-            }
-
-            prev = new_seg;
-            src  = src->next;
-        }
-    }
-
-    return *this;
-}
-
 void Workspace::cleanup_segments()
 {
     if (chain_) {

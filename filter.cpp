@@ -16,12 +16,12 @@
 bool Editor::execute_external_filter(const std::string &command, int start_line, int num_lines)
 {
     // Validate parameters
-    if (start_line < 0 || start_line >= wksp.nlines()) {
+    if (start_line < 0 || start_line >= wksp->nlines()) {
         return false;
     }
 
     // Limit num_lines to available lines
-    int end_line = std::min(start_line + num_lines, wksp.nlines());
+    int end_line = std::min(start_line + num_lines, wksp->nlines());
     num_lines    = end_line - start_line;
 
     if (num_lines <= 0) {
@@ -85,20 +85,20 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
 
     // Replace the selected lines with the output
     // Delete old lines
-    wksp.delete_segments(start_line, start_line + num_lines - 1);
+    wksp->delete_segments(start_line, start_line + num_lines - 1);
 
     // Insert new content
-    wksp.build_segment_chain_from_text(output_text);
+    wksp->build_segment_chain_from_text(output_text);
 
     // Update line count - TODO: need better integration
     int new_num_lines = 0;
-    Segment *seg      = wksp.chain();
+    Segment *seg      = wksp->chain();
     while (seg) {
         assert(seg->fdesc != 0); // fdesc should be present for segments with content
         new_num_lines += seg->nlines;
         seg = seg->next;
     }
-    wksp.set_nlines(wksp.nlines() - num_lines + new_num_lines);
+    wksp->set_nlines(wksp->nlines() - num_lines + new_num_lines);
 
     ensure_cursor_visible();
 

@@ -97,12 +97,12 @@ void Editor::startup(int restart)
 void Editor::model_init()
 {
     // Initialize workspaces
-    wksp     = Workspace{};
-    alt_wksp = Workspace{};
+    wksp     = std::make_unique<Workspace>();
+    alt_wksp = std::make_unique<Workspace>();
 
     // Open temp files for workspaces
-    wksp.open_temp_file();
-    alt_wksp.open_temp_file();
+    wksp->open_temp_file();
+    alt_wksp->open_temp_file();
 }
 
 //

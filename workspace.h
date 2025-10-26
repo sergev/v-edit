@@ -16,10 +16,6 @@ public:
     Workspace();
     ~Workspace();
 
-    // Copy constructor and assignment (needed for FileState)
-    Workspace(const Workspace &other);
-    Workspace &operator=(const Workspace &other);
-
     // Accessors
     Segment *chain() const { return chain_; }
     Segment *cursegm() const { return cursegm_; }
@@ -35,6 +31,8 @@ public:
     // Mutators
     void set_writable(int writable) { writable_ = writable; }
     void set_nlines(int nlines) { nlines_ = nlines; }
+    void set_tempfile_fd(int fd) { tempfile_fd_ = fd; }
+    void set_tempseek(long seek) { tempseek_ = seek; }
     void set_topline(int topline) { topline_ = topline; }
     void set_basecol(int basecol) { basecol_ = basecol; }
     void set_line(int line) { line_ = line; }
@@ -77,6 +75,8 @@ public:
 
     // Query methods
     bool has_segments() const { return chain_ != nullptr; }
+    int tempfile_fd() const { return tempfile_fd_; }
+    long tempseek() const { return tempseek_; }
 
     // Line count
     int get_line_count(int fallback_count) const;

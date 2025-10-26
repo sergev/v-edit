@@ -13,8 +13,8 @@ void Editor::save_state()
     std::ofstream out(tmpname.c_str());
     if (out) {
         out << filename << '\n';
-        out << wksp.topline() << '\n';
-        out << wksp.basecol() << '\n';
+        out << wksp->topline() << '\n';
+        out << wksp->basecol() << '\n';
         out << cursor_line << '\n';
         out << cursor_col << '\n';
         out << insert_mode << '\n';
@@ -22,7 +22,7 @@ void Editor::save_state()
         out << cmd << '\n';
         out << last_search << '\n';
         out << last_search_forward << '\n';
-        out << wksp.backup_done() << '\n';
+        out << wksp->backup_done() << '\n';
         // Save macro positions
         out << macros.size() << '\n';
         for (const auto &pair : macros) {
@@ -47,19 +47,19 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
             std::getline(in, nm);
             if (!nm.empty()) {
                 filename = nm;
-                wksp.set_backup_done(false); // reset backup flag for restored file
+                wksp->set_backup_done(false); // reset backup flag for restored file
             }
             int topline, basecol;
             in >> topline >> basecol >> cursor_line >> cursor_col;
-            wksp.set_topline(topline);
-            wksp.set_basecol(basecol);
+            wksp->set_topline(topline);
+            wksp->set_basecol(basecol);
             in >> insert_mode >> cmd_mode;
             std::getline(in, cmd); // consume newline
             std::getline(in, cmd);
             std::getline(in, last_search);
             bool backup_done;
             in >> last_search_forward >> backup_done;
-            wksp.set_backup_done(backup_done);
+            wksp->set_backup_done(backup_done);
 
             // Load macros
             size_t macro_count;

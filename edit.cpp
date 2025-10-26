@@ -7,16 +7,16 @@ void Editor::goto_line(int lineNumber)
 {
     if (lineNumber < 0)
         lineNumber = 0;
-    int total = wksp.nlines();
+    int total = wksp->nlines();
     if (lineNumber >= total)
         lineNumber = total - 1;
     if (lineNumber < 0)
         lineNumber = 0;
 
-    wksp.set_topline(lineNumber);
+    wksp->set_topline(lineNumber);
     cursor_line = 0;
     cursor_col  = 0;
-    wksp.set_basecol(0);
+    wksp->set_basecol(0);
     ensure_cursor_visible();
 }
 
@@ -27,14 +27,14 @@ void Editor::move_left()
 {
     if (cursor_col > 0) {
         cursor_col--;
-    } else if (wksp.basecol() > 0) {
-        wksp.set_basecol(wksp.basecol() - 1);
+    } else if (wksp->basecol() > 0) {
+        wksp->set_basecol(wksp->basecol() - 1);
     } else if (cursor_line > 0) {
         cursor_line--;
         int len    = current_line_length();
         cursor_col = len;
         if (cursor_col >= ncols - 1) {
-            wksp.set_basecol(len - (ncols - 2));
+            wksp->set_basecol(len - (ncols - 2));
             cursor_col = ncols - 2;
         }
     }
@@ -49,11 +49,11 @@ void Editor::move_right()
     if (cursor_col < len && cursor_col < ncols - 1) {
         cursor_col++;
     } else if (cursor_col >= ncols - 1) {
-        wksp.set_basecol(wksp.basecol() + 1);
+        wksp->set_basecol(wksp->basecol() + 1);
     } else if (cursor_line < nlines - 2) {
         cursor_line++;
         cursor_col = 0;
-        wksp.set_basecol(0);
+        wksp->set_basecol(0);
     }
 }
 
@@ -64,8 +64,8 @@ void Editor::move_up()
 {
     if (cursor_line > 0) {
         cursor_line--;
-    } else if (wksp.topline() > 0) {
-        wksp.set_topline(wksp.topline() - 1);
+    } else if (wksp->topline() > 0) {
+        wksp->set_topline(wksp->topline() - 1);
     }
     ensure_cursor_visible();
 }
@@ -75,16 +75,16 @@ void Editor::move_up()
 //
 void Editor::move_down()
 {
-    int total = wksp.nlines();
+    int total = wksp->nlines();
     if (cursor_line < nlines - 2) {
-        int absLine = wksp.topline() + cursor_line + 1;
+        int absLine = wksp->topline() + cursor_line + 1;
         if (absLine < total) {
             cursor_line++;
         }
     } else {
-        int absLine = wksp.topline() + cursor_line + 1;
+        int absLine = wksp->topline() + cursor_line + 1;
         if (absLine < total) {
-            wksp.set_topline(wksp.topline() + 1);
+            wksp->set_topline(wksp->topline() + 1);
         }
     }
     ensure_cursor_visible();
@@ -95,7 +95,7 @@ void Editor::move_down()
 //
 int Editor::current_line_length() const
 {
-    int curLine = wksp.topline() + cursor_line;
+    int curLine = wksp->topline() + cursor_line;
 
     // Load the line if not already loaded or if it's a different line
     if (current_line_no != curLine) {
@@ -110,9 +110,9 @@ int Editor::current_line_length() const
 //
 bool Editor::search_forward(const std::string &needle)
 {
-    int startLine = wksp.topline() + cursor_line;
-    int startCol  = wksp.basecol() + cursor_col;
-    int total     = wksp.nlines();
+    int startLine = wksp->topline() + cursor_line;
+    int startCol  = wksp->basecol() + cursor_col;
+    int total     = wksp->nlines();
 
     // Search from current position forward
     for (int i = startLine; i < total; ++i) {
@@ -121,15 +121,15 @@ bool Editor::search_forward(const std::string &needle)
         pos              = line.find(needle, pos);
         if (pos != std::string::npos) {
             // Found it - position cursor
-            wksp.set_topline(i);
+            wksp->set_topline(i);
             cursor_line = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.set_basecol((int)pos - (ncols - 10));
+                wksp->set_basecol((int)pos - (ncols - 10));
             } else {
-                wksp.set_basecol(0);
+                wksp->set_basecol(0);
             }
-            cursor_col = (int)pos - wksp.basecol();
+            cursor_col = (int)pos - wksp->basecol();
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -148,15 +148,15 @@ bool Editor::search_forward(const std::string &needle)
             pos = line.find(needle);
         }
         if (pos != std::string::npos) {
-            wksp.set_topline(i);
+            wksp->set_topline(i);
             cursor_line = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.set_basecol((int)pos - (ncols - 10));
+                wksp->set_basecol((int)pos - (ncols - 10));
             } else {
-                wksp.set_basecol(0);
+                wksp->set_basecol(0);
             }
-            cursor_col = (int)pos - wksp.basecol();
+            cursor_col = (int)pos - wksp->basecol();
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -172,9 +172,9 @@ bool Editor::search_forward(const std::string &needle)
 //
 bool Editor::search_backward(const std::string &needle)
 {
-    int startLine = wksp.topline() + cursor_line;
-    int startCol  = wksp.basecol() + cursor_col;
-    int total     = wksp.nlines();
+    int startLine = wksp->topline() + cursor_line;
+    int startCol  = wksp->basecol() + cursor_col;
+    int total     = wksp->nlines();
 
     // Search from current position backward
     for (int i = startLine; i >= 0; --i) {
@@ -186,15 +186,15 @@ bool Editor::search_backward(const std::string &needle)
             pos = line.rfind(needle);
         }
         if (pos != std::string::npos) {
-            wksp.set_topline(i);
+            wksp->set_topline(i);
             cursor_line = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.set_basecol((int)pos - (ncols - 10));
+                wksp->set_basecol((int)pos - (ncols - 10));
             } else {
-                wksp.set_basecol(0);
+                wksp->set_basecol(0);
             }
-            cursor_col = (int)pos - wksp.basecol();
+            cursor_col = (int)pos - wksp->basecol();
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -206,15 +206,15 @@ bool Editor::search_backward(const std::string &needle)
         std::string line = read_line_from_wksp(i);
         size_t pos       = line.rfind(needle);
         if (pos != std::string::npos) {
-            wksp.set_topline(i);
+            wksp->set_topline(i);
             cursor_line = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols - 10)) {
-                wksp.set_basecol((int)pos - (ncols - 10));
+                wksp->set_basecol((int)pos - (ncols - 10));
             } else {
-                wksp.set_basecol(0);
+                wksp->set_basecol(0);
             }
-            cursor_col = (int)pos - wksp.basecol();
+            cursor_col = (int)pos - wksp->basecol();
             ensure_cursor_visible();
             status = std::string("Found: ") + needle;
             return true;
@@ -268,9 +268,9 @@ void Editor::insertlines(int from, int number)
     ensure_line_saved();
 
     // Insert blank lines using workspace segments
-    Segment *blank = wksp.create_blank_lines(number);
-    wksp.insert_segments(blank, from);
-    wksp.set_nlines(wksp.nlines() + number);
+    Segment *blank = wksp->create_blank_lines(number);
+    wksp->insert_segments(blank, from);
+    wksp->set_nlines(wksp->nlines() + number);
 
     ensure_cursor_visible();
 }
@@ -289,14 +289,14 @@ void Editor::deletelines(int from, int number)
     picklines(from, number);
 
     // Delete the lines using workspace segments
-    wksp.delete_segments(from, from + number - 1);
-    wksp.set_nlines(std::max(0, wksp.nlines() - number));
+    wksp->delete_segments(from, from + number - 1);
+    wksp->set_nlines(std::max(0, wksp->nlines() - number));
 
     // Ensure at least one line exists
-    if (wksp.nlines() == 0) {
-        Segment *blank = wksp.create_blank_lines(1);
-        wksp.insert_segments(blank, 0);
-        wksp.set_nlines(1);
+    if (wksp->nlines() == 0) {
+        Segment *blank = wksp->create_blank_lines(1);
+        wksp->insert_segments(blank, 0);
+        wksp->set_nlines(1);
     }
 
     ensure_cursor_visible();
@@ -333,14 +333,14 @@ void Editor::splitline(int line, int col)
     put_line();
 
     // Insert new line with tail content
-    Segment *tail_seg = wksp.write_line_to_temp(tail);
+    Segment *tail_seg = wksp->write_line_to_temp(tail);
     if (tail_seg) {
-        wksp.insert_segments(tail_seg, line + 1);
-        wksp.set_nlines(wksp.nlines() + 1);
+        wksp->insert_segments(tail_seg, line + 1);
+        wksp->set_nlines(wksp->nlines() + 1);
     } else {
         // Fallback: insert blank line
         insertlines(line + 1, 1);
-        wksp.set_nlines(wksp.nlines() + 1);
+        wksp->set_nlines(wksp->nlines() + 1);
     }
 
     ensure_cursor_visible();
@@ -354,7 +354,7 @@ void Editor::combineline(int line, int col)
     if (line < 0 || col < 0)
         return;
 
-    if (line + 1 >= wksp.nlines())
+    if (line + 1 >= wksp->nlines())
         return; // No next line to combine
 
     ensure_line_saved();
@@ -380,8 +380,8 @@ void Editor::combineline(int line, int col)
     put_line();
 
     // Delete the next line
-    wksp.delete_segments(line + 1, line + 1);
-    wksp.set_nlines(std::max(1, wksp.nlines() - 1));
+    wksp->delete_segments(line + 1, line + 1);
+    wksp->set_nlines(std::max(1, wksp->nlines() - 1));
 
     ensure_cursor_visible();
 }

@@ -15,9 +15,7 @@ void Editor::switch_to_alternative_workspace()
     }
 
     // Swap workspaces
-    Workspace temp_wksp = wksp;
-    wksp                = alt_wksp;
-    alt_wksp            = temp_wksp;
+    std::swap(wksp, alt_wksp);
 
     // Swap filename
     std::string temp_filename = filename;
@@ -32,16 +30,22 @@ void Editor::switch_to_alternative_workspace()
 //
 void Editor::create_alternative_workspace()
 {
-    // Save current workspace state to alt_wksp
-    alt_wksp     = wksp;
+    // Create a fresh alternative workspace
+    alt_wksp = std::make_unique<Workspace>();
+
+    // Copy temp file descriptor from main workspace (they share the same temp file)
+    if (wksp && wksp->tempfile_fd() >= 0) {
+        alt_wksp->set_tempfile_fd(wksp->tempfile_fd());
+        alt_wksp->set_tempseek(wksp->tempseek());
+    }
+
     alt_filename = filename;
 
     // Try to open the help file in alternative workspace
     if (!open_help_file()) {
         // If help file fails, create a new empty workspace
         alt_filename = "untitled_alt";
-        alt_wksp     = Workspace{};
-        alt_wksp.build_segment_chain_from_text("");
+        alt_wksp->build_segment_chain_from_text("");
     }
 }
 
@@ -81,8 +85,8 @@ bool Editor::open_help_file()
 
     // Set alternative workspace to help file
     alt_filename = DEFAULT_HELP_FILE;
-    alt_wksp     = Workspace{};
-    alt_wksp.build_segment_chain_from_text(help_content);
+    alt_wksp     = std::make_unique<Workspace>();
+    alt_wksp->build_segment_chain_from_text(help_content);
 
     return true;
 }
@@ -128,8 +132,8 @@ bool Editor::create_builtin_help()
 
     // Set alternative workspace to built-in help
     alt_filename = "Built-in Help";
-    alt_wksp     = Workspace{};
-    alt_wksp.build_segment_chain_from_text(help_text);
+    alt_wksp     = std::make_unique<Workspace>();
+    alt_wksp->build_segment_chain_from_text(help_text);
 
     return true;
 }

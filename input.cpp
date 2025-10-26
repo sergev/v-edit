@@ -99,7 +99,7 @@ void Editor::handle_key_cmd(int ch)
 
     // Handle control characters in command mode (not in area selection)
     if (ch == 3) { // ^C - Copy lines
-        int curLine = wksp.topline() + cursor_line;
+        int curLine = wksp->topline() + cursor_line;
         // Parse count from cmd if it's numeric
         int count = 1;
         if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
@@ -121,7 +121,7 @@ void Editor::handle_key_cmd(int ch)
         return;
     }
     if (ch == 25) { // ^Y - Delete lines
-        int curLine = wksp.topline() + cursor_line;
+        int curLine = wksp->topline() + cursor_line;
         // Parse count from cmd if it's numeric
         int count = 1;
         if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
@@ -136,7 +136,7 @@ void Editor::handle_key_cmd(int ch)
         return;
     }
     if (ch == 15) { // ^O - Insert blank lines
-        int curLine = wksp.topline() + cursor_line;
+        int curLine = wksp->topline() + cursor_line;
         // Parse count from cmd if it's numeric
         int count = 1;
         if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
@@ -156,8 +156,8 @@ void Editor::handle_key_cmd(int ch)
         if (!area_selection_mode) {
             // Start area selection
             area_selection_mode = true;
-            param_c0 = param_c1 = wksp.basecol() + cursor_col;
-            param_r0 = param_r1 = wksp.topline() + cursor_line;
+            param_c0 = param_c1 = wksp->basecol() + cursor_col;
+            param_r0 = param_r1 = wksp->topline() + cursor_line;
             status              = "*** Area defined by cursor ***";
         }
         handle_area_selection(ch);
@@ -223,10 +223,10 @@ void Editor::handle_key_cmd(int ch)
             } else if (cmd.size() >= 2 && cmd.substr(0, 2) == "w ") {
                 // w + to make writable (or other w commands)
                 if (cmd.size() >= 3 && cmd[2] == '+') {
-                    wksp.set_writable(1);
+                    wksp->set_writable(1);
                     status = "File marked writable";
                 } else {
-                    wksp.set_writable(0);
+                    wksp->set_writable(0);
                     status = "File marked read-only";
                 }
             } else if (cmd == "s") {
@@ -246,7 +246,7 @@ void Editor::handle_key_cmd(int ch)
                 }
             } else if (filter_mode && !cmd.empty()) {
                 // External filter command
-                int curLine  = wksp.topline() + cursor_line;
+                int curLine  = wksp->topline() + cursor_line;
                 int numLines = 1; // default to current line
 
                 // Parse command for line count (e.g., "3 sort" means sort 3 lines)
@@ -402,7 +402,7 @@ void Editor::handle_key_cmd(int ch)
     // Handle control characters immediately, even in command mode
     if (ch == 3) { // ^C - Copy
         if (cmd_mode && !area_selection_mode && !filter_mode) {
-            int curLine = wksp.topline() + cursor_line;
+            int curLine = wksp->topline() + cursor_line;
             int count   = param_count > 0 ? param_count : 1;
             picklines(curLine, count);
             status      = std::string("Copied ") + std::to_string(count) + " line(s)";
@@ -414,7 +414,7 @@ void Editor::handle_key_cmd(int ch)
     }
     if (ch == 25) { // ^Y - Delete
         if (cmd_mode && !area_selection_mode && !filter_mode) {
-            int curLine = wksp.topline() + cursor_line;
+            int curLine = wksp->topline() + cursor_line;
             int count   = param_count > 0 ? param_count : 1;
             deletelines(curLine, count);
             status      = std::string("Deleted ") + std::to_string(count) + " line(s)";
@@ -426,7 +426,7 @@ void Editor::handle_key_cmd(int ch)
     }
     if (ch == 15) { // ^O - Insert blank lines
         if (cmd_mode && !area_selection_mode && !filter_mode) {
-            int curLine = wksp.topline() + cursor_line;
+            int curLine = wksp->topline() + cursor_line;
             int count   = param_count > 0 ? param_count : 1;
             insertlines(curLine, count);
             status      = std::string("Inserted ") + std::to_string(count) + " line(s)";
@@ -476,7 +476,7 @@ void Editor::handle_area_selection(int ch)
         cursor_col = 0;
         break;
     case KEY_END: {
-        int curLine = wksp.topline() + cursor_line;
+        int curLine = wksp->topline() + cursor_line;
         get_line(curLine);
         cursor_col = current_line.length();
         break;
@@ -492,8 +492,8 @@ void Editor::handle_area_selection(int ch)
     }
 
     // Update area bounds
-    int curCol  = wksp.basecol() + cursor_col;
-    int curLine = wksp.topline() + cursor_line;
+    int curCol  = wksp->basecol() + cursor_col;
+    int curLine = wksp->topline() + cursor_line;
 
     if (curCol > param_c0) {
         param_c1 = curCol;
@@ -550,7 +550,7 @@ void Editor::handle_key_edit(int ch)
     }
     if (ch == KEY_F(5)) {
         // Copy current line to clipboard
-        int curLine = wksp.topline() + cursor_line;
+        int curLine = wksp->topline() + cursor_line;
         picklines(curLine, 1);
         status = "Copied";
         return;
@@ -558,22 +558,22 @@ void Editor::handle_key_edit(int ch)
     if (ch == KEY_F(6)) {
         // Paste clipboard at current position
         if (!clipboard.is_empty()) {
-            int curLine = wksp.topline() + cursor_line;
-            int curCol  = wksp.basecol() + cursor_col;
+            int curLine = wksp->topline() + cursor_line;
+            int curCol  = wksp->basecol() + cursor_col;
             paste(curLine, curCol);
         }
         return;
     }
     // ^D - Delete character at cursor
     if (ch == 4) { // Ctrl-D
-        int curLine = wksp.topline() + cursor_line;
+        int curLine = wksp->topline() + cursor_line;
         get_line(curLine);
         if (cursor_col < (int)current_line.size()) {
             current_line.erase((size_t)cursor_col, 1);
             current_line_modified = true;
             put_line();
             ensure_cursor_visible();
-        } else if (curLine + 1 < wksp.nlines()) {
+        } else if (curLine + 1 < wksp->nlines()) {
             // Join with next line
             get_line(curLine + 1);
             current_line += current_line;
@@ -581,20 +581,20 @@ void Editor::handle_key_edit(int ch)
             current_line_modified = true;
             put_line();
             // Delete next line
-            wksp.delete_segments(curLine + 1, curLine + 1);
+            wksp->delete_segments(curLine + 1, curLine + 1);
             ensure_cursor_visible();
         }
         return;
     }
     // ^Y - Delete current line
     if (ch == 25) { // Ctrl-Y
-        int curLine = wksp.topline() + cursor_line;
-        if (curLine >= 0 && curLine < wksp.nlines()) {
+        int curLine = wksp->topline() + cursor_line;
+        if (curLine >= 0 && curLine < wksp->nlines()) {
             picklines(curLine, 1); // Copy to clipboard before deleting
-            wksp.delete_segments(curLine, curLine);
-            wksp.set_nlines(wksp.nlines() - 1);
-            if (cursor_line >= wksp.nlines() - 1) {
-                cursor_line = wksp.nlines() - 2;
+            wksp->delete_segments(curLine, curLine);
+            wksp->set_nlines(wksp->nlines() - 1);
+            if (cursor_line >= wksp->nlines() - 1) {
+                cursor_line = wksp->nlines() - 2;
                 if (cursor_line < 0)
                     cursor_line = 0;
             }
@@ -604,7 +604,7 @@ void Editor::handle_key_edit(int ch)
     }
     // ^C - Copy current line to clipboard
     if (ch == 3) { // Ctrl-C
-        int curLine = wksp.topline() + cursor_line;
+        int curLine = wksp->topline() + cursor_line;
         picklines(curLine, 1);
         status = "Copied line";
         return;
@@ -612,18 +612,18 @@ void Editor::handle_key_edit(int ch)
     // ^V - Paste clipboard at current position
     if (ch == 22) { // Ctrl-V
         if (!clipboard.is_empty()) {
-            int curLine = wksp.topline() + cursor_line;
-            int curCol  = wksp.basecol() + cursor_col;
+            int curLine = wksp->topline() + cursor_line;
+            int curCol  = wksp->basecol() + cursor_col;
             paste(curLine, curCol);
         }
         return;
     }
     // ^O - Insert blank line
     if (ch == 15) { // Ctrl-O
-        int curLine    = wksp.topline() + cursor_line;
-        Segment *blank = wksp.create_blank_lines(1);
-        wksp.insert_segments(blank, curLine + 1);
-        wksp.set_nlines(wksp.nlines() + 1);
+        int curLine    = wksp->topline() + cursor_line;
+        Segment *blank = wksp->create_blank_lines(1);
+        wksp->insert_segments(blank, curLine + 1);
+        wksp->set_nlines(wksp->nlines() + 1);
         ensure_cursor_visible();
         return;
     }
@@ -661,7 +661,7 @@ void Editor::handle_key_edit(int ch)
     // ^X f - Shift view right
     if (ctrlx_state && (ch == 'f' || ch == 'F')) {
         int shift = param_count > 0 ? param_count : ncols / 4;
-        wksp.set_basecol(wksp.basecol() + shift);
+        wksp->set_basecol(wksp->basecol() + shift);
         param_count = 0;
         ctrlx_state = false;
         ensure_cursor_visible();
@@ -670,9 +670,9 @@ void Editor::handle_key_edit(int ch)
     // ^X b - Shift view left
     if (ctrlx_state && (ch == 'b' || ch == 'B')) {
         int shift = param_count > 0 ? param_count : ncols / 4;
-        wksp.set_basecol(wksp.basecol() - shift);
-        if (wksp.basecol() < 0)
-            wksp.set_basecol(0);
+        wksp->set_basecol(wksp->basecol() - shift);
+        if (wksp->basecol() < 0)
+            wksp->set_basecol(0);
         param_count = 0;
         ctrlx_state = false;
         ensure_cursor_visible();
@@ -727,33 +727,33 @@ void Editor::handle_key_edit(int ch)
     }
 
     if (ch == KEY_HOME) {
-        wksp.set_basecol(0);
+        wksp->set_basecol(0);
         cursor_col = 0;
         return;
     }
     if (ch == KEY_END) {
         int len = current_line_length();
         if (len >= ncols - 1) {
-            wksp.set_basecol(len - (ncols - 2));
-            if (wksp.basecol() < 0)
-                wksp.set_basecol(0);
-            cursor_col = len - wksp.basecol();
+            wksp->set_basecol(len - (ncols - 2));
+            if (wksp->basecol() < 0)
+                wksp->set_basecol(0);
+            cursor_col = len - wksp->basecol();
             if (cursor_col > ncols - 2)
                 cursor_col = ncols - 2;
         } else {
-            wksp.set_basecol(0);
+            wksp->set_basecol(0);
             cursor_col = len;
         }
         return;
     }
     if (ch == KEY_NPAGE) {
-        int total = wksp.nlines();
+        int total = wksp->nlines();
         int step  = nlines - 2;
         if (step < 1)
             step = 1;
-        wksp.set_topline(wksp.topline() + step);
-        if (wksp.topline() > std::max(0, total - (nlines - 1)))
-            wksp.set_topline(std::max(0, total - (nlines - 1)));
+        wksp->set_topline(wksp->topline() + step);
+        if (wksp->topline() > std::max(0, total - (nlines - 1)))
+            wksp->set_topline(std::max(0, total - (nlines - 1)));
         ensure_cursor_visible();
         return;
     }
@@ -761,9 +761,9 @@ void Editor::handle_key_edit(int ch)
         int step = nlines - 2;
         if (step < 1)
             step = 1;
-        wksp.set_topline(wksp.topline() - step);
-        if (wksp.topline() < 0)
-            wksp.set_topline(0);
+        wksp->set_topline(wksp->topline() - step);
+        if (wksp->topline() < 0)
+            wksp->set_topline(0);
         ensure_cursor_visible();
         return;
     }
@@ -780,7 +780,7 @@ void Editor::handle_key_edit(int ch)
     }
 
     // --- Basic editing operations using current_line buffer ---
-    int curLine = wksp.topline() + cursor_line;
+    int curLine = wksp->topline() + cursor_line;
     if (curLine < 0)
         curLine = 0;
     get_line(curLine);
@@ -803,7 +803,7 @@ void Editor::handle_key_edit(int ch)
             current_line_modified = true;
             put_line();
             // Delete current line
-            wksp.delete_segments(curLine, curLine);
+            wksp->delete_segments(curLine, curLine);
             cursor_line = cursor_line > 0 ? cursor_line - 1 : 0;
             cursor_col  = prev.size();
         }
@@ -816,14 +816,14 @@ void Editor::handle_key_edit(int ch)
         if (cursor_col < (int)current_line.size()) {
             current_line.erase((size_t)cursor_col, 1);
             current_line_modified = true;
-        } else if (curLine + 1 < wksp.nlines()) {
+        } else if (curLine + 1 < wksp->nlines()) {
             // Join with next line
             get_line(curLine + 1);
             current_line += current_line;
             current_line_no       = curLine;
             current_line_modified = true;
             put_line();
-            wksp.delete_segments(curLine + 1, curLine + 1);
+            wksp->delete_segments(curLine + 1, curLine + 1);
         }
         put_line();
         ensure_cursor_visible();
@@ -840,28 +840,28 @@ void Editor::handle_key_edit(int ch)
         put_line();
         // Insert new line with tail content
         if (!tail.empty()) {
-            Segment *tail_seg = wksp.write_line_to_temp(tail);
+            Segment *tail_seg = wksp->write_line_to_temp(tail);
             if (tail_seg) {
-                wksp.insert_segments(tail_seg, curLine + 1);
+                wksp->insert_segments(tail_seg, curLine + 1);
             } else {
                 // Fallback: insert blank line
-                Segment *blank = wksp.create_blank_lines(1);
-                wksp.insert_segments(blank, curLine + 1);
+                Segment *blank = wksp->create_blank_lines(1);
+                wksp->insert_segments(blank, curLine + 1);
             }
         } else {
-            Segment *blank = wksp.create_blank_lines(1);
-            wksp.insert_segments(blank, curLine + 1);
+            Segment *blank = wksp->create_blank_lines(1);
+            wksp->insert_segments(blank, curLine + 1);
         }
         if (cursor_line + 1 < nlines - 1) {
             cursor_line++;
         } else {
             // At bottom of viewport: scroll down
-            wksp.set_topline(wksp.topline() + 1);
+            wksp->set_topline(wksp->topline() + 1);
             // keep cursor on last content row
             cursor_line = nlines - 2;
         }
         cursor_col = 0;
-        wksp.set_nlines(wksp.nlines() + 1);
+        wksp->set_nlines(wksp->nlines() + 1);
         ensure_cursor_visible();
         return;
     }

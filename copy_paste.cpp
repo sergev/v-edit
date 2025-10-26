@@ -13,7 +13,7 @@ void Editor::picklines(int startLine, int count)
 
     // Read lines from workspace segments
     std::vector<std::string> lines;
-    for (int i = 0; i < count && (startLine + i) < wksp.nlines(); ++i) {
+    for (int i = 0; i < count && (startLine + i) < wksp->nlines(); ++i) {
         std::string line = read_line_from_wksp(startLine + i);
         lines.push_back(line);
     }
@@ -37,7 +37,7 @@ void Editor::paste(int afterLine, int atCol)
 
     if (clipboard.is_rectangular()) {
         // Paste as rectangular block - insert at column position
-        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp.nlines(); ++i) {
+        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp->nlines(); ++i) {
             get_line(afterLine + i);
             if (atCol < (int)current_line.size()) {
                 current_line.insert(atCol, clip_lines[i]);
@@ -53,11 +53,11 @@ void Editor::paste(int afterLine, int atCol)
         // Paste as lines
         for (const auto &line : clip_lines) {
             // Create a segment for this line
-            Segment *new_seg = wksp.write_line_to_temp(line);
+            Segment *new_seg = wksp->write_line_to_temp(line);
             if (new_seg) {
-                wksp.insert_segments(new_seg, afterLine + 1);
+                wksp->insert_segments(new_seg, afterLine + 1);
                 afterLine++;
-                wksp.set_nlines(wksp.nlines() + 1);
+                wksp->set_nlines(wksp->nlines() + 1);
             }
         }
     }
@@ -78,7 +78,7 @@ void Editor::pickspaces(int line, int col, int number, int nl)
 
     // Read lines from workspace and extract rectangular block
     std::vector<std::string> lines;
-    for (int i = 0; i < nl && (line + i) < wksp.nlines(); ++i) {
+    for (int i = 0; i < nl && (line + i) < wksp->nlines(); ++i) {
         std::string full_line = read_line_from_wksp(line + i);
         std::string block;
 
@@ -105,7 +105,7 @@ void Editor::closespaces(int line, int col, int number, int nl)
     // Now delete the rectangular area using get_line/put_line pattern
     ensure_line_saved();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < wksp.nlines()) {
+        if (line + i < wksp->nlines()) {
             get_line(line + i);
             if (col < (int)current_line.size()) {
                 int end_pos = std::min(col + number, (int)current_line.size());
@@ -126,7 +126,7 @@ void Editor::openspaces(int line, int col, int number, int nl)
     // Insert spaces in rectangular area using get_line/put_line pattern
     ensure_line_saved();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < wksp.nlines()) {
+        if (line + i < wksp->nlines()) {
             get_line(line + i);
             if (col <= (int)current_line.size()) {
                 current_line.insert(col, number, ' ');
@@ -139,8 +139,8 @@ void Editor::openspaces(int line, int col, int number, int nl)
             put_line();
         } else {
             // Create new line if needed - TODO: need proper implementation
-            Segment *blank = wksp.create_blank_lines(1);
-            wksp.insert_segments(blank, line + i);
+            Segment *blank = wksp->create_blank_lines(1);
+            wksp->insert_segments(blank, line + i);
         }
     }
     ensure_cursor_visible();
@@ -151,8 +151,8 @@ void Editor::openspaces(int line, int col, int number, int nl)
 //
 void Editor::save_macro_position(char name)
 {
-    int absLine = wksp.topline() + cursor_line;
-    int absCol  = wksp.basecol() + cursor_col;
+    int absLine = wksp->topline() + cursor_line;
+    int absCol  = wksp->basecol() + cursor_col;
     macros[name].setPosition(absLine, absCol);
 }
 
@@ -166,7 +166,7 @@ bool Editor::goto_macro_position(char name)
         return false;
     auto pos = it->second.getPosition();
     goto_line(pos.first);
-    wksp.set_basecol(pos.second);
+    wksp->set_basecol(pos.second);
     cursor_col = 0;
     ensure_cursor_visible();
     return true;
@@ -226,8 +226,8 @@ bool Editor::mdeftag(char tag_name)
     }
 
     // Get current cursor position
-    int curLine = wksp.topline() + cursor_line;
-    int curCol  = wksp.basecol() + cursor_col;
+    int curLine = wksp->topline() + cursor_line;
+    int curCol  = wksp->basecol() + cursor_col;
 
     // Get tag position
     auto pos    = it->second.getPosition();
@@ -264,7 +264,7 @@ bool Editor::mdeftag(char tag_name)
     // Move cursor to start if swapped
     if (f) {
         goto_line(param_r0);
-        wksp.set_basecol(param_c0);
+        wksp->set_basecol(param_c0);
         cursor_col = 0;
         ensure_cursor_visible();
     }

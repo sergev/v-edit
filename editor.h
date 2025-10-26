@@ -2,6 +2,7 @@
 #define EDITOR_H
 
 #include <map>
+#include <memory>
 #include <string>
 
 #include "clipboard.h"
@@ -54,8 +55,8 @@ private:
     bool interrupt_flag{ false }; // interrupt signal occurred
 
     // Two workspaces: main workspace (wksp) and alternative workspace (alt_wksp)
-    Workspace wksp;
-    Workspace alt_wksp;
+    std::unique_ptr<Workspace> wksp;
+    std::unique_ptr<Workspace> alt_wksp;
     std::string alt_filename;
 
     // Help file installed in a public place

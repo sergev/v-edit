@@ -520,8 +520,15 @@ TEST_F(WorkspaceTest, ScrollHorizontalClamp)
 
 TEST_F(WorkspaceTest, GotoLine)
 {
+    // Create a workspace with 100 blank lines
     wksp->set_nlines(100);
     wksp->set_topline(0);
+    
+    // Initialize workspace with blank lines so set_current_segment can work
+    Segment *blank_seg = Workspace::create_blank_lines(100);
+    wksp->set_chain(blank_seg);
+    wksp->set_cursegm(blank_seg);
+    wksp->set_segmline(0);
 
     // Go to line 50
     wksp->goto_line(50, 20);
@@ -532,8 +539,15 @@ TEST_F(WorkspaceTest, GotoLine)
 
 TEST_F(WorkspaceTest, GotoLineNearEnd)
 {
+    // Create a workspace with 100 blank lines
     wksp->set_nlines(100);
     wksp->set_topline(0);
+    
+    // Initialize workspace with blank lines so set_current_segment can work
+    Segment *blank_seg = Workspace::create_blank_lines(100);
+    wksp->set_chain(blank_seg);
+    wksp->set_cursegm(blank_seg);
+    wksp->set_segmline(0);
 
     // Go to line 95 (near end)
     wksp->goto_line(95, 20);

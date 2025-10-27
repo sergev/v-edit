@@ -20,7 +20,7 @@ public:
     ~Workspace();
 
     // Accessors
-    Segment *chain() const { return chain_; }
+    Segment *chain() const { return head_; }
     Segment *cursegm() const { return cursegm_; }
     int writable() const { return writable_; }
     int nlines() const { return nlines_; }
@@ -40,15 +40,15 @@ public:
     void set_segmline(int segmline) { segmline_ = segmline; }
     void set_cursorcol(int cursorcol) { cursorcol_ = cursorcol; }
     void set_cursorrow(int cursorrow) { cursorrow_ = cursorrow; }
-    void set_chain(Segment *chain) { chain_ = chain; }
+    void set_chain(Segment *chain) { head_ = chain; }
     void set_cursegm(Segment *seg) { cursegm_ = seg; }
 
     // Segment chain operations
     // Build segment chain from in-memory lines vector
-    void build_segment_chain_from_lines(const std::vector<std::string> &lines);
+    void build_segments_from_lines(const std::vector<std::string> &lines);
 
     // Build segment chain from text string
-    void build_segment_chain_from_text(const std::string &text);
+    void build_segments_from_text(const std::string &text);
 
     // Position workspace to segment containing specified line
     int position(int lno);
@@ -60,7 +60,7 @@ public:
     void load_file_to_segments(const std::string &path);
 
     // Build segment chain from file descriptor
-    void build_segment_chain_from_file(int fd);
+    void build_segments_from_file(int fd);
 
     // Read line content from segment chain at specified index
     std::string read_line_from_segment(int line_no);
@@ -75,7 +75,7 @@ public:
     void reset();
 
     // Query methods
-    bool has_segments() const { return chain_ != nullptr; }
+    bool has_segments() const { return head_ != nullptr; }
     Tempfile &get_tempfile() const { return tempfile_; }
 
     // Line count
@@ -128,7 +128,7 @@ public:
 private:
     Tempfile &tempfile_;          // reference to temp file manager
     Segment *cursegm_{ nullptr }; // current segment in chain
-    Segment *chain_{ nullptr };   // file's segment chain (direct access)
+    Segment *head_{ nullptr };   // file's segment chain (direct access)
     int writable_{ 0 };           // write permission
     int nlines_{ 0 };             // line count
     int topline_{ 0 };            // top line visible on screen

@@ -113,7 +113,7 @@ private:
 
     // --- Segment-based reading skeleton ---
     void model_init();
-    void build_segment_chain_from_text(const std::string &text);
+    void build_segments_from_text(const std::string &text);
     bool load_file_segments(const std::string &path);
     bool load_file_to_segments(const std::string &path);
 

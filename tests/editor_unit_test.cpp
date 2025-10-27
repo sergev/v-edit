@@ -197,10 +197,10 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
 
 TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
 {
-    // Initially workspace is empty (only tail segment)
+    // Initially workspace is empty (has tail segment)
     EXPECT_TRUE(editor->wksp->has_segments());
     EXPECT_EQ(editor->wksp->nlines(), 0);
-
+    
     // Verify the tail segment
     Segment *tail = editor->wksp->chain();
     ASSERT_NE(tail, nullptr);

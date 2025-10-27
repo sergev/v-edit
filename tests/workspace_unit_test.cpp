@@ -683,10 +683,10 @@ TEST_F(WorkspaceTest, WriteLineToTempAndSave)
 
 TEST_F(WorkspaceTest, BuildSegmentChainFromLines)
 {
-    // Test that build_segment_chain_from_lines writes to temp file
+    // Test that build_segments_from_lines writes to temp file
     std::vector<std::string> lines = { "First line", "Second line", "Third line" };
 
-    wksp->build_segment_chain_from_lines(lines);
+    wksp->build_segments_from_lines(lines);
 
     // Verify segments were created
     EXPECT_TRUE(wksp->has_segments());

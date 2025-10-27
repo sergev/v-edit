@@ -9,10 +9,10 @@
 //
 // Parse text and build segment chain from it.
 //
-void Editor::build_segment_chain_from_text(const std::string &text)
+void Editor::build_segments_from_text(const std::string &text)
 {
     // Build segment chain directly from text in workspace
-    wksp->build_segment_chain_from_text(text);
+    wksp->build_segments_from_text(text);
 }
 
 //
@@ -71,40 +71,57 @@ void Editor::put_line()
         Segment *old_seg = wksp->cursegm();
         Segment *prev    = old_seg ? old_seg->prev : nullptr;
 
-        // Break at line_no + 1 to isolate the line
-        if (wksp->breaksegm(line_no + 1, false) == 0) {
-            // Now cursegm_ points to segment starting at line_no + 1
-            Segment *after = wksp->cursegm();
+        // Check if the segment only contains one line (or if we're at end of file)
+        int segmline = wksp->segmline();
+        bool only_one_line = (old_seg->nlines == 1);
 
-            // old_seg is the segment containing ONLY line_no (isolated between prev and after)
+        Segment *after = nullptr;
 
-            // Link new segment in place of old_seg
-            new_seg->prev = prev;
-            new_seg->next = after;
+        if (only_one_line) {
+            // Segment already contains only the one line we want to replace
+            // Just get the next segment
+            after = old_seg->next;
+        } else {
+            // Break at line_no + 1 to isolate the line
+            int break2_result = wksp->breaksegm(line_no + 1, false);
 
-            if (prev) {
-                prev->next = new_seg;
+            if (break2_result == 0) {
+                // Now cursegm_ points to segment starting at line_no + 1
+                after = wksp->cursegm();
             } else {
-                wksp->set_chain(new_seg);
+                // Second break created blank lines - we're at end of file
+                after = old_seg->next;
             }
-
-            if (after) {
-                after->prev = new_seg;
-            }
-
-            // Update workspace position
-            wksp->set_cursegm(new_seg);
-            wksp->set_segmline(line_no);
-
-            // Free the old isolated segment
-            delete old_seg;
-
-            // Try to merge adjacent segments
-            wksp->catsegm();
-
-            // Mark workspace as modified
-            wksp->set_modified(true);
         }
+
+        // Link new segment in place of old_seg
+        new_seg->prev = prev;
+        new_seg->next = after;
+
+        if (prev) {
+            prev->next = new_seg;
+        } else {
+            wksp->set_chain(new_seg);
+        }
+
+        if (after) {
+            after->prev = new_seg;
+        }
+
+        // Update workspace position
+        wksp->set_cursegm(new_seg);
+        wksp->set_segmline(segmline);
+
+        // Free the old segment
+        delete old_seg;
+
+        // Try to merge adjacent segments (but not if we just created blank lines)
+        if (only_one_line || line_no < wksp->nlines() - 1) {
+            wksp->catsegm();
+        }
+
+        // Mark workspace as modified
+        wksp->set_modified(true);
     } else if (break_result == 1) {
         // breaksegm created blank lines - insert the new segment
         // This matches prototype putline() when flg != 0
@@ -169,12 +186,12 @@ void Editor::open_initial(int argc, char **argv)
         filename = argv[1];
         if (!load_file_segments(filename)) {
             // File doesn't exist or can't be opened - create empty segments for new file
-            build_segment_chain_from_text("");
+            build_segments_from_text("");
         }
     } else {
         // No file specified, create untitled file with one empty line
         filename = "untitled";
-        build_segment_chain_from_text("");
+        build_segments_from_text("");
     }
     status = "Cmd: ";
 }

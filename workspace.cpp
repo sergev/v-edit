@@ -10,6 +10,9 @@
 
 Workspace::Workspace(Tempfile &tempfile) : tempfile_(tempfile)
 {
+    // Create initial tail segment (empty workspace still has a tail)
+    head_    = new Segment();
+    cursegm_ = head_;
 }
 
 Workspace::~Workspace()
@@ -19,14 +22,14 @@ Workspace::~Workspace()
 
 void Workspace::cleanup_segments()
 {
-    if (chain_) {
-        Segment *seg = chain_;
+    if (head_) {
+        Segment *seg = head_;
         while (seg) {
             Segment *next = seg->next;
             delete seg;
             seg = next;
         }
-        chain_   = nullptr;
+        head_   = nullptr;
         cursegm_ = nullptr;
     }
 }
@@ -50,7 +53,7 @@ void Workspace::reset()
 // Build segment chain from in-memory lines vector.
 // Writes lines into temp file.
 //
-void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &lines)
+void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
 {
     writable_ = 1;
     nlines_   = (int)lines.size();
@@ -70,7 +73,7 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
             seg->fdesc  = 0; // Tail marker
             seg->seek   = 0;
         }
-        chain_    = seg;
+        head_    = seg;
         cursegm_  = seg;
         segmline_ = 0;
         basecol_  = 0;
@@ -84,7 +87,7 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
         return;
     }
 
-    chain_    = seg;
+    head_    = seg;
     cursegm_  = seg;
     segmline_ = 0;
     basecol_  = 0;
@@ -94,7 +97,7 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
 //
 // Parse text and build segment chain from it.
 //
-void Workspace::build_segment_chain_from_text(const std::string &text)
+void Workspace::build_segments_from_text(const std::string &text)
 {
     std::vector<std::string> lines_vec;
     std::string cur;
@@ -110,7 +113,7 @@ void Workspace::build_segment_chain_from_text(const std::string &text)
     // In case text doesn't end with newline, keep the last line
     if (!cur.empty() || lines_vec.empty())
         lines_vec.push_back(cur);
-    build_segment_chain_from_lines(lines_vec);
+    build_segments_from_lines(lines_vec);
 }
 
 //
@@ -177,13 +180,13 @@ void Workspace::load_file_to_segments(const std::string &path)
 
     // Build segment chain from file
     // Note: we keep the fd open because segments reference it via fdesc
-    build_segment_chain_from_file(fd);
+    build_segments_from_file(fd);
 }
 
 //
 // Build segment chain from file descriptor.
 //
-void Workspace::build_segment_chain_from_file(int fd)
+void Workspace::build_segments_from_file(int fd)
 {
     nlines_ = 0;
 
@@ -314,7 +317,7 @@ void Workspace::build_segment_chain_from_file(int fd)
             first_seg = tail;
     }
 
-    chain_    = first_seg;
+    head_    = first_seg;
     cursegm_  = first_seg;
     segmline_ = 0;
     line_     = 0;
@@ -363,7 +366,7 @@ std::string Workspace::read_line_from_segment(int line_no)
 //
 bool Workspace::write_segments_to_file(const std::string &path)
 {
-    if (!chain_) {
+    if (!head_) {
         // No segment chain - write empty file
         int out_fd = creat(path.c_str(), 0664);
         if (out_fd >= 0) {
@@ -376,7 +379,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
     if (out_fd < 0)
         return false;
 
-    Segment *seg = chain_;
+    Segment *seg = head_;
     char buffer[8192];
 
     while (seg && seg->has_contents()) {
@@ -419,7 +422,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
 //
 int Workspace::get_line_count(int fallback_count) const
 {
-    return chain_ ? nlines_ : fallback_count;
+    return head_ ? nlines_ : fallback_count;
 }
 
 //
@@ -429,7 +432,7 @@ int Workspace::get_line_count(int fallback_count) const
 //
 int Workspace::breaksegm(int line_no, bool realloc_flag)
 {
-    if (!chain_ || !cursegm_)
+    if (!head_ || !cursegm_)
         return 1;
 
     // Position workspace to the target line
@@ -574,7 +577,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
 //
 bool Workspace::catsegm()
 {
-    if (!chain_ || !cursegm_ || !cursegm_->prev)
+    if (!head_ || !cursegm_ || !cursegm_->prev)
         return false;
 
     Segment *curr = cursegm_;
@@ -603,7 +606,7 @@ bool Workspace::catsegm()
             if (prev->prev)
                 prev->prev->next = merged;
             else
-                chain_ = merged;
+                head_ = merged;
 
             if (curr->next)
                 curr->next->prev = merged;
@@ -658,7 +661,7 @@ void Workspace::insert_segments(Segment *new_seg, int at)
         if (insert_prev)
             insert_prev->next = new_seg;
         else
-            chain_ = new_seg; // New segments become the start
+            head_ = new_seg; // New segments become the start
 
         // Update workspace position
         cursegm_  = new_seg;
@@ -677,7 +680,7 @@ void Workspace::insert_segments(Segment *new_seg, int at)
 //
 Segment *Workspace::delete_segments(int from, int to)
 {
-    if (!chain_ || from > to)
+    if (!head_ || from > to)
         return nullptr;
 
     // Break at line 'to' (not to+1) to get the segment containing line 'to'
@@ -723,7 +726,7 @@ Segment *Workspace::delete_segments(int from, int to)
     if (before)
         before->next = after;
     else
-        chain_ = after;
+        head_ = after;
 
     if (after)
         after->prev = before;

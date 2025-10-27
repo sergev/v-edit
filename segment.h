@@ -2,6 +2,7 @@
 #define SEGMENT_H
 
 #include <cstddef>
+#include <ostream>
 #include <vector>
 
 class Segment {
@@ -40,6 +41,9 @@ public:
     // Segment has contents when it comes from some file or contains only newlines.
     // A linked list of segments terminates with a placeholder with fdesc=0.
     bool has_contents() const { return fdesc != 0; }
+
+    // Debug routine: print all fields in consistent format as single line.
+    void debug_print(std::ostream &out) const;
 
 private:
 };

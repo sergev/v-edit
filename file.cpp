@@ -45,21 +45,22 @@ void Editor::put_line()
         return;
     }
 
-    if (wksp->nlines() <= current_line_no) {
-        wksp->set_nlines(current_line_no + 1);
-    }
-
     current_line_modified = false;
 
     // Write the modified line to temp file and get a segment for it
     Segment *new_seg = tempfile_.write_line_to_temp(current_line);
     if (!new_seg) {
+        // TODO: error message, as we lost contents of the current line.
         current_line_no = -1;
         return;
     }
 
     int line_no     = current_line_no;
     current_line_no = -1;
+    if (wksp->nlines() <= current_line_no) {
+        // Is it safe to increase nlines before extending the segment chain?
+        wksp->set_nlines(current_line_no + 1);
+    }
 
     // Break segment at line_no position to split into segments before and at line_no
     int break_result = wksp->breaksegm(line_no, true);
@@ -156,10 +157,8 @@ void Editor::put_line()
 
         // Update workspace position
         wksp->set_cursegm(new_seg);
-        wksp->set_segmline(line_no);
-
-        // Try to merge adjacent segments
-        wksp->catsegm();
+        // Don't modify segmline_ - it was set correctly by breaksegm
+        // Don't call catsegm() - segmline_ calculation will be wrong when inserting at end
 
         // Mark workspace as modified
         wksp->set_modified(true);

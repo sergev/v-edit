@@ -985,3 +985,39 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
             topline_ = 0;
     }
 }
+
+//
+// Debug routine: print all fields and segment chain.
+//
+void Workspace::debug_print(std::ostream &out) const
+{
+    out << "Workspace[" 
+        << "writable_=" << writable_ << ", "
+        << "nlines_=" << nlines_ << ", "
+        << "topline_=" << topline_ << ", "
+        << "basecol_=" << basecol_ << ", "
+        << "line_=" << line_ << ", "
+        << "segmline_=" << segmline_ << ", "
+        << "cursorcol_=" << cursorcol_ << ", "
+        << "cursorrow_=" << cursorrow_ << ", "
+        << "modified_=" << (modified_ ? "true" : "false") << ", "
+        << "backup_done_=" << (backup_done_ ? "true" : "false") << ", "
+        << "original_fd_=" << original_fd_ << ", "
+        << "cursegm_=" << static_cast<void*>(cursegm_) << ", "
+        << "head_=" << static_cast<void*>(head_) << "]\n";
+
+    // Print segment chain
+    out << "Segment chain:\n";
+    int seg_idx = 0;
+    Segment *seg = head_;
+    while (seg) {
+        out << "  [" << seg_idx << "] ";
+        seg->debug_print(out);
+        out << "\n";
+        seg = seg->next;
+        ++seg_idx;
+    }
+    if (seg_idx == 0) {
+        out << "  (empty)\n";
+    }
+}

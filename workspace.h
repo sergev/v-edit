@@ -2,6 +2,7 @@
 #define WORKSPACE_H
 
 #include <fstream>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -123,6 +124,9 @@ public:
 
     // Update topline when file changes (used by wksp_redraw)
     void update_topline_after_edit(int from, int to, int delta);
+
+    // Debug routine: print all fields and segment chain
+    void debug_print(std::ostream &out) const;
 
 private:
     Tempfile &tempfile_;          // reference to temp file manager

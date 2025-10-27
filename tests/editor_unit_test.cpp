@@ -352,3 +352,229 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
     }
     EXPECT_EQ(total_lines, 10);
 }
+
+// Unit tests for Workspace::position() method
+TEST_F(EditorTest, PositionValidLine)
+{
+    // Create workspace with 5 lines
+    CreateBlankLines(5);
+
+    // Set current segment to valid line
+    EXPECT_EQ(editor->wksp->set_current_segment(2), 0);
+    EXPECT_EQ(editor->wksp->line(), 2);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentFirstLine)
+{
+    CreateBlankLines(5);
+
+    // Set current segment at first line
+    EXPECT_EQ(editor->wksp->set_current_segment(0), 0);
+    EXPECT_EQ(editor->wksp->line(), 0);
+    EXPECT_EQ(editor->wksp->cursegm(), editor->wksp->chain());
+}
+
+TEST_F(EditorTest, SetCurrentSegmentLastLine)
+{
+    CreateBlankLines(5);
+
+    // Set current segment at last line (line 4)
+    EXPECT_EQ(editor->wksp->set_current_segment(4), 0);
+    EXPECT_EQ(editor->wksp->line(), 4);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentMidFile)
+{
+    CreateBlankLines(100);
+
+    // Set current segment in middle of file
+    EXPECT_EQ(editor->wksp->set_current_segment(50), 0);
+    EXPECT_EQ(editor->wksp->line(), 50);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentNegativeLineThrows)
+{
+    CreateBlankLines(5);
+
+    // Negative line number should throw
+    EXPECT_THROW(editor->wksp->set_current_segment(-1), std::runtime_error);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentBeyondEndReturnsOne)
+{
+    CreateBlankLines(5);
+
+    // Line beyond end should return 1 (not throw)
+    EXPECT_EQ(editor->wksp->set_current_segment(10), 1);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentBeyondEndByOne)
+{
+    CreateBlankLines(5);
+
+    // Try to set current segment at line 5 (one past end) should return 1
+    EXPECT_EQ(editor->wksp->set_current_segment(5), 1);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentEmptyWorkspaceReturnsOne)
+{
+    // Empty workspace (has tail but no content)
+    EXPECT_EQ(editor->wksp->nlines(), 0);
+
+    // Any position should return 1 (beyond end)
+    EXPECT_EQ(editor->wksp->set_current_segment(0), 1);
+    EXPECT_EQ(editor->wksp->set_current_segment(1), 1);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentUpdatesCursegm)
+{
+    CreateBlankLines(20);
+
+    // Set current segment at line 5
+    EXPECT_EQ(editor->wksp->set_current_segment(5), 0);
+    Segment *seg5 = editor->wksp->cursegm();
+
+    // Set current segment at line 10
+    EXPECT_EQ(editor->wksp->set_current_segment(10), 0);
+    Segment *seg10 = editor->wksp->cursegm();
+
+    // Should potentially be different segments
+    EXPECT_EQ(editor->wksp->line(), 10);
+
+    // Set current segment back to line 5
+    EXPECT_EQ(editor->wksp->set_current_segment(5), 0);
+    EXPECT_EQ(editor->wksp->line(), 5);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentUpdatesSegmline)
+{
+    CreateBlankLines(20);
+
+    // Set current segment at line 0
+    editor->wksp->set_current_segment(0);
+    EXPECT_EQ(editor->wksp->segmline(), 0);
+
+    // Set current segment at line 10
+    editor->wksp->set_current_segment(10);
+    int segmline10 = editor->wksp->segmline();
+    EXPECT_GE(segmline10, 0);
+    EXPECT_LE(segmline10, 10);
+
+    // Set current segment at line 15
+    editor->wksp->set_current_segment(15);
+    int segmline15 = editor->wksp->segmline();
+    EXPECT_GE(segmline15, segmline10);
+    EXPECT_LE(segmline15, 15);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentBackwardMovement)
+{
+    CreateBlankLines(20);
+
+    // Start at end
+    editor->wksp->set_current_segment(19);
+    Segment *endSeg = editor->wksp->cursegm();
+
+    // Move backward to beginning
+    editor->wksp->set_current_segment(0);
+    Segment *startSeg = editor->wksp->cursegm();
+
+    EXPECT_EQ(editor->wksp->line(), 0);
+    EXPECT_EQ(editor->wksp->segmline(), 0);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentForwardMovement)
+{
+    CreateBlankLines(20);
+
+    // Start at beginning
+    editor->wksp->set_current_segment(0);
+
+    // Move forward to end
+    editor->wksp->set_current_segment(19);
+
+    EXPECT_EQ(editor->wksp->line(), 19);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentBoundaryAtZero)
+{
+    CreateBlankLines(10);
+
+    // Set current segment at 0
+    EXPECT_EQ(editor->wksp->set_current_segment(0), 0);
+    EXPECT_EQ(editor->wksp->line(), 0);
+
+    // Set current segment at 1
+    EXPECT_EQ(editor->wksp->set_current_segment(1), 0);
+    EXPECT_EQ(editor->wksp->line(), 1);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentBoundaryAtEnd)
+{
+    CreateBlankLines(10);
+
+    // Set current segment at last line (9)
+    EXPECT_EQ(editor->wksp->set_current_segment(9), 0);
+    EXPECT_EQ(editor->wksp->line(), 9);
+
+    // Try to set current segment beyond (should return 1, not throw)
+    EXPECT_EQ(editor->wksp->set_current_segment(10), 1);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentLargeFile)
+{
+    CreateBlankLines(1000);
+
+    // Set current segment at various points
+    EXPECT_EQ(editor->wksp->set_current_segment(0), 0);
+    EXPECT_EQ(editor->wksp->set_current_segment(500), 0);
+    EXPECT_EQ(editor->wksp->set_current_segment(999), 0);
+
+    // Beyond end (should return 1, not throw)
+    EXPECT_EQ(editor->wksp->set_current_segment(1000), 1);
+}
+
+TEST_F(EditorTest, SetCurrentSegmentConsistency)
+{
+    CreateBlankLines(50);
+
+    // Set current segment multiple times at same line
+    for (int i = 0; i < 5; i++) {
+        EXPECT_EQ(editor->wksp->set_current_segment(25), 0);
+        EXPECT_EQ(editor->wksp->line(), 25);
+    }
+}
+
+TEST_F(EditorTest, SetCurrentSegmentSequenceForward)
+{
+    CreateBlankLines(30);
+
+    // Set current segment sequentially forward
+    for (int i = 0; i < 30; i++) {
+        EXPECT_EQ(editor->wksp->set_current_segment(i), 0);
+        EXPECT_EQ(editor->wksp->line(), i);
+    }
+}
+
+TEST_F(EditorTest, SetCurrentSegmentSequenceBackward)
+{
+    CreateBlankLines(30);
+
+    // Set current segment sequentially backward
+    for (int i = 29; i >= 0; i--) {
+        EXPECT_EQ(editor->wksp->set_current_segment(i), 0);
+        EXPECT_EQ(editor->wksp->line(), i);
+    }
+}
+
+TEST_F(EditorTest, SetCurrentSegmentRandomAccess)
+{
+    CreateBlankLines(50);
+
+    // Random access pattern
+    std::vector<int> random_lines = {0, 25, 49, 12, 33, 7, 40, 3, 30, 15};
+    for (int line : random_lines) {
+        EXPECT_EQ(editor->wksp->set_current_segment(line), 0);
+        EXPECT_EQ(editor->wksp->line(), line);
+    }
+}

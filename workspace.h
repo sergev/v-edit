@@ -50,11 +50,10 @@ public:
     // Build segment chain from text string
     void build_segments_from_text(const std::string &text);
 
-    // Position workspace to segment containing specified line
-    int position(int lno);
-
-    // Compute byte offset of specified line in file
-    int seek(int lno, long &outSeek);
+    // Set current segment to the segment containing the specified line
+    // Updates cursegm_, segmline_, and line_ to position the workspace at line number
+    // Throws std::runtime_error for invalid line numbers or corrupted segment chain
+    int set_current_segment(int lno);
 
     // Load file content into segment chain structure
     void load_file_to_segments(const std::string &path);

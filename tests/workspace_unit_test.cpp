@@ -399,7 +399,7 @@ TEST_F(WorkspaceTest, LoadAndPosition)
     wksp->load_file_to_segments(filename);
 
     // Position at line 3
-    int result = wksp->position(3);
+    int result = wksp->set_current_segment(3);
     EXPECT_EQ(result, 0);
     EXPECT_EQ(wksp->line(), 3);
 
@@ -425,7 +425,7 @@ TEST_F(WorkspaceTest, LargeFileSegmentOperations)
     wksp->load_file_to_segments(filename);
 
     // Position in middle
-    wksp->position(75);
+    wksp->set_current_segment(75);
 
     // Break at middle
     int result = wksp->breaksegm(75, true);

@@ -12,14 +12,15 @@
 #include "workspace.h"
 
 class Editor {
-private:
-    static Editor *instance_; // For signal handler access
-
 public:
     Editor();
     int run(int argc, char **argv);
 
+#ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_H_
 private:
+#endif
+    static Editor *instance_; // For signal handler access
+
     // Minimal single-window state
     int ncols{};
     int nlines{};
@@ -80,7 +81,9 @@ private:
     int inputfile{ 0 };    // 0=stdin, >=0=journal file fd for replay
     int restart_mode{ 0 }; // 0=normal, 1=restore, 2=replay
 
+#ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_H_
 private:
+#endif
     // Startup and display
     //
     // Initialize ncurses terminal.
@@ -181,17 +184,6 @@ private:
     void pickspaces(int line, int col, int number, int nl);
     void closespaces(int line, int col, int number, int nl);
     void openspaces(int line, int col, int number, int nl);
-
-#ifdef FRIEND_TEST
-    friend class SegmentTest; // For segment unit testing
-    FRIEND_TEST(SegmentTest, LoadFileToSegments);
-    FRIEND_TEST(SegmentTest, ReadLineFromSegment);
-    FRIEND_TEST(SegmentTest, HandleEmptyFile);
-    FRIEND_TEST(SegmentTest, HandleLargeFile);
-    FRIEND_TEST(SegmentTest, HandleVeryLongLines);
-    FRIEND_TEST(SegmentTest, WriteSegmentsToFile);
-    FRIEND_TEST(SegmentTest, SegmentChainFromVariableLines);
-#endif
 };
 
 #endif

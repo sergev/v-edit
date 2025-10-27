@@ -41,7 +41,23 @@ public:
     void set_segmline(int segmline) { segmline_ = segmline; }
     void set_cursorcol(int cursorcol) { cursorcol_ = cursorcol; }
     void set_cursorrow(int cursorrow) { cursorrow_ = cursorrow; }
-    void set_chain(Segment *chain) { head_ = chain; }
+    void set_chain(Segment *chain) { 
+        head_ = chain;
+        // Ensure there's a tail segment at the end of the chain
+        if (head_) {
+            Segment *last = head_;
+            while (last->next) {
+                last = last->next;
+            }
+            // If the last segment is not a tail, add one
+            if (last->fdesc != 0) {
+                Segment *tail = new Segment(); // fdesc defaults to 0
+                tail->nlines = 0;
+                last->next = tail;
+                tail->prev = last;
+            }
+        }
+    }
     void set_cursegm(Segment *seg) { cursegm_ = seg; }
 
     // Segment chain operations

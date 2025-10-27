@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <fstream>
+#include <iostream>
 
 #include "tempfile.h"
 
@@ -131,10 +132,12 @@ int Workspace::set_current_segment(int lno)
             return 1;
         }
         segmline_ += cursegm_->nlines;
-        cursegm_ = cursegm_->next;
-        if (!cursegm_) {
+        
+        // Check if there's a next segment before moving
+        if (!cursegm_->next) {
             throw std::runtime_error("set_current_segment: null segment in chain");
         }
+        cursegm_ = cursegm_->next;
     }
 
     // Move backward to find the segment containing lno
@@ -146,8 +149,9 @@ int Workspace::set_current_segment(int lno)
     }
 
     // Consistency check: segmline_ should not be negative
-    if (segmline_ < 0)
+    if (segmline_ < 0) {
         throw std::runtime_error("set_current_segment: line count lost (segmline_ < 0)");
+    }
 
     // Update workspace state
     line_ = lno;
@@ -433,20 +437,24 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     if (set_current_segment(line_no)) {
         // Line is beyond end of file - create blank lines to extend it
         // This matches the prototype behavior
+        // Calculate how many blank lines to create
+        // line_ was set by set_current_segment to segmline_ of the tail segment
+        // Check if workspace is empty (only has a tail segment)
+        bool is_empty = (head_->fdesc == 0);
+        
         int num_blank_lines;
-
-        if (cursegm_->fdesc == 0) {
-            // Empty workspace - we're at the tail segment
-            // Need to create lines from 0 to line_no (inclusive)
+        
+        if (is_empty) {
+            // Empty file, create lines from 0 to line_no
             num_blank_lines = line_no + 1;
         } else {
-            // Not empty - line_ is set to the last valid line
-            // Calculate how many lines to add beyond that
-            num_blank_lines = line_no - line_;
-            if (num_blank_lines <= 0) {
-                // Shouldn't happen, but just in case
-                num_blank_lines = 1;
-            }
+            // Normal case: create lines from line_ to line_no
+            num_blank_lines = (line_no - line_) + 1;
+        }
+        
+        // Must create at least 1 blank line
+        if (num_blank_lines <= 0) {
+            num_blank_lines = 1;
         }
 
         Segment *blank_seg = create_blank_lines(num_blank_lines);
@@ -461,13 +469,24 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         if (prev)
             prev->next = nullptr;
 
+        // Find the last blank segment and remove the tail that was created by create_blank_lines
+        Segment *last_blank = blank_seg;
+        while (last_blank->next) {
+            if (last_blank->next->fdesc == 0) {
+                // Found the tail created by create_blank_lines - remove it
+                Segment *extra_tail = last_blank->next;
+                last_blank->next = nullptr;
+                extra_tail->prev = nullptr;
+                delete extra_tail;
+                break;
+            }
+            last_blank = last_blank->next;
+        }
+
         // Link blank segments before tail
         blank_seg->prev     = prev;
-        Segment *last_blank = blank_seg;
-        while (last_blank->next)
-            last_blank = last_blank->next;
-        last_blank->next = tail;
-        tail->prev       = last_blank;
+        last_blank->next    = tail;
+        tail->prev          = last_blank;
 
         // Update workspace
         if (prev) {
@@ -476,12 +495,18 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
             set_chain(blank_seg);
         }
 
+        // Calculate where the blank segments start
+        // line_ is the segmline_ of the tail, which is the first position beyond the last valid line
+        // For empty: line_=0, so blank segments start at 0
+        // For non-empty: line_ is the first position beyond valid, so blank segments start at line_
+        int blank_seg_start = line_;
+        
+        // Position to the first blank segment
+        cursegm_ = blank_seg;
+        segmline_ = blank_seg_start;
+        
         // Update nlines to include the blank lines
         nlines_ = line_no + 1;
-
-        // Position to the target line
-        if (set_current_segment(line_no))
-            return 1;
 
         return 1; // Signal that we created lines
     }
@@ -752,15 +777,13 @@ Segment *Workspace::delete_segments(int from, int to)
     // Remove the back link from the deleted chain
     start_seg->prev = nullptr;
 
-    // Add a tail segment to the deleted chain
-    end_seg->next        = new Segment();
-    end_seg->next->prev  = end_seg;
-    end_seg->next->fdesc = 0;
+    // Detach end_seg from the main chain (don't create a tail for deleted segments)
+    end_seg->next = nullptr;
 
     // Count lines in deleted segments
     int deleted_lines = 0;
     Segment *del_seg  = start_seg;
-    while (del_seg && del_seg != end_seg->next) {
+    while (del_seg) {
         deleted_lines += del_seg->nlines;
         del_seg = del_seg->next;
     }
@@ -808,16 +831,7 @@ Segment *Workspace::copy_segment_chain(Segment *start, Segment *end)
         curr = curr->next;
     }
 
-    // Add tail segment
-    if (copied_first) {
-        Segment *tail     = new Segment();
-        tail->nlines      = 0;
-        tail->fdesc       = 0;
-        tail->seek        = end ? end->seek : (curr ? curr->seek : 0);
-        tail->next        = nullptr;
-        tail->prev        = copied_last;
-        copied_last->next = tail;
-    }
+    // Note: we do NOT add a tail segment here - it should already exist in the workspace
 
     return copied_first;
 }
@@ -859,14 +873,7 @@ Segment *Workspace::create_blank_lines(int n)
         n -= lines_in_seg;
     }
 
-    // Add tail segment
-    if (first) {
-        Segment *tail = new Segment();
-        tail->nlines  = 0;
-        tail->fdesc   = 0;
-        tail->prev    = last;
-        last->next    = tail;
-    }
+    // Note: we do NOT add a tail segment here - it should already exist in the workspace
 
     return first;
 }
@@ -991,7 +998,7 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
 //
 void Workspace::debug_print(std::ostream &out) const
 {
-    out << "Workspace[" 
+    out << "Workspace["
         << "writable_=" << writable_ << ", "
         << "nlines_=" << nlines_ << ", "
         << "topline_=" << topline_ << ", "
@@ -1013,7 +1020,6 @@ void Workspace::debug_print(std::ostream &out) const
     while (seg) {
         out << "  [" << seg_idx << "] ";
         seg->debug_print(out);
-        out << "\n";
         seg = seg->next;
         ++seg_idx;
     }

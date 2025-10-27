@@ -108,7 +108,8 @@ TEST_F(WorkspaceTest, CleanupSegments)
         count++;
         curr = curr->next;
     }
-    EXPECT_GT(count, 1);
+    // Should have at least 1 segment (tail is created separately in workspace)
+    EXPECT_GE(count, 1);
 
     // Cleanup
     Workspace::cleanup_segments(seg);
@@ -145,18 +146,31 @@ TEST_F(WorkspaceTest, CopySegmentChain)
 
 TEST_F(WorkspaceTest, CopySegmentChainPartial)
 {
-    Segment *original = Workspace::create_blank_lines(20);
+    // Create enough lines to span multiple segments (300 lines will create 3 segments)
+    Segment *original = Workspace::create_blank_lines(300);
 
-    // Copy only first 3 lines
+    // Copy only first 2 segments (to get a partial copy)
     Segment *end_marker = original;
-    for (int i = 0; i < 3; ++i) {
-        if (end_marker && end_marker->next)
+    int segments_to_copy = 2;
+    for (int i = 0; i < segments_to_copy && end_marker; ++i) {
+        if (end_marker->next)
             end_marker = end_marker->next;
+        else
+            break;
     }
 
     Segment *copy = Workspace::copy_segment_chain(original, end_marker);
 
     EXPECT_NE(copy, nullptr);
+    
+    // Verify the copy has the expected number of segments
+    int copy_count = 0;
+    Segment *curr = copy;
+    while (curr && curr != end_marker) {
+        copy_count++;
+        curr = curr->next;
+    }
+    EXPECT_EQ(copy_count, segments_to_copy);
 
     // Cleanup
     Workspace::cleanup_segments(original);

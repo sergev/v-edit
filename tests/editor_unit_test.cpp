@@ -578,3 +578,44 @@ TEST_F(EditorTest, SetCurrentSegmentRandomAccess)
         EXPECT_EQ(editor->wksp->line(), line);
     }
 }
+
+TEST_F(EditorTest, DebugPutLineGaps)
+{
+    std::cout << "\n=== Test: Put line at 0 ===\n";
+    // Add first line
+    editor->current_line          = "Line 1";
+    editor->current_line_no       = 0;
+    editor->current_line_modified = true;
+    editor->put_line();
+    
+    std::cout << "After put_line(0):\n";
+    editor->wksp->debug_print(std::cout);
+    
+    // Verify we can read it
+    std::string line0 = editor->wksp->read_line_from_segment(0);
+    std::cout << "Line 0: '" << line0 << "'\n";
+    
+    std::cout << "\n=== Test: Put line at 2 ===\n";
+    // Add third line (skipping line 1)
+    editor->current_line          = "Line 3";
+    editor->current_line_no       = 2;
+    editor->current_line_modified = true;
+    editor->put_line();
+    
+    std::cout << "After put_line(2):\n";
+    editor->wksp->debug_print(std::cout);
+    
+    // Verify all three lines exist
+    EXPECT_EQ(editor->wksp->nlines(), 3);
+    line0 = editor->wksp->read_line_from_segment(0);
+    std::string line1 = editor->wksp->read_line_from_segment(1);
+    std::string line2 = editor->wksp->read_line_from_segment(2);
+    
+    std::cout << "Line 0: '" << line0 << "'\n";
+    std::cout << "Line 1: '" << line1 << "'\n";
+    std::cout << "Line 2: '" << line2 << "'\n";
+    
+    EXPECT_EQ(line0, "Line 1");
+    EXPECT_EQ(line1, "");  // Should be blank
+    EXPECT_EQ(line2, "Line 3");
+}

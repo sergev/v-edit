@@ -20,9 +20,7 @@ long Segment::get_total_bytes() const
 //
 void Segment::debug_print(std::ostream &out) const
 {
-    out << "Segment["
-        << "prev=" << static_cast<void *>(prev) << ", "
-        << "next=" << static_cast<void *>(next) << ", "
+    out << "Segment "
         << "nlines=" << nlines << ", "
         << "fdesc=" << fdesc << ", "
         << "seek=" << seek << ", "
@@ -34,5 +32,5 @@ void Segment::debug_print(std::ostream &out) const
         out << sizes[i];
     }
 
-    out << "}]";
+    out << "}\n";
 }

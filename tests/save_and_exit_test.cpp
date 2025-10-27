@@ -47,7 +47,8 @@ TEST_F(TmuxDriver, SaveAndExitWritesFile)
     std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     in.close();
 
-    EXPECT_EQ(contents, std::string("hello\nworld\n!"));
+    // Note: newline is appended by editor.
+    EXPECT_EQ(contents, std::string("hello\nworld\n!\n"));
 
     // Cleanup
     std::remove(filePath.c_str());

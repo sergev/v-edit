@@ -128,12 +128,25 @@ void Editor::put_line()
         Segment *wg = wksp->cursegm();
         Segment *w0 = wg ? wg->prev : nullptr;
 
+        // Get the segment after wg before deleting
+        Segment *after = wg ? wg->next : nullptr;
+        
         // Free the segment we're replacing
         delete wg;
 
+        // If no tail exists, create one
+        if (!after || after->fdesc != 0) {
+            Segment *tail = new Segment();
+            tail->fdesc   = 0; // Tail marker
+            tail->nlines  = 0;
+            tail->next    = nullptr;
+            tail->prev    = new_seg;
+            after         = tail;
+        }
+
         // Link new segment
         new_seg->prev = w0;
-        new_seg->next = nullptr; // No next yet
+        new_seg->next = after;
 
         if (w0) {
             w0->next = new_seg;

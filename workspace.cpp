@@ -455,9 +455,21 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     if (set_current_segment(line_no)) {
         // Line is beyond end of file - create blank lines to extend it
         // This matches the prototype behavior
-        int num_blank_lines = line_no - line_;
-        if (num_blank_lines <= 0)
-            throw std::runtime_error("breaksegm: inconsistent line_no after set_current_segment()");
+        int num_blank_lines;
+        
+        if (cursegm_->fdesc == 0) {
+            // Empty workspace - we're at the tail segment
+            // Need to create lines from 0 to line_no (inclusive)
+            num_blank_lines = line_no + 1;
+        } else {
+            // Not empty - line_ is set to the last valid line
+            // Calculate how many lines to add beyond that
+            num_blank_lines = line_no - line_;
+            if (num_blank_lines <= 0) {
+                // Shouldn't happen, but just in case
+                num_blank_lines = 1;
+            }
+        }
 
         Segment *blank_seg = create_blank_lines(num_blank_lines);
         if (!blank_seg)

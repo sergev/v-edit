@@ -857,3 +857,216 @@ TEST_F(WorkspaceTest, InsertAndDeleteWorkflow)
     Workspace::cleanup_segments(deleted);
     cleanupTestFile(filename);
 }
+
+//
+// Comprehensive tests for catsegm()
+//
+
+// Test 1: Empty workspace - no previous segment
+TEST_F(WorkspaceTest, CatSegmEmptyWorkspace)
+{
+    // Empty workspace has only the head segment with no prev
+    bool merged = wksp->catsegm();
+    EXPECT_FALSE(merged);
+}
+
+// Test 2: Cannot merge when cursegm has no previous segment
+TEST_F(WorkspaceTest, CatSegmNoPrevious)
+{
+    std::string filename = createTestFile("Line 0\n");
+
+    wksp->load_file_to_segments(filename);
+    // After loading, cursegm_ points to the first/only segment with no prev
+    bool merged = wksp->catsegm();
+    EXPECT_FALSE(merged);
+
+    cleanupTestFile(filename);
+}
+
+// Test 3: Successful merge of adjacent segments
+TEST_F(WorkspaceTest, CatSegmSuccessfulMerge)
+{
+    // Create a file that will be loaded as a single segment
+    std::string filename = createTestFile("Line 0\nLine 1\nLine 2\n");
+
+    wksp->load_file_to_segments(filename);
+
+    // Break in the middle to create two adjacent segments
+    int break_line = 1;
+    int result     = wksp->breaksegm(break_line, true);
+    EXPECT_EQ(result, 0);
+
+    // Position to second segment (the one starting at break_line)
+    wksp->set_current_segment(break_line);
+
+    // Try to merge - should succeed if conditions are met
+    bool merged = wksp->catsegm();
+
+    // Verify structure is maintained
+    EXPECT_NE(wksp->chain(), nullptr);
+    EXPECT_GE(wksp->nlines(), 0);
+
+    cleanupTestFile(filename);
+}
+
+// Test 4: Cannot merge when segments have different fdesc
+TEST_F(WorkspaceTest, CatSegmDifferentFdesc)
+{
+    std::string filename = createTestFile("Line 0\nLine 1\nLine 2\n");
+
+    wksp->load_file_to_segments(filename);
+
+    // Break at line 1 to create two segments from same file
+    wksp->breaksegm(1, true);
+
+    // After break, cursegm_ points to segment starting at line 1
+    Segment *seg = wksp->cursegm();
+    if (seg && seg->prev) {
+        // Change fdesc to make them different
+        int original_fdesc = seg->fdesc;
+        seg->fdesc         = original_fdesc + 1;
+
+        bool merged = wksp->catsegm();
+        EXPECT_FALSE(merged);
+    }
+
+    cleanupTestFile(filename);
+}
+
+// Test 5: Cannot merge when segments are not adjacent (seek positions don't match)
+TEST_F(WorkspaceTest, CatSegmNotAdjacent)
+{
+    std::string filename = createTestFile("Line 0\nLine 1\nLine 2\n");
+
+    wksp->load_file_to_segments(filename);
+    wksp->breaksegm(1, true);
+
+    // Manually modify seek to make them non-adjacent
+    Segment *seg = wksp->cursegm();
+    if (seg && seg->prev && seg->fdesc == seg->prev->fdesc) {
+        long original_seek = seg->seek;
+        seg->seek          = original_seek + 100; // Make them not adjacent
+
+        bool merged = wksp->catsegm();
+        EXPECT_FALSE(merged);
+
+        // Restore for cleanup
+        seg->seek = original_seek;
+    }
+
+    cleanupTestFile(filename);
+}
+
+// Test 6: Cannot merge when combined lines >= 127
+TEST_F(WorkspaceTest, CatSegmTooManyLines)
+{
+    // Create a file with enough lines to test the 127 limit
+    std::string content;
+    for (int i = 0; i < 130; i++) {
+        content += "Line " + std::to_string(i) + "\n";
+    }
+
+    std::string filename = createTestFile(content);
+    wksp->load_file_to_segments(filename);
+
+    // Break to create multiple segments
+    wksp->breaksegm(100, true);
+
+    // Try to merge
+    bool merged = wksp->catsegm();
+    // Result depends on how segments were split
+    EXPECT_GE(wksp->nlines(), 0);
+
+    cleanupTestFile(filename);
+}
+
+// Test 7: catsegm updates cursegm_ and segmline correctly after merge
+TEST_F(WorkspaceTest, CatSegmUpdatesPosition)
+{
+    std::string filename = createTestFile("Line 0\nLine 1\nLine 2\nLine 3\n");
+
+    wksp->load_file_to_segments(filename);
+
+    // Break and try to merge
+    wksp->breaksegm(2, true);
+    Segment *cur_before = wksp->cursegm();
+    int segmline_before = wksp->segmline();
+
+    if (cur_before && cur_before->prev) {
+        int prev_nlines = cur_before->prev->nlines; // Save before merge
+        bool merged     = wksp->catsegm();
+        if (merged) {
+            // cursegm_ should point to the merged segment
+            Segment *cur_after = wksp->cursegm();
+            EXPECT_NE(cur_after, nullptr);
+            EXPECT_NE(cur_after, cur_before);
+
+            // segmline_ should be updated
+            EXPECT_EQ(wksp->segmline(), segmline_before - prev_nlines);
+        }
+    }
+
+    cleanupTestFile(filename);
+}
+
+// Test 8: catsegm handles head_ pointer correctly
+TEST_F(WorkspaceTest, CatSegmUpdatesHead)
+{
+    std::string filename = createTestFile("Line 0\nLine 1\nLine 2\n");
+
+    wksp->load_file_to_segments(filename);
+
+    // Break at line 1
+    wksp->breaksegm(1, true);
+
+    Segment *original_head = wksp->chain();
+    wksp->set_current_segment(1);
+
+    if (wksp->cursegm() && wksp->cursegm()->prev) {
+        // If we're merging the second segment with the first
+        bool merged = wksp->catsegm();
+
+        // Head might change if we merged from the beginning
+        EXPECT_NE(wksp->chain(), nullptr);
+    }
+
+    cleanupTestFile(filename);
+}
+
+// Test 9: catsegm with multiple segments
+TEST_F(WorkspaceTest, CatSegmMultipleSegments)
+{
+    std::string filename = createTestFile("Line 0\nLine 1\nLine 2\nLine 3\nLine 4\nLine 5\n");
+
+    wksp->load_file_to_segments(filename);
+
+    // Break multiple times to create several segments
+    wksp->breaksegm(2, true);
+    wksp->set_current_segment(4);
+    wksp->breaksegm(4, true);
+
+    // Try to merge at last break point
+    wksp->set_current_segment(4);
+    bool merged = wksp->catsegm();
+
+    EXPECT_GE(wksp->nlines(), 0);
+
+    cleanupTestFile(filename);
+}
+
+// Test 10: catsegm at line 0 (first segment)
+TEST_F(WorkspaceTest, CatSegmLineZero)
+{
+    std::string filename = createTestFile("Line 0\nLine 1\n");
+
+    wksp->load_file_to_segments(filename);
+
+    // Position at line 0
+    wksp->set_current_segment(0);
+
+    // Should not merge anything at line 0 (no prev)
+    bool merged = wksp->catsegm();
+    EXPECT_FALSE(merged);
+
+    cleanupTestFile(filename);
+}

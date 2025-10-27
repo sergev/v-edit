@@ -590,8 +590,8 @@ bool Workspace::catsegm()
     Segment *prev = curr->prev;
 
     // Check if segments can be merged
-    // They must be from the same file and together have < 127 lines
-    if (prev->fdesc == curr->fdesc && (prev->nlines + curr->nlines) < 127) {
+    // They must be from the same file (not tail segments) and together have < 127 lines
+    if (prev->fdesc > 0 && prev->fdesc == curr->fdesc && (prev->nlines + curr->nlines) < 127) {
         // Calculate if they're adjacent
         long prev_bytes = prev->get_total_bytes();
         if (curr->seek == prev->seek + prev_bytes) {

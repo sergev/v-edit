@@ -29,7 +29,7 @@ void Workspace::cleanup_segments()
             delete seg;
             seg = next;
         }
-        head_   = nullptr;
+        head_    = nullptr;
         cursegm_ = nullptr;
     }
 }
@@ -55,43 +55,21 @@ void Workspace::reset()
 //
 void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
 {
+    reset();
     writable_ = 1;
-    nlines_   = (int)lines.size();
+    nlines_   = lines.size();
 
-    // Clean up old chain if any
-    cleanup_segments();
-
-    if (nlines_ == 0) {
-        // Empty file - create a segment with one empty line in temp file
-        Segment *seg = tempfile_.write_lines_to_temp({ "" });
-        if (!seg) {
-            // Fallback: create an empty segment
-            seg         = new Segment();
-            seg->prev   = nullptr;
-            seg->next   = nullptr;
-            seg->nlines = 0;
-            seg->fdesc  = 0; // Tail marker
-            seg->seek   = 0;
-        }
-        head_    = seg;
-        cursegm_  = seg;
-        segmline_ = 0;
-        basecol_  = 0;
-        line_     = 0;
-        return;
+    if (nlines_ > 0) {
+        // Write lines to temp file and get a segment
+        head_ = tempfile_.write_lines_to_temp(lines);
+        if (!head_)
+            throw std::runtime_error(
+                "build_segments_from_lines: failed to write lines to temp file");
+    } else {
+        // Empty file - create a tail marker
+        head_ = new Segment();
     }
-
-    // Use Tempfile to write lines and get a segment
-    Segment *seg = tempfile_.write_lines_to_temp(lines);
-    if (!seg) {
-        return;
-    }
-
-    head_    = seg;
-    cursegm_  = seg;
-    segmline_ = 0;
-    basecol_  = 0;
-    line_     = 0;
+    cursegm_ = head_;
 }
 
 //
@@ -319,18 +297,18 @@ void Workspace::build_segments_from_file(int fd)
     if (first_seg) {
         Segment *tail = new Segment();
         tail->prev    = last_seg;
-        tail->next    = nullptr;
-        tail->nlines  = 0;
-        tail->fdesc   = 0;
         tail->seek    = file_offset;
 
         if (last_seg)
             last_seg->next = tail;
         else
             first_seg = tail;
+    } else {
+        // Empty file - create a tail segment
+        first_seg = new Segment();
     }
 
-    head_    = first_seg;
+    head_     = first_seg;
     cursegm_  = first_seg;
     segmline_ = 0;
     line_     = 0;
@@ -456,7 +434,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Line is beyond end of file - create blank lines to extend it
         // This matches the prototype behavior
         int num_blank_lines;
-        
+
         if (cursegm_->fdesc == 0) {
             // Empty workspace - we're at the tail segment
             // Need to create lines from 0 to line_no (inclusive)
@@ -519,7 +497,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     // Special case: blank line segment (fdesc == -1) - split by sizes array
     if (seg->fdesc == -1) {
         if (rel_line >= seg->nlines) {
-            throw std::runtime_error("breaksegm: inconsistent rel_line after set_current_segment()");
+            throw std::runtime_error(
+                "breaksegm: inconsistent rel_line after set_current_segment()");
         }
 
         // Split the blank line segment

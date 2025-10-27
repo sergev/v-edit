@@ -62,12 +62,12 @@ Segment *Tempfile::write_line_to_temp(const std::string &line_content)
 
     long seek_pos = tempseek_;
     int nbytes    = line.size();
-    
+
     // Seek to the correct position before writing
     if (lseek(tempfile_fd_, seek_pos, SEEK_SET) < 0) {
         return nullptr;
     }
-    
+
     if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
         return nullptr;
     }

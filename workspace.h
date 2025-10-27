@@ -127,7 +127,7 @@ public:
 private:
     Tempfile &tempfile_;          // reference to temp file manager
     Segment *cursegm_{ nullptr }; // current segment in chain
-    Segment *head_{ nullptr };   // file's segment chain (direct access)
+    Segment *head_{ nullptr };    // file's segment chain (direct access)
     int writable_{ 0 };           // write permission
     int nlines_{ 0 };             // line count
     int topline_{ 0 };            // top line visible on screen

@@ -72,7 +72,7 @@ void Editor::put_line()
         Segment *prev    = old_seg ? old_seg->prev : nullptr;
 
         // Check if the segment only contains one line (or if we're at end of file)
-        int segmline = wksp->segmline();
+        int segmline       = wksp->segmline();
         bool only_one_line = (old_seg->nlines == 1);
 
         Segment *after = nullptr;
@@ -130,7 +130,7 @@ void Editor::put_line()
 
         // Get the segment after wg before deleting
         Segment *after = wg ? wg->next : nullptr;
-        
+
         // Free the segment we're replacing
         delete wg;
 

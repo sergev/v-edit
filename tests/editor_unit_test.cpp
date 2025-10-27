@@ -200,7 +200,7 @@ TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
     // Initially workspace is empty (has tail segment)
     EXPECT_TRUE(editor->wksp->has_segments());
     EXPECT_EQ(editor->wksp->nlines(), 0);
-    
+
     // Verify the tail segment
     Segment *tail = editor->wksp->chain();
     ASSERT_NE(tail, nullptr);
@@ -572,7 +572,7 @@ TEST_F(EditorTest, SetCurrentSegmentRandomAccess)
     CreateBlankLines(50);
 
     // Random access pattern
-    std::vector<int> random_lines = {0, 25, 49, 12, 33, 7, 40, 3, 30, 15};
+    std::vector<int> random_lines = { 0, 25, 49, 12, 33, 7, 40, 3, 30, 15 };
     for (int line : random_lines) {
         EXPECT_EQ(editor->wksp->set_current_segment(line), 0);
         EXPECT_EQ(editor->wksp->line(), line);

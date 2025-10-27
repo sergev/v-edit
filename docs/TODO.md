@@ -39,7 +39,9 @@ This document tracks the implementation of segment-based editing, migrating from
 - ✅ Fixed WorkspaceTest.WriteLineToTempAndSave by using tempfile->write_line_to_temp()
 - ✅ Added Tempfile class to encapsulate temp file management
 - ✅ Refactored build_segment_chain_from_lines to use Tempfile method
-- 🚧 Investigating empty file handling issues
+- ✅ Fixed write_segments_to_file to handle tail segments (fdesc==0)
+- ✅ Modified empty file handling to create initial empty line segment
+- 🚧 Investigating remaining TmuxDriver test failures (file save issues)
 
 ## Key Design Decisions
 

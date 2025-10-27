@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <cassert>
 #include <cstring>
 #include <fstream>
 
@@ -60,18 +59,22 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
     cleanup_segments();
 
     if (nlines_ == 0) {
-        // Empty file - create an empty segment
-        Segment *seg = new Segment();
-        seg->prev    = nullptr;
-        seg->next    = nullptr;
-        seg->nlines  = 0;
-        seg->fdesc   = 0; // Tail marker
-        seg->seek    = 0;
-        chain_       = seg;
-        cursegm_     = seg;
-        segmline_    = 0;
-        basecol_     = 0;
-        line_        = 0;
+        // Empty file - create a segment with one empty line in temp file
+        Segment *seg = tempfile_.write_lines_to_temp({""});
+        if (!seg) {
+            // Fallback: create an empty segment
+            seg         = new Segment();
+            seg->prev   = nullptr;
+            seg->next   = nullptr;
+            seg->nlines = 0;
+            seg->fdesc  = 0; // Tail marker
+            seg->seek   = 0;
+        }
+        chain_    = seg;
+        cursegm_  = seg;
+        segmline_ = 0;
+        basecol_  = 0;
+        line_     = 0;
         return;
     }
 
@@ -121,8 +124,7 @@ int Workspace::position(int lno)
     Segment *seg = cursegm_;
     int segStart = segmline_;
     // adjust forward
-    while (lno >= segStart + seg->nlines) {
-        assert(seg->fdesc != 0); // fdesc should be present for segments with content
+    while (lno >= segStart + seg->nlines && seg->has_contents()) {
         segStart += seg->nlines;
         seg = seg->next;
         if (!seg) {
@@ -324,7 +326,7 @@ void Workspace::build_segment_chain_from_file(int fd)
 std::string Workspace::read_line_from_segment(int line_no)
 {
     if (position(line_no))
-        return std::string();
+        return "";
 
     Segment *seg = cursegm_;
     int rel_line = line_no - segmline_;
@@ -340,16 +342,13 @@ std::string Workspace::read_line_from_segment(int line_no)
 
     // Get line length
     int line_len = seg->sizes[rel_line];
-    if (line_len <= 0)
+    if (line_len <= 0 || !seg->has_contents())
         return "";
 
     // Handle empty lines (just newline) - return empty string without newline
-    if (line_len == 1 || seg->fdesc == -1) {
+    if (line_len == 1 || seg->fdesc < 0) {
         return "";
     }
-
-    // Assert that fdesc is valid.
-    assert(seg->fdesc > 0);
 
     // Read line from file
     std::string result(line_len - 1, '\0'); // exclude newline
@@ -380,11 +379,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
     Segment *seg = chain_;
     char buffer[8192];
 
-    while (seg) {
-        // Assert that fdesc is present for segments with content
-        // It may be -1 here though, meaning empty lines.
-        assert(seg->fdesc != 0);
-
+    while (seg && seg->has_contents()) {
         // Calculate total bytes for this segment
         long total_bytes = seg->get_total_bytes();
 

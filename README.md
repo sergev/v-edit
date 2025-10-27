@@ -1,7 +1,7 @@
 ve - A lightweight plain text editor with the C/C++ ncurses library.
 
 Build and Install:
-    cmake -B build -DCMAKE_BUILD_TYPE=Release
+    cmake -B build
     make -C build
     make -C build install
 

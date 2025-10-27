@@ -425,7 +425,7 @@ int Workspace::get_line_count(int fallback_count) const
 //
 // Split segment at given line number (based on breaksegm from prototype).
 // When the needed line is beyond the end of file, creates empty segments.
-// Returns 0 on success, 1 if line is beyond end of file.
+// Returns 0 on success, 1 if line had to be created.
 //
 int Workspace::breaksegm(int line_no, bool realloc_flag)
 {
@@ -433,8 +433,49 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         return 1;
 
     // Position workspace to the target line
-    if (position(line_no))
-        return 1;
+    if (position(line_no)) {
+        // Line is beyond end of file - create blank lines to extend it
+        // This matches the prototype behavior
+        int num_blank_lines = line_no - line_;
+        if (num_blank_lines <= 0)
+            return 1;
+
+        Segment *blank_seg = create_blank_lines(num_blank_lines);
+        if (!blank_seg)
+            return 1;
+
+        // Get the tail segment (the one we're currently at, beyond EOF)
+        Segment *tail = cursegm_;
+        Segment *prev = tail ? tail->prev : nullptr;
+
+        // Remove tail temporarily
+        if (prev)
+            prev->next = nullptr;
+
+        // Link blank segments before tail
+        blank_seg->prev     = prev;
+        Segment *last_blank = blank_seg;
+        while (last_blank->next)
+            last_blank = last_blank->next;
+        last_blank->next = tail;
+        tail->prev       = last_blank;
+
+        // Update workspace
+        if (prev) {
+            prev->next = blank_seg;
+        } else {
+            set_chain(blank_seg);
+        }
+
+        // Update nlines to include the blank lines
+        nlines_ = line_no + 1;
+
+        // Position to the target line
+        if (position(line_no))
+            return 1;
+
+        return 1; // Signal that we created lines
+    }
 
     // Now we're at the segment containing line_no
     Segment *seg = cursegm_;
@@ -444,7 +485,43 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         return 0; // Already at the right position
     }
 
-    // Record where we are in the data after processing rel_line entries
+    // Special case: blank line segment (fdesc == -1) - split by sizes array
+    if (seg->fdesc == -1) {
+        if (rel_line >= seg->nlines) {
+            // Requested line beyond this blank segment
+            return 1;
+        }
+
+        // Split the blank line segment
+        Segment *new_seg = new Segment();
+        new_seg->nlines  = seg->nlines - rel_line;
+        new_seg->fdesc   = -1; // Still blank lines
+        new_seg->seek    = seg->seek;
+
+        // Copy remaining sizes
+        for (size_t i = rel_line; i < seg->sizes.size(); ++i) {
+            new_seg->sizes.push_back(seg->sizes[i]);
+        }
+
+        // Link new segment
+        new_seg->next = seg->next;
+        new_seg->prev = seg;
+        if (seg->next)
+            seg->next->prev = new_seg;
+        seg->next = new_seg;
+
+        // Truncate original segment sizes
+        seg->sizes.resize(rel_line);
+        seg->nlines = rel_line;
+
+        // Update workspace position
+        cursegm_  = new_seg;
+        segmline_ = line_no;
+
+        return 0;
+    }
+
+    // Normal file segment - record where we are in the data
     size_t split_point = rel_line;
 
     // Walk through the first rel_line lines to calculate offset

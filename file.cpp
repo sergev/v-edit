@@ -62,7 +62,10 @@ void Editor::put_line()
     current_line_no = -1;
 
     // Break segment at line_no position to split into segments before and at line_no
-    if (wksp->breaksegm(line_no, true) == 0) {
+    int break_result = wksp->breaksegm(line_no, true);
+
+    if (break_result == 0) {
+        // Normal case: line exists, split it
         // Now cursegm_ points to the segment starting at line_no
         // Get the segment we want to replace (the one containing line_no)
         Segment *old_seg = wksp->cursegm();
@@ -102,6 +105,34 @@ void Editor::put_line()
             // Mark workspace as modified
             wksp->set_modified(true);
         }
+    } else if (break_result == 1) {
+        // breaksegm created blank lines - insert the new segment
+        // This matches prototype putline() when flg != 0
+        Segment *wg = wksp->cursegm();
+        Segment *w0 = wg ? wg->prev : nullptr;
+
+        // Free the segment we're replacing
+        delete wg;
+
+        // Link new segment
+        new_seg->prev = w0;
+        new_seg->next = nullptr; // No next yet
+
+        if (w0) {
+            w0->next = new_seg;
+        } else {
+            wksp->set_chain(new_seg);
+        }
+
+        // Update workspace position
+        wksp->set_cursegm(new_seg);
+        wksp->set_segmline(line_no);
+
+        // Try to merge adjacent segments
+        wksp->catsegm();
+
+        // Mark workspace as modified
+        wksp->set_modified(true);
     }
 }
 

@@ -320,3 +320,49 @@ void start_status_color() {
 - Session files use per-user temp directories
 - Colors: Black text on cyan background for status bar
 - Cursor positioned with `move()` before every input read
+
+## Recent Work Context
+
+### Editor::put_line() Implementation (2024-10-26)
+
+**Goal**: Enhance `put_line()` to match prototype behavior for creating lines beyond end of file.
+
+**Prototype Behavior** (r.edit.c lines 1178-1217):
+- When `breaksegm()` returns 1 (line beyond EOF), it creates blank lines to extend the file
+- Putline handles two cases:
+  - `flg == 0`: Normal split/replace of existing line
+  - `flg != 0`: Lines were created, just insert the new segment without second break
+
+**Key Insight from Prototype** (r.edit.c lines 477-498):
+- `blanklines()` creates segments with `fdesc=-1` (not from file)
+- Each blank line has length 1 (just newline)
+- Data array is: `1` repeated for each line (represents "\n" bytes)
+
+**Our Implementation Status**:
+1. Enhanced `breaksegm()` in `workspace.cpp` (lines 430-565):
+   - If `position()` fails, create blank lines using `create_blank_lines()`
+   - Returns 1 to signal that lines were created
+   - Special handling for blank line segments (`fdesc=-1`)
+
+2. Enhanced `put_line()` in `file.cpp` (lines 41-137):
+   - Handles both cases: normal replacement (return 0) and line creation (return 1)
+   - When `break_result == 1`, inserts new segment without second breaksegm call
+
+**Test File**: `tests/editor_unit_test.cpp`
+- Tests initialization with tail segment (empty workspace)
+- Tests creating first line from empty workspace
+- Tests extending file beyond end
+- Tests creating lines with gaps (creating blank lines in between)
+- Tests updating existing lines
+
+**Key Implementation Details**:
+- Empty file (zero bytes) → `load_file_to_segments()` creates no segments
+- Falls through to `build_segment_chain_from_text("")` which creates 1 empty line
+- Open file with tail segment → workspace starts with `nlines=0`, ready for first put_line()
+- Blank lines created with `fdesc=-1`, `sizes[]` array with values `1` (newline length)
+- When splitting blank line segments, use the sizes array (no seek/offset calculations)
+
+**Testing**:
+- Unit tests use `EditorPutLineTest` fixture
+- Direct instantiation of Editor (no TmuxDriver)
+- Tests verify segment chain integrity after operations

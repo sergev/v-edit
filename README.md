@@ -1,143 +1,58 @@
-ve - A lightweight plain text editor with the C/C++ ncurses library.
+# ve — Minimal ncurses-based text editor
 
-**Note**: This editor uses consistent naming conventions:
+A lightweight terminal-based text editor supporting multiple files, rectangular block operations, macros, and session management.
+
+## Build & Install
+
+```bash
+make
+make install          # Optional
+```
+
+## Usage
+
+```bash
+ve                    # Restore last session
+ve -                  # Replay keystrokes from journal
+ve [file]             # Open file
+ve --help             # Show help
+ve --version          # Show version
+```
+
+## Core Features
+
+### Editing Modes
+- **Insert mode** (default): Characters insert at cursor
+- **Overwrite mode**: Characters replace existing text (`^X i` to toggle)
+- **Command mode**: `F1` or `^A` for commands
+
+### Basic Editing
+- **Navigation**: Arrow keys, Home/End, Page Up/Down
+- **Text input**: Printable characters, Tab (4 spaces), Enter (split line)
+- **Character operations**: Backspace, Delete (`^D`), Quote next (`^P`)
+- **Line operations**: Copy (`^C`/F5), Paste (`^V`/F6), Delete (`^Y`), Insert blank (`^O`)
+
+### Advanced Operations
+- **Search**: Forward (`/text` or `^F`), backward (`?text` or `^B`)
+- **Navigation**: Goto line (`g<number>` or `:<number>`), next/prev match (`n`/`N`)
+- **Rectangular blocks**: Select with cursor, copy (`^C`), delete (`^Y`), insert spaces (`^O`)
+- **Macros**: Position markers (`>x`, `$x`) and text buffers
+- **External filters**: `F4` to run shell commands on selected lines
+- **Alternative workspace**: `^N` for two independent editing contexts
+
+### File Management
+- **Multiple files**: `F3` to switch, `o<filename>` to open
+- **Session persistence**: Auto-save state and keystroke journals
+- **Save operations**: `F2`, `^A s`, `:w`, `^X ^C` (quit)
+
+## Naming Conventions
+
 - Private class member variables use underscore suffix (e.g., `ncols_`, `cursor_line_`)
 - Public methods and accessors use no suffix (e.g., `get_lines()`, `topline()`)
-- This helps distinguish private fields from public API and local variables
 
-Build and Install:
-    cmake -B build
-    make -C build
-    make -C build install
+## Documentation
 
-Usage:
-    ve                    # Restore last session
-    ve -                  # Replay journal
-    ve [file]             # Open file
-    ve --help             # Show help
-    ve --version          # Show version
-
-Basic Editing:
-
- * Printable characters - insert into text
- * Cursor left, right, up, down - move cursor
- * Home/End - jump to start/end of line
- * Page Up/Down - scroll page up/down
- * Enter - split line or create new line
- * Delete / ^D - delete character under cursor
- * Backspace - erase previous character
- * Tab - insert spaces up to next 4-column boundary
- * Escape - cancel operation
-
-Line Operations (Edit Mode):
-
- * ^C - copy current line to clipboard
- * ^V - paste clipboard below current line
- * ^Y - delete current line (saves to clipboard)
- * ^O - insert blank line below cursor
-
-Function Keys:
-
- * F1 or ^A - enter command mode
- * F2 - save file
- * F3 - switch to next file
- * F4 - execute external filter
- * F5 - copy current line
- * F6 - paste clipboard
- * F7 - search forward dialog (same as ^F)
- * F8 - goto line dialog
-
-Shortcuts (Edit Mode):
-
- * ^C - copy current line to clipboard
- * ^V - paste clipboard
- * ^Y - delete current line
- * ^O - insert blank line
- * ^D - delete character under cursor
- * ^P - quote next character (literal insert)
- * ^N - switch to alternative workspace (opens help file)
- * ^F or F7 - search forward dialog
- * ^B - search backward dialog
- * ^X prefix - extended commands (see below)
-
-View Control (^X prefix):
-
- * ^X f - shift view right
- * ^X b - shift view left
- * ^X i - toggle insert/overwrite mode
- * ^X ^C - save file and exit
-
-Command Mode (F1 or ^A):
-
-Search and Navigation:
- * /text or +text - search forward
- * ?text or -text - search backward
- * n - find next match
- * N - find previous match
- * g<number> or :<number> - goto line number
-
-File Operations:
- * o<filename> - open file
- * s or :w - save file
- * s<filename> - save as
- * :q or qa - quit without saving
- * :wq - save and quit
-
-Area Selection (Rectangular Blocks):
- * Move cursor to define rectangular area
- * ^C - copy rectangular block
- * ^Y - delete rectangular block
- * ^O - insert rectangular block of spaces
- * <number><movement> - move with count
- * <number>→ or ← - shift view with count
-
-Line Operations with Count:
- * ^C<number> - copy N lines
- * ^Y<number> - delete N lines
- * ^O<number> - insert N blank lines
-
-Macros:
- * >x - save position marker (x = a-z)
- * $x - goto position marker
- * ^C>x - save buffer with name
- * ^V$x - paste named buffer
-
-Other Commands:
- * r - redraw screen
- * |command - execute shell filter on selection
- * Press ESC, F1, or ^A to cancel selection
-
-Mode Display:
-
- * INSERT mode - characters are inserted (default)
- * OVERWRITE mode - characters replace existing text
-
-Advanced Features:
-
-Multiple Files:
- * F3 - switch to next open file
- * o<filename> - open file in editor
- * Multiple files can be open simultaneously
- * Each file maintains its own cursor position
-
-Alternative Workspace:
- * ^N - switch between two independent workspaces
- * First press creates help file in alternative workspace
- * Subsequent presses toggle between workspaces
- * Useful for keeping reference material open
-
-External Filters:
- * F4 - enter filter command mode
- * |command - pipe selected lines through shell command
- * Example: |sort sorts selected lines
-
-Session Management:
-
- * Last session state (file, position) is automatically saved
- * Journal of keystrokes is recorded for debugging
- * Use `-` argument to replay journal
- * Session persists across crashes
-
-See Also:
- * [Commands](docs/Commands.md) - Complete command reference
- * [Rectangular Blocks](docs/Rectangular_Blocks.md) - Operations with rectangular blocks
+- **[Commands Reference](docs/Commands.md)** — Complete command documentation
+- **[Rectangular Blocks](docs/Rectangular_Blocks.md)** — Block operations guide
+- **[Testing](docs/Testing.md)** — Build and test information
+- **[AI Prompt](docs/AI_Prompt.md)** — Technical context for AI agents developing this codebase

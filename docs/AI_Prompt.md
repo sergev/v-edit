@@ -6,33 +6,44 @@ This file captures context and conventions for assisting on this repository. Loa
 - **Name**: ve — minimal ncurses-based text editor (C++17)
 - **Binary**: `ve` (two letters, simple)
 - **Build system**: CMake (>= 3.15)
-- **Core sources**: `core.cpp`, `display.cpp`, `input.cpp`, `edit.cpp`, `file.cpp`, `files.cpp`, `clipboard.cpp`, `session.cpp`, `filter.cpp`, `segments.cpp`, `signal_handler.cpp`, `main.cpp`
+- **Core sources**: `core.cpp`, `display.cpp`, `input.cpp`, `edit.cpp`, `file.cpp`, `files.cpp`, `clipboard.cpp`, `session.cpp`, `filter.cpp`, `segments.cpp`, `signal.cpp`, `main.cpp`
 - **Main header**: `editor.h` — contains the `Editor` class definition
 - **Libraries**: ncurses
 - **Platform**: macOS primary (AppleClang); portable C++17
 
 ## Architecture Overview
 
+### Dual-Workspace Model with Segment Chains
+The editor uses a hybrid approach with two independent workspaces:
+
+1. **Primary Workspace** (`wksp_`): Main editing workspace
+2. **Alternative Workspace** (`alt_wksp_`): Accessible via `^N` for reference material or help
+
+Both workspaces share the same tempfile and use the dual data model approach.
+
 ### Dual-Mode Data Model
-The editor uses a hybrid approach with two data storage mechanisms:
+The editor uses two data storage mechanisms within each workspace:
 
-1. **In-Memory Lines** (`std::vector<std::string> lines`):
-   - Primary editing interface
-   - Fast, accessible for immediate edits
-   - Rebuilt into segment chains when needed
-
-2. **Segment Chain Model** (from prototype):
+1. **Segment Chain Model** (for large file handling):
    - Linked list of segments with byte data
-   - Efficient for large file handling
-   - Allows lazy loading and streaming
+   - Efficient for large file handling and streaming
    - Used for file I/O and persistence
+   - Handles partial loading and byte-level operations
 
-The editor maintains both representations with a dirty flag system to keep them in sync.
+2. **In-Memory Current Line** (`std::string current_line_`):
+   - Primary editing interface in workspace
+   - Fast, accessible for immediate edits
+   - Rebuilt into segment chains when needed for save/load
+   - Buffer populated via `get_line()`/`put_line()`
 
-### Key Components
+### Current Line Buffer Pattern
+- **During editing**: Use `get_line(line_no)` to load line into `current_line_` buffer
+- **After editing**: Call `put_line()` to write buffer back to segment chain if modified
+- **State tracking**: `current_line_no_`, `current_line_modified_` flags
+
+### Component Architecture
 - **Editor class**: Singleton pattern (signal handlers need static instance pointer)
-- **Multiple file support**: Tab-like switching between open files
-- **Alternative workspace**: `^N` to switch between two independent workspaces
+- **Multiple workspace support**: Tab-like switching between primary and alternative workspaces
 - **Session management**: Automatic save/restore of position and state
 - **Journaling**: Keystroke recording for debugging and replay
 - **Signal handling**: Graceful crash recovery, interrupt handling
@@ -40,361 +51,302 @@ The editor maintains both representations with a dirty flag system to keep them 
 ## Core Features
 
 ### Editing Modes
-- **Insert mode** (default): Characters inserted at cursor
-- **Overwrite mode**: Characters replace existing text (toggle with `^X i`)
+- **Insert mode** (default): Characters inserted at cursor (`insert_mode_` = true)
+- **Overwrite mode**: Characters replace existing text (^X i to toggle)
 - **Command mode**: `F1` or `^A` to enter commands
-- **Area selection mode**: For selecting rectangular blocks
-- **Filter mode**: For executing external shell commands
+- **Area selection mode**: For selecting rectangular blocks (^C/^Y/^O in selection)
+- **Filter mode**: `F4` to execute external shell commands
 
 ### Editing Operations
-- **Character edit**: Insert/overwrite characters, tabs
-- **Line operations**: Copy (`^C`, `F5`), paste (`^V`, `F6`), delete (`^Y`), insert blank (`^O`)
-- **Rectangular block operations**: Copy (`^C` in area selection), delete (`^Y`), insert spaces (`^O`)
-- **Clipboard**: Line ranges and rectangular blocks
-- **Function keys**: F1-F8 for quick access to common operations
+
+#### Character edit:
+- Insert/overwrite characters, tabs
+- Tab inserts 4 spaces
+- Backspace/delete with line joining
+- Enter for line splitting, with text carriage
+
+#### Line operations:
+- **Copy** (^C, F5): Copy current line to clipboard
+- **Paste** (^V, F6): Paste clipboard below current line
+- **Delete** (^Y): Delete current line (saves to clipboard)
+- **Insert blank** (^O): Insert blank line below cursor
+
+#### Rectangular block operations:
+- Move cursor to define rectangular area (^C/^Y/^O + movement)
+- **Copy** (^C): Copy rectangular block
+- **Delete** (^Y): Delete rectangular block + save to buffer
+- **Insert spaces** (^O): Insert rectangular spaces
+- **Line counts**: ^C<number>, ^Y<number>, ^O<number> for multi-line operations
+
+#### Clipboard system:
+- **Line-based**: Traditional line copy/paste (F5/F6)
+- **Rectangular**: Block-based clipboard with coordinate tracking
+- **Serialization**: Clipboard contents persist across sessions
 
 ### File Operations
-- **Open**: `o<filename>` or `F3` (next file)
-- **Save**: `F2`, `^A s`, or `:w`
-- **Exit**: `qa` (no save), `^X ^C` (save and exit), `:wq`
-- **Multiple files**: Support for multiple files, switching with F3
-- **Alternative workspace**: `^N` to switch between two workspaces
+- **Open**: `o<filename>` — opens in current workspace
+- **Save**: `F2`, `^A s`, `:w`, `^X ^C` (save and exit)
+- **Save as**: `s<filename>`
+- **Exit**: `qa` (quit without save), `:q`, `^X ^C`
+- **Alternative workspace**: `^N` to switch between workspaces
+- **Help file**: Built-in help accessible in alternative workspace
 
-### Navigation
+### Navigation & Search
 - **Search**: `/text` (forward), `?text` (backward), `n` (next), `N` (previous)
-- **Search dialogs**: `^F` or `F7` (forward), `^B` (backward), `F8` (goto line)
-- **Goto line**: `g<number>` or `:<number>`
+- **Search dialogs**: `^F` or `F7` (forward), `^B` (backward)
+- **Goto line**: `g<number>` or `:<number>` or direct `<number>`
 - **Scroll**: `^X f/b` (shift view), Page Up/Down, Home/End
 - **Cursor movement**: Arrow keys, Home/End for line navigation
+- **View control**: `^X f` (right), `^X b` (left) for horizontal scroll
 
 ### Advanced Features
 - **External filters**: `F4` to run shell commands on selected lines
-- **Macros**: Position markers (`>x`) and buffers (use with `$x`)
-- **Session restore**: Automatically saves/restores editing position
-- **Help file**: Built-in help accessible via `^N` (alternative workspace)
+- **Macros**: Position markers (`>x`) and text buffers (`>>x`) with `$x` recall
+- **Session restore**: Automatic state persistence (`~/.ve/session`)
+- **Journaling**: Keystroke logs (`/tmp/rej{tty}{user}`) for replay `-` argument
 - **Quote mode**: `^P` to insert literal characters
-- **Overwrite mode**: Toggle with `^X i`
+- **Overwrite toggle**: `^X i`
 
-### Function Keys
-- **F1** or **^A**: Enter command mode
+### Function Keys (Edit Mode)
+- **F1** (`^A`): Enter command mode
 - **F2**: Save file
-- **F3**: Switch to next file
-- **F4**: Filter mode (execute external commands)
-- **F5**: Copy current line
-- **F6**: Paste clipboard
-- **F7**: Search forward dialog
-- **F8**: Goto line dialog
+- **F3**: Switch to next workspace
+- **F4**: Filter mode (external commands)
+- **F5** (`^C`): Copy current line
+- **F6** (`^V`): Paste clipboard
+- **F7** (`^F`): Search forward dialog
+- **F8** (`g`): Goto line dialog
 
-### UI
-- **Status bar**: Shows line/column, mode, filename (cyan background, black text if colors supported)
-- **Cursor positioning**: Uses `move(row, col)` before input
-- **Display refresh**: Manual `refresh()` calls; timeout-based input loop
+### Command Mode Operations
+- **Line operations**: ^C (copy), ^Y (delete), ^O (insert) with optional counts
+- **Area selection**: Movement keys define rectangular bounds
+- **Search/navigation**: / ? n N g<number>
+- **File ops**: o s w q qa :wq etc.
+- **Macros**: >x (buffer), >>x (position), $x (recall)
+- **Filters**: |command (external shell commands)
+
+### UI Elements
+- **Status bar**: Cyan background, black text (shows line/col, mode, filename)
+- **Cursor positioning**: `move(row, col)` before input; timeout-based loop
+- **Display refresh**: Every input cycle calls `draw()` with `ensure_cursor_visible()`
+- **Color support**: Black text on cyan for status (configurable)
+
+## Data Structures
+
+### Editor State
+```cpp
+int ncols_, nlines_;           // Terminal dimensions
+int cursor_col_, cursor_line_; // Cursor position in view
+std::string status_;           // Status message
+std::string filename_;         // Current filename
+bool cmd_mode_;                // Command mode active
+bool quit_flag_;               // Exit requested
+bool insert_mode_;             // Insert vs overwrite
+bool quote_next_;              // ^P literal insert mode
+bool filter_mode_;             // External filter entry mode
+bool area_selection_mode_;     // Rectangular selection active
+```
+
+### Current Line Buffer
+```cpp
+std::string current_line_;        // Editing buffer
+int current_line_no_;             // Which line is buffered (-1 = invalid)
+bool current_line_modified_;      // Buffer needs writing back
+```
+
+### Segment Chain (large file model)
+```cpp
+struct Segment {
+    Segment *prev, *next;        // Doubly linked
+    int nlines;                  // Lines in this segment
+    long seek;                   // File offset
+    std::vector<unsigned char> data; // Raw bytes
+    int fdesc;                   // File descriptor (-1 for blank lines)
+    long offset;                 // Memory offset in segment
+};
+```
+
+### Enhanced Clipboard
+```cpp
+class Clipboard {
+    std::vector<std::string> lines_;  // Content lines
+    Parameters params_;              // Bounds and type tracking
+
+    void serialize(std::ostream&);   // Save/restore across sessions
+    void deserialize(std::istream&);
+};
+```
+
+### Workspaces
+```cpp
+class Workspace {
+    Segment *head_;         // Segment chain head
+    Segment *cursegm_;      // Current segment pointer
+    int nlines_;            // Total line count
+    int topline_;           // Viewport top line
+    int basecol_;           // Horizontal scroll offset
+    bool modified_;         // Change tracking
+    Tempfile &tempfile_;    // Shared temp file
+};
+
+// Editor maintains two:
+std::unique_ptr<Workspace> wksp_;      // Primary workspace
+std::unique_ptr<Workspace> alt_wksp_;  // Alternative workspace
+```
+
+### Macro System
+```cpp
+std::map<char, Macro> macros_;  // char -> macro data
+class Macro {
+    enum Type { POSITION, BUFFER } type_;
+    std::pair<int,int> position_;         // line,col for POSITION
+    std::vector<std::string> buffer_;     // lines for BUFFER
+    Parameters bounds_;                  // rectangular extents
+};
+```
 
 ## Build System
 
 ### CMake Structure
 ```cmake
-v_edit_lib (static)  # All sources except main.cpp
-    ↓
-ve (executable)      # Main entry point
-    ↓
-v_edit_tests         # Test suite linking v_edit_lib
+v_edit_lib (static)
+    ↳ core.cpp display.cpp input.cpp edit.cpp file.cpp files.cpp
+      clipboard.cpp session.cpp filter.cpp segments.cpp signal.cpp
+
+ve (executable) ← v_edit_lib
+
+v_edit_tests ← v_edit_lib + GoogleTest + TmuxDriver
 ```
 
-- **Library**: `v_edit_lib` static library with all editor logic
-- **Executable**: `ve` links to library
-- **Warnings**: `-Wall -Werror -Wshadow` (non-MSVC)
-- **Install**: Both `ve` and `v_edit_lib` installed
+- **Library**: `v_edit_lib` includes all editor logic except `main.cpp`
+- **Executable**: `ve` links only main.cpp + library
+- **Warnings**: `-Wall -Werror -Wshadow` (varies by compiler)
+- **Install**: Both binary and library installed
+- **Tests**: GoogleTest 1.15.2 with TmuxDriver for ncurses UI testing
 
 Typical build:
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -B build
 make -C build
-make -C build install
+make -C build install  # Optional
 ```
 
-### Source Files and Purposes
+### Testing Framework
+- **Unit tests**: Direct Editor/Workspace instantiation
+- **Integration tests**: tmux-based UI testing
+- **Test isolation**: Unique tmux socket per PID
+- **Mock requirement**: GoogleTest with disabled GMock
 
-**Core Files**:
-- `main.cpp` - Entry point, argument parsing, help messages
-- `editor.h` - Main Editor class definition with all data structures
-- `core.cpp` - Initialization, model setup, main loop
-- `display.cpp` - Drawing, status bar, cursor positioning, color support
-- `input.cpp` - Key handling (edit mode, command mode, area selection)
-- `edit.cpp` - File operations, search, navigation
-- `file.cpp` - File I/O operations
-- `files.cpp` - Multiple file management, alternative workspace, help file
-- `clipboard.cpp` - Clipboard operations (line and rectangular blocks)
-- `session.cpp` - Session save/restore, journaling
-- `filter.cpp` - External filter execution
-- `segments.cpp` - Segment chain model implementation
-- `signal_handler.cpp` - Signal handling, crash recovery
-
-**Key Features by File**:
-- `input.cpp` - Handles all keyboard input, modes, and shortcuts
-- `files.cpp` - Manages multiple files and alternative workspace (^N)
-- `clipboard.cpp` - Supports both line-based and rectangular block clipboards
-- `edit.cpp` - Search, navigation, goto line
-- `filter.cpp` - External command execution (F4 filter mode)
-
-## Tests
-
-### Test Framework
-- **GoogleTest** (v1.15.2) via FetchContent
-- **Test target**: `v_edit_tests`
-- **Fixture**: `TmuxDriver` for ncurses UI testing
-- **Isolation**: Dedicated tmux server (`-L v-edit-tests-<pid>`)
-
-### Running Tests
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
-make -C build
-cd build/tests
-ctest -V
-```
-
-### Test Infrastructure
-- **TmuxDriver**: Provides `createSession()`, `sendKeys()`, `capturePane()`, `killSession()`
-- **Test macro**: `V_EDIT_BIN_PATH` injected by CMake
-- **Auto-skip**: If `tmux` not available
-
-## Key Data Structures
-
-### Editor State
-```cpp
-int cursor_col, cursor_line;           // Cursor position in view
-int ncols, nlines;                      // Terminal dimensions
-std::vector<std::string> lines;         // In-memory file content
-std::string status;                     // Status message
-bool cmd_mode;                          // Command mode active
-bool insert_mode;                       // Insert vs overwrite
-```
-
-### Clipboard
-```cpp
-struct Clipboard {
-    std::vector<std::string> lines;
-    int start_line, end_line;
-    int start_col, end_col;
-    bool is_rectangular;
-};
-```
-
-### Segment Chain (for large files)
-```cpp
-struct Segment {
-    Segment *prev, *next;
-    int nlines, fdesc;
-    long seek;
-    std::vector<unsigned char> data;
-};
-```
-
-### Macros
-```cpp
-struct Macro {
-    enum Type { POSITION, BUFFER };
-    Type type;
-    std::pair<int, int> position;       // For POSITION
-    std::vector<std::string> buffer_lines; // For BUFFER
-    int start_line, end_line;
-    int start_col, end_col;
-    bool is_rectangular;
-};
-```
-
-## Important Patterns
+## Key Implementation Patterns
 
 ### Main Loop (core.cpp)
 ```cpp
-timeout(200);  // Non-blocking input with 200ms timeout
+timeout(200);  // 200ms non-blocking input
 for (;;) {
     check_interrupt();
-    move(cursor_line, cursor_col);  // Position cursor before input
+    move(cursor_line_, cursor_col_);
     int ch = journal_read_key();
     if (ch == ERR) {
         draw();  // Redraw even without input
     } else {
-        journal_write_key(ch);  // Record
+        journal_write_key(ch);
         handle_key(ch);
         draw();
     }
-    if (quit_flag) break;
+    if (quit_flag_) break;
 }
 ```
 
-### Display Refresh
-- Every loop iteration calls `draw()`
-- `draw()` calls `ensure_segments_up_to_date()` if segments dirty
-- Cursor positioned with `move(cursor_line, cursor_col)` before input
+### Current Line Editing Pattern
+```cpp
+// To edit line N:
+get_line(N);              // Load into current_line_
+current_line_ = "...";    // Edit buffer contents
+current_line_modified_ = true;
+put_line();               // Write back to segment chain
+```
 
 ### Key Handling Flow
 ```
 handle_key()
-  ├─ cmd_mode? → handle_key_cmd()
-  │                ├─ area_selection_mode? → handle_area_selection()
-  │                └─ Movement keys update param bounds
-  └─ handle_key_edit()
-     └─ Various editing operations
+  ├─ cmd_mode_? → handle_key_cmd() ┌─ area_selection_mode_?
+  │                                ├─ rectangular operations (^C/^Y/^O)
+  │                                └─ parameter/movement processing
+  └─ handle_key_edit() ──────────────┼─ F-keys, ^X prefix, movement
+                                     └─ character editing into current_line_
 ```
 
-### Color Support (display.cpp)
-```cpp
-void start_status_color() {
-    if (has_colors()) {
-        attron(COLOR_PAIR(1));  // Black on cyan
-    } else {
-        attron(A_REVERSE);
-    }
-}
-```
-
-## Session Management
-- **State file**: `~/.ve/session` (via tmpname in `/tmp/ret*` on macOS)
-- **Journal**: `/tmp/rej*` records all keystrokes
-- **Restore modes**:
-  - No args → restore state
-  - `-` argument → replay journal
-
-## Important Conventions
-
-### Code Style
-- **Indentation**: 4 spaces (C++ and CMake)
-- **Formatting**: Run `make reindent` for clang-format
-- **Naming**:
-  - Member variables in camelCase
-  - Functions in snake_case
-  - Structs in PascalCase
-
-### Editor State Management
-- **Dirty tracking**: `segments_dirty` flag for lazy rebuilding
-- **File state**: Saved before workspace switches
-- **Backup tracking**: `backup_done` flag per file
+### Session State
+- **State file**: `~/.ve/session`
+- **Journal files**: `/tmp/rej{tty}{user}` for replay
+- **Modes**: `0`=normal, `1`=restore, `2`=replay
+- **Restart logic**: Arg parsing determines startup mode
 
 ### Signal Handling
-- Static instance pointer for signal handlers
-- Graceful shutdown with session save
-- Interrupt flag for user-canceled operations
+- **SIGINT**: Sets `interrupt_flag_` (user cancel)
+- **Fatal signals**: Emergency state save + graceful exit
+- **Singleton pattern**: Static `instance_` for handlers
 
-## Adding New Features
+## Development Conventions
 
-### UI Operations
-1. Add state variables to `Editor` class in `editor.h`
-2. Handle key in `input.cpp` → `handle_key_edit()` or `handle_key_cmd()`
-3. Update display in `display.cpp` as needed
-4. Write test in `tests/` with `TEST_F(TmuxDriver, ...)`
-5. Add to `tests/CMakeLists.txt` target `v_edit_tests`
+### Code Style
+- **Indentation**: 4 spaces, no tabs (C++ and CMake)
+- **Formatting**: `make reindent` for clang-format
+- **Naming**:
+  - Private members: underscore suffix (`ncols_`, `wksp_`)
+  - Public API: no suffix (`get_lines()`, `topline()`)
+  - Methods: snake_case (`handle_key()`, `draw()`)
+  - Fields and local variables: snake_case (`start_line`, `first_seg`)
+  - Classes/Structs: PascalCase (`Editor`, `Clipboard`)
 
-### File Operations
-1. Modify `file.cpp` or `files.cpp` for file I/O
-2. Update `segments.cpp` if changing segment model
-3. Consider session state in `session.cpp`
+### Architecture Decisions
+- **Dual workspaces**: Independent editing contexts with shared tempfile
+- **Segment chains**: Efficient large file handling with lazy loading
+- **Current line buffer**: Fast in-memory editing with selective persistence
+- **Parameter system**: Enhanced command parsing with counts/bounds
+- **Serialization**: Persistent clipboard and macro state
 
-## Repository Layout (Key Paths)
-- `CMakeLists.txt` — root build; defines `v_edit_lib` and `ve`
-- `Makefile` — convenience targets (`all`, `install`, `reindent`)
-- `core.cpp` — main loop, initialization
-- `display.cpp` — rendering, status bar, color
-- `input.cpp` — keyboard input handling
-- `edit.cpp` — file operations, search, navigation
-- `file.cpp` — file I/O
-- `files.cpp` — multiple file management
-- `clipboard.cpp` — clipboard operations
-- `session.cpp` — session management
-- `filter.cpp` — external filter execution
-- `segments.cpp` — segment chain model
-- `signal_handler.cpp` — signal handling
-- `editor.h` — main class definition
-- `main.cpp` — entry point
-- `tests/CMakeLists.txt` — test build config
-- `tests/TmuxDriver.h/.cpp` — tmux-based gtest fixture
-- `tests/*_test.cpp` — individual tests
-- `docs/Testing.md` — testing methodology
-- `docs/AI_Prompt.md` — this file
-- `README.md` — user documentation
+### File Organization
+- **Headers**: Classes, structures, constants in `.h` files
+- **Implementation**: Single-responsibility `.cpp` files
+- **Test files**: Comprehensive unit and integration tests
+- **Documentation**: Usage docs separate from AI context
 
-## Known Decisions
-- GoogleMock is disabled (`BUILD_GMOCK=OFF`)
-- CMake policy CMP0135 set to NEW
-- `DOWNLOAD_EXTRACT_TIMESTAMP TRUE` for FetchContent downloads
-- Session files use per-user temp directories
-- Colors: Black text on cyan background for status bar
-- Cursor positioned with `move()` before every input read
+### Debugging
+- Create focused unit tests to reproduce the issue
+- Insert debug prints for visibility
+- Use `lldb` for debugging crashes
 
-## Recent Work Context
+## Repository Structure
+```
+/Users/vak/Project/Editors/v-edit/
+├── cmake/                      # Build configuration
+├── docs/                       # Documentation
+│   ├── AI_Prompt.md            # This file
+│   ├── Commands.md             # User command reference
+│   ├── Rectangular_Blocks.md   # Block operations
+│   └── Testing.md              # Testing guidelines
+├── prototype/                  # Original C prototype
+├── tests/                      # Comprehensive test suite
+│   ├── CMakeLists.txt          # Test build config
+│   ├── TmuxDriver.*            # UI testing framework
+│   └── *_test.cpp              # Individual test files
+├── CMakeLists.txt              # Root build file
+├── Makefile                    # Convenience targets
+├── *.cpp *.h                   # Source code and headers
+└── README.md                   # User documentation
+```
 
-### Editor::put_line() Implementation (2024-10-26)
+## Known Issues & Future Work
+- **Performance**: Segment chain operations may need optimization for very large files
+- **Memory usage**: Dual data model could be optimized further
+- **Feature**: Macro system could be expanded
+- **Testing**: More integration tests for complex editing scenarios
 
-**Goal**: Enhance `put_line()` to match prototype behavior for creating lines beyond end of file.
+## Startup Behavior
+- **No args**: Attempt session restore from `~/.ve/session`
+- **`-` arg**: Replay keystrokes from journal file
+- **File arg**: Open specified file for editing
+- **Help args**: Display usage information
 
-**Prototype Behavior** (r.edit.c lines 1178-1217):
-- When `breaksegm()` returns 1 (line beyond EOF), it creates blank lines to extend the file
-- Putline handles two cases:
-  - `flg == 0`: Normal split/replace of existing line
-  - `flg != 0`: Lines were created, just insert the new segment without second break
-
-**Key Insight from Prototype** (r.edit.c lines 477-498):
-- `blanklines()` creates segments with `fdesc=-1` (not from file)
-- Each blank line has length 1 (just newline)
-- Data array is: `1` repeated for each line (represents "\n" bytes)
-
-**Our Implementation Status**:
-1. Enhanced `breaksegm()` in `workspace.cpp` (lines 430-565):
-   - If `position()` fails, create blank lines using `create_blank_lines()`
-   - Returns 1 to signal that lines were created
-   - Special handling for blank line segments (`fdesc=-1`)
-
-2. Enhanced `put_line()` in `file.cpp` (lines 41-137):
-   - Handles both cases: normal replacement (return 0) and line creation (return 1)
-   - When `break_result == 1`, inserts new segment without second breaksegm call
-
-**Test File**: `tests/editor_unit_test.cpp`
-- Tests initialization with tail segment (empty workspace)
-- Tests creating first line from empty workspace
-- Tests extending file beyond end
-- Tests creating lines with gaps (creating blank lines in between)
-- Tests updating existing lines
-
-**Key Implementation Details**:
-- Empty file (zero bytes) → `load_file_to_segments()` creates no segments
-- Falls through to `build_segment_chain_from_text("")` which creates 1 empty line
-- Open file with tail segment → workspace starts with `nlines=0`, ready for first put_line()
-- Blank lines created with `fdesc=-1`, `sizes[]` array with values `1` (newline length)
-- When splitting blank line segments, use the sizes array (no seek/offset calculations)
-
-**Testing**:
-- Unit tests use `EditorPutLineTest` fixture
-- Direct instantiation of Editor (no TmuxDriver)
-- Tests verify segment chain integrity after operations
-
-### Refactoring: Private Field Naming Convention (2024-12-19)
-
-**Goal**: Append underscore suffix to all private class member variable names for consistency.
-
-**Changes Applied**:
-- All private fields in `Editor` class renamed with underscore suffix:
-  - `ncols` → `ncols_`, `nlines` → `nlines_`, `cursor_col` → `cursor_col_`, etc.
-  - `wksp` → `wksp_`, `alt_wksp` → `alt_wksp_`, `cmd` → `cmd_`, `filename` → `filename_`
-  - `status` → `status_`, `clipboard` → `clipboard_`, `macros` → `macros_`, etc.
-  - All parameter and state variables: `param_*_`, `current_line*_`, `last_search*_`, etc.
-- All private fields in `Clipboard` class renamed:
-  - `lines` → `lines_`, `start_line` → `start_line_`, `end_line` → `end_line_`, etc.
-  - `m_is_rectangular` → `m_is_rectangular_`
-- All `.cpp` implementation files updated to use new field names
-- All test files updated to use new field names
-
-**Files Modified**:
-- Headers: `editor.h`, `clipboard.h`
-- Implementation: All `.cpp` files (core, input, display, edit, file, files, copy_paste, filter, session, clipboard, signal, etc.)
-- Tests: `editor_unit_test.cpp`, `segment_unit_test.cpp`
-- Note: `workspace.h` and `tempfile.h` already had underscore convention
-
-**Naming Convention**:
-- Private member variables: underscore suffix (e.g., `ncols_`, `wksp_`)
-- Public members and accessors: no suffix (e.g., `get_lines()`, `topline()`)
-- Method names: no underscore suffix (e.g., `handle_key()`, `draw()`)
-
-**Build Status**:
-- ✅ All files compile successfully
-- ✅ All 117 tests pass
-- ✅ No breaking changes to public API
+This comprehensive AI context ensures consistent and accurate assistance across all development tasks.

@@ -950,9 +950,8 @@ void Workspace::scroll_vertical(int nl, int max_rows, int total_lines)
         }
     } else {
         // Scroll down (toward end)
-        int last_line = total_lines - topline_;
-        if (last_line <= max_rows) {
-            // Already showing the end
+        if (topline_ + max_rows >= total_lines) {
+            // Already at bottom - can't scroll further
             return;
         }
     }

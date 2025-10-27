@@ -7,6 +7,7 @@
 
 #include "clipboard.h"
 #include "macro.h"
+#include "parameters.h"
 #include "segment.h"
 #include "tempfile.h"
 #include "workspace.h"
@@ -40,13 +41,9 @@ private:
     bool area_selection_mode_{ false }; // track if we're in area selection mode
     std::string cmd_;
 
-    // Enhanced parameter system (from prototype)
-    int param_type_{ 0 };               // 0=none, 1=string, -1=area, -2=tag-defined area
-    std::string param_str_;             // string parameter
-    int param_c0_{ 0 }, param_r0_{ 0 }; // area top-left corner
-    int param_c1_{ 0 }, param_r1_{ 0 }; // area bottom-right corner
-    int param_count_{ 0 };              // numeric count parameter
-    std::string last_search_;           // last search needle
+    // Enhanced parameter system
+    Parameters params_;
+    std::string last_search_; // last search needle
     bool last_search_forward_{ true };
     std::vector<std::string> clipboard_lines_; // simple line clipboard (F5/F6)
     bool quote_next_{ false };                 // ^P - quote next character literally
@@ -64,9 +61,6 @@ private:
     std::unique_ptr<Workspace> alt_wksp_;
     std::string alt_filename_;
 
-    // Help file installed in a public place
-    static const std::string DEFAULT_HELP_FILE;
-
     // Enhanced clipboard (supports line ranges)
     Clipboard clipboard_;
 
@@ -77,13 +71,15 @@ private:
     int journal_fd_{ -1 };
     std::string jname_;
     std::string tmpname_;
-    std::string rfile_;
     int inputfile_{ 0 };    // 0=stdin, >=0=journal file fd for replay
     int restart_mode_{ 0 }; // 0=normal, 1=restore, 2=replay
 
 #ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_H_
 private:
 #endif
+    // Help file installed in a public place
+    static const std::string DEFAULT_HELP_FILE;
+
     // Startup and display
     //
     // Initialize ncurses terminal.

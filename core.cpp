@@ -74,7 +74,6 @@ void Editor::startup(int restart)
     const std::string suf  = ttySuffix();
     tmpname_               = std::string("/tmp/ret") + suf + user;
     jname_                 = std::string("/tmp/rej") + suf + user;
-    rfile_                 = std::string("/tmp/res") + suf + user;
 
     if (restart == 2) {
         // Replay mode: open existing journal

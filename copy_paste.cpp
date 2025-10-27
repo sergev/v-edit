@@ -235,36 +235,47 @@ bool Editor::mdeftag(char tag_name)
     int tagCol  = pos.second;
 
     // Set up area between current cursor and tag
-    param_type_ = -2;
-    param_r0_   = curLine;
-    param_c0_   = curCol;
-    param_r1_   = tagLine;
-    param_c1_   = tagCol;
+    params_.set_type(Parameters::PARAM_TAG_AREA);
+    params_.set_area_start(curCol, curLine);
+    params_.set_area_end(tagCol, tagLine);
 
-    // Normalize bounds (swap if needed)
-    int f = 0;
-    if (param_r0_ > param_r1_) {
-        std::swap(param_r0_, param_r1_);
-        f++;
-    }
-    if (param_c0_ > param_c1_) {
-        std::swap(param_c0_, param_c1_);
-        f++;
+    // Normalize bounds
+    bool needs_reposition = false;
+    bool was_swaped       = false;
+
+    if (params_.get_type() == Parameters::PARAM_TAG_AREA) {
+        // Get original coordinates
+        int start_col, start_row;
+        params_.get_area_start(start_col, start_row);
+        bool was_start_at_cursor = (curLine == start_row && curCol == start_col);
+
+        params_.normalize_area();
+
+        // Check if coordinates were swapped
+        int new_start_col, new_start_row;
+        params_.get_area_start(new_start_col, new_start_row);
+        was_swaped = (new_start_row != curLine || new_start_col != curCol);
+
+        if (was_swaped) {
+            needs_reposition = was_start_at_cursor;
+        }
     }
 
     // Determine message based on selection type
-    if (param_r1_ == param_r0_) {
+    if (params_.is_horizontal_area()) {
         status_ = "*** Columns defined by tag ***";
-    } else if (param_c1_ == param_c0_) {
+    } else if (params_.is_vertical_area()) {
         status_ = "*** Lines defined by tag ***";
     } else {
         status_ = "*** Area defined by tag ***";
     }
 
-    // Move cursor to start if swapped
-    if (f) {
-        goto_line(param_r0_);
-        wksp_->set_basecol(param_c0_);
+    // Move cursor to start if needed
+    if (needs_reposition) {
+        int col, row;
+        params_.get_area_start(col, row);
+        goto_line(row);
+        wksp_->set_basecol(col);
         cursor_col_ = 0;
         ensure_cursor_visible();
     }

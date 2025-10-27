@@ -1,5 +1,10 @@
 ve - A lightweight plain text editor with the C/C++ ncurses library.
 
+**Note**: This editor uses consistent naming conventions:
+- Private class member variables use underscore suffix (e.g., `ncols_`, `cursor_line_`)
+- Public methods and accessors use no suffix (e.g., `get_lines()`, `topline()`)
+- This helps distinguish private fields from public API and local variables
+
 Build and Install:
     cmake -B build
     make -C build

@@ -366,3 +366,35 @@ void start_status_color() {
 - Unit tests use `EditorPutLineTest` fixture
 - Direct instantiation of Editor (no TmuxDriver)
 - Tests verify segment chain integrity after operations
+
+### Refactoring: Private Field Naming Convention (2024-12-19)
+
+**Goal**: Append underscore suffix to all private class member variable names for consistency.
+
+**Changes Applied**:
+- All private fields in `Editor` class renamed with underscore suffix:
+  - `ncols` → `ncols_`, `nlines` → `nlines_`, `cursor_col` → `cursor_col_`, etc.
+  - `wksp` → `wksp_`, `alt_wksp` → `alt_wksp_`, `cmd` → `cmd_`, `filename` → `filename_`
+  - `status` → `status_`, `clipboard` → `clipboard_`, `macros` → `macros_`, etc.
+  - All parameter and state variables: `param_*_`, `current_line*_`, `last_search*_`, etc.
+- All private fields in `Clipboard` class renamed:
+  - `lines` → `lines_`, `start_line` → `start_line_`, `end_line` → `end_line_`, etc.
+  - `m_is_rectangular` → `m_is_rectangular_`
+- All `.cpp` implementation files updated to use new field names
+- All test files updated to use new field names
+
+**Files Modified**:
+- Headers: `editor.h`, `clipboard.h`
+- Implementation: All `.cpp` files (core, input, display, edit, file, files, copy_paste, filter, session, clipboard, signal, etc.)
+- Tests: `editor_unit_test.cpp`, `segment_unit_test.cpp`
+- Note: `workspace.h` and `tempfile.h` already had underscore convention
+
+**Naming Convention**:
+- Private member variables: underscore suffix (e.g., `ncols_`, `wksp_`)
+- Public members and accessors: no suffix (e.g., `get_lines()`, `topline()`)
+- Method names: no underscore suffix (e.g., `handle_key()`, `draw()`)
+
+**Build Status**:
+- ✅ All files compile successfully
+- ✅ All 117 tests pass
+- ✅ No breaking changes to public API

@@ -15,12 +15,12 @@ void Editor::switch_to_alternative_workspace()
     }
 
     // Swap workspaces
-    std::swap(wksp, alt_wksp);
+    std::swap(wksp_, alt_wksp_);
 
     // Swap filename
-    std::string temp_filename = filename;
-    filename                  = alt_filename;
-    alt_filename              = temp_filename;
+    std::string temp_filename = filename_;
+    filename_                 = alt_filename_;
+    alt_filename_             = temp_filename;
 
     ensure_cursor_visible();
 }
@@ -31,14 +31,14 @@ void Editor::switch_to_alternative_workspace()
 void Editor::create_alternative_workspace()
 {
     // Create a fresh alternative workspace (with tempfile reference)
-    alt_wksp     = std::make_unique<Workspace>(tempfile_);
-    alt_filename = filename;
+    alt_wksp_     = std::make_unique<Workspace>(tempfile_);
+    alt_filename_ = filename_;
 
     // Try to open the help file in alternative workspace
     if (!open_help_file()) {
         // If help file fails, create a new empty workspace
-        alt_filename = "untitled_alt";
-        alt_wksp->build_segments_from_text("");
+        alt_filename_ = "untitled_alt";
+        alt_wksp_->build_segments_from_text("");
     }
 }
 
@@ -48,7 +48,7 @@ void Editor::create_alternative_workspace()
 bool Editor::has_alternative_workspace() const
 {
     // We have an alternative workspace if we have at least something stored
-    return !alt_filename.empty();
+    return !alt_filename_.empty();
 }
 
 // Help file operations
@@ -77,9 +77,9 @@ bool Editor::open_help_file()
     }
 
     // Set alternative workspace to help file
-    alt_filename = DEFAULT_HELP_FILE;
-    alt_wksp     = std::make_unique<Workspace>(tempfile_);
-    alt_wksp->build_segments_from_text(help_content);
+    alt_filename_ = DEFAULT_HELP_FILE;
+    alt_wksp_     = std::make_unique<Workspace>(tempfile_);
+    alt_wksp_->build_segments_from_text(help_content);
 
     return true;
 }
@@ -124,9 +124,9 @@ bool Editor::create_builtin_help()
         "Press ^N to return to your file.\n";
 
     // Set alternative workspace to built-in help
-    alt_filename = "Built-in Help";
-    alt_wksp     = std::make_unique<Workspace>(tempfile_);
-    alt_wksp->build_segments_from_text(help_text);
+    alt_filename_ = "Built-in Help";
+    alt_wksp_     = std::make_unique<Workspace>(tempfile_);
+    alt_wksp_->build_segments_from_text(help_text);
 
     return true;
 }

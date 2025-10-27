@@ -64,8 +64,8 @@ void Workspace::set_chain(Segment *chain)
 
     if (!head_) {
         // Create an empty chain with just a tail
-        head_     = new Segment();
-        cursegm_  = head_;
+        head_    = new Segment();
+        cursegm_ = head_;
         return;
     }
 

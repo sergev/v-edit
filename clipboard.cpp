@@ -3,62 +3,62 @@
 #include <iostream>
 
 Clipboard::Clipboard()
-    : start_line(-1), end_line(-1), start_col(-1), end_col(-1), m_is_rectangular(false)
+    : start_line_(-1), end_line_(-1), start_col_(-1), end_col_(-1), m_is_rectangular_(false)
 {
 }
 
 bool Clipboard::is_empty() const
 {
-    return lines.empty();
+    return lines_.empty();
 }
 
 bool Clipboard::is_rectangular() const
 {
-    return m_is_rectangular;
+    return m_is_rectangular_;
 }
 
 int Clipboard::get_start_line() const
 {
-    return start_line;
+    return start_line_;
 }
 
 int Clipboard::get_end_line() const
 {
-    return end_line;
+    return end_line_;
 }
 
 int Clipboard::get_start_col() const
 {
-    return start_col;
+    return start_col_;
 }
 
 int Clipboard::get_end_col() const
 {
-    return end_col;
+    return end_col_;
 }
 
 const std::vector<std::string> &Clipboard::get_lines() const
 {
-    return lines;
+    return lines_;
 }
 
 void Clipboard::clear()
 {
-    lines.clear();
-    start_line = end_line = start_col = end_col = -1;
-    m_is_rectangular                            = false;
+    lines_.clear();
+    start_line_ = end_line_ = start_col_ = end_col_ = -1;
+    m_is_rectangular_                               = false;
 }
 
 void Clipboard::copy_lines(const std::vector<std::string> &source, int startLine, int count)
 {
     clear();
-    m_is_rectangular = false;
-    start_line       = startLine;
-    end_line         = startLine + count - 1;
+    m_is_rectangular_ = false;
+    start_line_       = startLine;
+    end_line_         = startLine + count - 1;
 
     for (int i = 0; i < count; ++i) {
         if (startLine + i < (int)source.size()) {
-            lines.push_back(source[startLine + i]);
+            lines_.push_back(source[startLine + i]);
         }
     }
 }
@@ -67,11 +67,11 @@ void Clipboard::copy_rectangular_block(const std::vector<std::string> &source, i
                                        int width, int height)
 {
     clear();
-    m_is_rectangular = true;
-    start_line       = line;
-    end_line         = line + height - 1;
-    start_col        = col;
-    end_col          = col + width - 1;
+    m_is_rectangular_ = true;
+    start_line_       = line;
+    end_line_         = line + height - 1;
+    start_col_        = col;
+    end_col_          = col + width - 1;
 
     for (int i = 0; i < height; ++i) {
         if (line + i < (int)source.size()) {
@@ -84,9 +84,9 @@ void Clipboard::copy_rectangular_block(const std::vector<std::string> &source, i
                     block_line += ' '; // pad with spaces
                 }
             }
-            lines.push_back(block_line);
+            lines_.push_back(block_line);
         } else {
-            lines.push_back(std::string(width, ' '));
+            lines_.push_back(std::string(width, ' '));
         }
     }
 }
@@ -94,24 +94,24 @@ void Clipboard::copy_rectangular_block(const std::vector<std::string> &source, i
 Clipboard::BlockData Clipboard::get_data() const
 {
     BlockData data;
-    data.lines          = lines;
-    data.start_line     = start_line;
-    data.end_line       = end_line;
-    data.start_col      = start_col;
-    data.end_col        = end_col;
-    data.is_rectangular = m_is_rectangular;
+    data.lines          = lines_;
+    data.start_line     = start_line_;
+    data.end_line       = end_line_;
+    data.start_col      = start_col_;
+    data.end_col        = end_col_;
+    data.is_rectangular = m_is_rectangular_;
     return data;
 }
 
 void Clipboard::set_data(bool rect, int s_line, int e_line, int s_col, int e_col,
-                         const std::vector<std::string> &clipboard_lines)
+                         const std::vector<std::string> &clipboard_lines_)
 {
-    m_is_rectangular = rect;
-    start_line       = s_line;
-    end_line         = e_line;
-    start_col        = s_col;
-    end_col          = e_col;
-    lines            = clipboard_lines;
+    m_is_rectangular_ = rect;
+    start_line_       = s_line;
+    end_line_         = e_line;
+    start_col_        = s_col;
+    end_col_          = e_col;
+    lines_            = clipboard_lines_;
 }
 
 void Clipboard::paste_into_lines(std::vector<std::string> &target, int afterLine)
@@ -120,9 +120,9 @@ void Clipboard::paste_into_lines(std::vector<std::string> &target, int afterLine
         return;
     }
 
-    // Paste as lines
-    target.insert(target.begin() + std::min((int)target.size(), afterLine + 1), lines.begin(),
-                  lines.end());
+    // Paste as lines_
+    target.insert(target.begin() + std::min((int)target.size(), afterLine + 1), lines_.begin(),
+                  lines_.end());
 }
 
 void Clipboard::paste_into_rectangular(std::vector<std::string> &target, int afterLine, int atCol)
@@ -132,10 +132,10 @@ void Clipboard::paste_into_rectangular(std::vector<std::string> &target, int aft
     }
 
     int startLine = afterLine + 1;
-    int numLines  = lines.size();
-    int numCols   = end_col - start_col + 1;
+    int numLines  = lines_.size();
+    int numCols   = end_col_ - start_col_ + 1;
 
-    // Ensure we have enough lines
+    // Ensure we have enough lines_
     while ((int)target.size() <= startLine + numLines - 1) {
         target.push_back("");
     }
@@ -150,8 +150,8 @@ void Clipboard::paste_into_rectangular(std::vector<std::string> &target, int aft
         }
 
         // Copy the block content
-        if (i < (int)lines.size()) {
-            const std::string &src = lines[i];
+        if (i < (int)lines_.size()) {
+            const std::string &src = lines_[i];
             for (int j = 0; j < numCols && j < (int)src.size(); ++j) {
                 targetLine[atCol + j] = src[j];
             }
@@ -161,28 +161,28 @@ void Clipboard::paste_into_rectangular(std::vector<std::string> &target, int aft
 
 void Clipboard::serialize(std::ostream &out) const
 {
-    out << m_is_rectangular << '\n';
-    out << start_line << '\n';
-    out << end_line << '\n';
-    out << start_col << '\n';
-    out << end_col << '\n';
-    out << lines.size() << '\n';
-    for (const std::string &line : lines) {
+    out << m_is_rectangular_ << '\n';
+    out << start_line_ << '\n';
+    out << end_line_ << '\n';
+    out << start_col_ << '\n';
+    out << end_col_ << '\n';
+    out << lines_.size() << '\n';
+    for (const std::string &line : lines_) {
         out << line << '\n';
     }
 }
 
 void Clipboard::deserialize(std::istream &in)
 {
-    in >> m_is_rectangular >> start_line >> end_line;
-    in >> start_col >> end_col;
+    in >> m_is_rectangular_ >> start_line_ >> end_line_;
+    in >> start_col_ >> end_col_;
     size_t clip_count;
     in >> clip_count;
-    lines.clear();
+    lines_.clear();
     for (size_t i = 0; i < clip_count; ++i) {
         std::string line;
         std::getline(in, line); // consume newline
         std::getline(in, line);
-        lines.push_back(line);
+        lines_.push_back(line);
     }
 }

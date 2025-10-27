@@ -55,7 +55,7 @@ void Editor::handle_fatal_signal(int sig)
 //
 void Editor::handle_sigint(int sig)
 {
-    if (instance_ && instance_->interrupt_flag) {
+    if (instance_ && instance_->interrupt_flag_) {
         // Second SIGINT - abort
         if (instance_) {
             endwin();
@@ -66,7 +66,7 @@ void Editor::handle_sigint(int sig)
 
     // First SIGINT - set flag
     if (instance_) {
-        instance_->interrupt_flag = true;
+        instance_->interrupt_flag_ = true;
     }
 
     // Reinstall handler for next time
@@ -78,8 +78,8 @@ void Editor::handle_sigint(int sig)
 //
 void Editor::check_interrupt()
 {
-    if (interrupt_flag) {
-        interrupt_flag = false;
-        status         = "Interrupt";
+    if (interrupt_flag_) {
+        interrupt_flag_ = false;
+        status_         = "Interrupt";
     }
 }

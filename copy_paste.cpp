@@ -1,7 +1,7 @@
 #include "editor.h"
 
 //
-// Copy specified lines to clipboard.
+// Copy specified lines to clipboard_.
 //
 void Editor::picklines(int startLine, int count)
 {
@@ -13,13 +13,13 @@ void Editor::picklines(int startLine, int count)
 
     // Read lines from workspace segments
     std::vector<std::string> lines;
-    for (int i = 0; i < count && (startLine + i) < wksp->nlines(); ++i) {
+    for (int i = 0; i < count && (startLine + i) < wksp_->nlines(); ++i) {
         std::string line = read_line_from_wksp(startLine + i);
         lines.push_back(line);
     }
 
     // Store in clipboard
-    clipboard.copy_lines(lines, 0, lines.size());
+    clipboard_.copy_lines(lines, 0, lines.size());
 }
 
 //
@@ -27,26 +27,26 @@ void Editor::picklines(int startLine, int count)
 //
 void Editor::paste(int afterLine, int atCol)
 {
-    if (clipboard.is_empty()) {
+    if (clipboard_.is_empty()) {
         return;
     }
 
     ensure_line_saved(); // Save any unsaved modifications
 
-    const std::vector<std::string> &clip_lines = clipboard.get_lines();
+    const std::vector<std::string> &clip_lines = clipboard_.get_lines();
 
-    if (clipboard.is_rectangular()) {
+    if (clipboard_.is_rectangular()) {
         // Paste as rectangular block - insert at column position
-        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp->nlines(); ++i) {
+        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp_->nlines(); ++i) {
             get_line(afterLine + i);
-            if (atCol < (int)current_line.size()) {
-                current_line.insert(atCol, clip_lines[i]);
+            if (atCol < (int)current_line_.size()) {
+                current_line_.insert(atCol, clip_lines[i]);
             } else {
                 // Extend line with spaces if needed
-                current_line.resize(atCol, ' ');
-                current_line += clip_lines[i];
+                current_line_.resize(atCol, ' ');
+                current_line_ += clip_lines[i];
             }
-            current_line_modified = true;
+            current_line_modified_ = true;
             put_line();
         }
     } else {
@@ -55,9 +55,9 @@ void Editor::paste(int afterLine, int atCol)
             // Create a segment for this line
             Segment *new_seg = tempfile_.write_line_to_temp(line);
             if (new_seg) {
-                wksp->insert_segments(new_seg, afterLine + 1);
+                wksp_->insert_segments(new_seg, afterLine + 1);
                 afterLine++;
-                wksp->set_nlines(wksp->nlines() + 1);
+                wksp_->set_nlines(wksp_->nlines() + 1);
             }
         }
     }
@@ -66,7 +66,7 @@ void Editor::paste(int afterLine, int atCol)
 }
 
 //
-// Copy rectangular block to clipboard.
+// Copy rectangular block to clipboard_.
 //
 void Editor::pickspaces(int line, int col, int number, int nl)
 {
@@ -78,7 +78,7 @@ void Editor::pickspaces(int line, int col, int number, int nl)
 
     // Read lines from workspace and extract rectangular block
     std::vector<std::string> lines;
-    for (int i = 0; i < nl && (line + i) < wksp->nlines(); ++i) {
+    for (int i = 0; i < nl && (line + i) < wksp_->nlines(); ++i) {
         std::string full_line = read_line_from_wksp(line + i);
         std::string block;
 
@@ -91,11 +91,11 @@ void Editor::pickspaces(int line, int col, int number, int nl)
     }
 
     // Store rectangular block in clipboard
-    clipboard.copy_rectangular_block(lines, 0, col, number, lines.size());
+    clipboard_.copy_rectangular_block(lines, 0, col, number, lines.size());
 }
 
 //
-// Delete rectangular block and save to clipboard.
+// Delete rectangular block and save to clipboard_.
 //
 void Editor::closespaces(int line, int col, int number, int nl)
 {
@@ -105,12 +105,12 @@ void Editor::closespaces(int line, int col, int number, int nl)
     // Now delete the rectangular area using get_line/put_line pattern
     ensure_line_saved();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < wksp->nlines()) {
+        if (line + i < wksp_->nlines()) {
             get_line(line + i);
-            if (col < (int)current_line.size()) {
-                int end_pos = std::min(col + number, (int)current_line.size());
-                current_line.erase(col, end_pos - col);
-                current_line_modified = true;
+            if (col < (int)current_line_.size()) {
+                int end_pos = std::min(col + number, (int)current_line_.size());
+                current_line_.erase(col, end_pos - col);
+                current_line_modified_ = true;
                 put_line();
             }
         }
@@ -126,21 +126,21 @@ void Editor::openspaces(int line, int col, int number, int nl)
     // Insert spaces in rectangular area using get_line/put_line pattern
     ensure_line_saved();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < wksp->nlines()) {
+        if (line + i < wksp_->nlines()) {
             get_line(line + i);
-            if (col <= (int)current_line.size()) {
-                current_line.insert(col, number, ' ');
+            if (col <= (int)current_line_.size()) {
+                current_line_.insert(col, number, ' ');
             } else {
                 // Extend line with spaces if needed
-                current_line.resize(col, ' ');
-                current_line.insert(col, number, ' ');
+                current_line_.resize(col, ' ');
+                current_line_.insert(col, number, ' ');
             }
-            current_line_modified = true;
+            current_line_modified_ = true;
             put_line();
         } else {
             // Create new line if needed - TODO: need proper implementation
-            Segment *blank = wksp->create_blank_lines(1);
-            wksp->insert_segments(blank, line + i);
+            Segment *blank = wksp_->create_blank_lines(1);
+            wksp_->insert_segments(blank, line + i);
         }
     }
     ensure_cursor_visible();
@@ -151,9 +151,9 @@ void Editor::openspaces(int line, int col, int number, int nl)
 //
 void Editor::save_macro_position(char name)
 {
-    int absLine = wksp->topline() + cursor_line;
-    int absCol  = wksp->basecol() + cursor_col;
-    macros[name].setPosition(absLine, absCol);
+    int absLine = wksp_->topline() + cursor_line_;
+    int absCol  = wksp_->basecol() + cursor_col_;
+    macros_[name].setPosition(absLine, absCol);
 }
 
 //
@@ -161,13 +161,13 @@ void Editor::save_macro_position(char name)
 //
 bool Editor::goto_macro_position(char name)
 {
-    auto it = macros.find(name);
-    if (it == macros.end() || !it->second.isPosition())
+    auto it = macros_.find(name);
+    if (it == macros_.end() || !it->second.isPosition())
         return false;
     auto pos = it->second.getPosition();
     goto_line(pos.first);
-    wksp->set_basecol(pos.second);
-    cursor_col = 0;
+    wksp_->set_basecol(pos.second);
+    cursor_col_ = 0;
     ensure_cursor_visible();
     return true;
 }
@@ -178,9 +178,9 @@ bool Editor::goto_macro_position(char name)
 void Editor::save_macro_buffer(char name)
 {
     // Save current clipboard content to named macro buffer
-    auto data = clipboard.get_data();
-    macros[name].setBuffer(data.lines, data.start_line, data.end_line, data.start_col, data.end_col,
-                           data.is_rectangular);
+    auto data = clipboard_.get_data();
+    macros_[name].setBuffer(data.lines, data.start_line, data.end_line, data.start_col,
+                            data.end_col, data.is_rectangular);
 }
 
 //
@@ -188,24 +188,24 @@ void Editor::save_macro_buffer(char name)
 //
 bool Editor::paste_macro_buffer(char name)
 {
-    auto it = macros.find(name);
-    if (it == macros.end() || !it->second.isBuffer())
+    auto it = macros_.find(name);
+    if (it == macros_.end() || !it->second.isBuffer())
         return false;
 
     // Restore clipboard from macro buffer
     auto data = it->second.getAllBufferData();
-    clipboard.set_data(data.is_rectangular, data.start_line, data.end_line, data.start_col,
-                       data.end_col, data.lines);
+    clipboard_.set_data(data.is_rectangular, data.start_line, data.end_line, data.start_col,
+                        data.end_col, data.lines);
 
     // Paste the buffer
-    if (!clipboard.is_empty()) {
+    if (!clipboard_.is_empty()) {
         // TODO: Implement clipboard paste with segments
         // Use the clipboard's paste method
         /*
-        if (!clipboard.is_rectangular()) {
-            clipboard.paste_into_lines(lines, curLine);
+        if (!clipboard_.is_rectangular()) {
+            clipboard_.paste_into_lines(lines, curLine);
         } else {
-            clipboard.paste_into_rectangular(lines, curLine, curCol);
+            clipboard_.paste_into_rectangular(lines, curLine, curCol);
         }
         */
 
@@ -219,15 +219,15 @@ bool Editor::paste_macro_buffer(char name)
 //
 bool Editor::mdeftag(char tag_name)
 {
-    auto it = macros.find(tag_name);
-    if (it == macros.end() || !it->second.isPosition()) {
-        status = "Tag not found";
+    auto it = macros_.find(tag_name);
+    if (it == macros_.end() || !it->second.isPosition()) {
+        status_ = "Tag not found";
         return false;
     }
 
     // Get current cursor position
-    int curLine = wksp->topline() + cursor_line;
-    int curCol  = wksp->basecol() + cursor_col;
+    int curLine = wksp_->topline() + cursor_line_;
+    int curCol  = wksp_->basecol() + cursor_col_;
 
     // Get tag position
     auto pos    = it->second.getPosition();
@@ -235,37 +235,37 @@ bool Editor::mdeftag(char tag_name)
     int tagCol  = pos.second;
 
     // Set up area between current cursor and tag
-    param_type = -2;
-    param_r0   = curLine;
-    param_c0   = curCol;
-    param_r1   = tagLine;
-    param_c1   = tagCol;
+    param_type_ = -2;
+    param_r0_   = curLine;
+    param_c0_   = curCol;
+    param_r1_   = tagLine;
+    param_c1_   = tagCol;
 
     // Normalize bounds (swap if needed)
     int f = 0;
-    if (param_r0 > param_r1) {
-        std::swap(param_r0, param_r1);
+    if (param_r0_ > param_r1_) {
+        std::swap(param_r0_, param_r1_);
         f++;
     }
-    if (param_c0 > param_c1) {
-        std::swap(param_c0, param_c1);
+    if (param_c0_ > param_c1_) {
+        std::swap(param_c0_, param_c1_);
         f++;
     }
 
     // Determine message based on selection type
-    if (param_r1 == param_r0) {
-        status = "*** Columns defined by tag ***";
-    } else if (param_c1 == param_c0) {
-        status = "*** Lines defined by tag ***";
+    if (param_r1_ == param_r0_) {
+        status_ = "*** Columns defined by tag ***";
+    } else if (param_c1_ == param_c0_) {
+        status_ = "*** Lines defined by tag ***";
     } else {
-        status = "*** Area defined by tag ***";
+        status_ = "*** Area defined by tag ***";
     }
 
     // Move cursor to start if swapped
     if (f) {
-        goto_line(param_r0);
-        wksp->set_basecol(param_c0);
-        cursor_col = 0;
+        goto_line(param_r0_);
+        wksp_->set_basecol(param_c0_);
+        cursor_col_ = 0;
         ensure_cursor_visible();
     }
 

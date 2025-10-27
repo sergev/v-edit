@@ -22,64 +22,64 @@ private:
     static Editor *instance_; // For signal handler access
 
     // Minimal single-window state
-    int ncols{};
-    int nlines{};
-    int cursor_col{};
-    int cursor_line{};
-    std::string status;
-    std::string filename{ "untitled" };
-    bool cmd_mode{ false };
-    bool quit_flag{ false };
+    int ncols_{};
+    int nlines_{};
+    int cursor_col_{};
+    int cursor_line_{};
+    std::string status_;
+    std::string filename_{ "untitled" };
+    bool cmd_mode_{ false };
+    bool quit_flag_{ false };
 
     // Current line buffer (prototype's cline pattern)
-    std::string current_line;
-    int current_line_no{ -1 };
-    bool current_line_modified{ false };
+    std::string current_line_;
+    int current_line_no_{ -1 };
+    bool current_line_modified_{ false };
 
-    bool filter_mode{ false };         // track if we're in filter command mode
-    bool area_selection_mode{ false }; // track if we're in area selection mode
-    std::string cmd;
+    bool filter_mode_{ false };         // track if we're in filter command mode
+    bool area_selection_mode_{ false }; // track if we're in area selection mode
+    std::string cmd_;
 
     // Enhanced parameter system (from prototype)
-    int param_type{ 0 };              // 0=none, 1=string, -1=area, -2=tag-defined area
-    std::string param_str;            // string parameter
-    int param_c0{ 0 }, param_r0{ 0 }; // area top-left corner
-    int param_c1{ 0 }, param_r1{ 0 }; // area bottom-right corner
-    int param_count{ 0 };             // numeric count parameter
-    std::string last_search;          // last search needle
-    bool last_search_forward{ true };
-    std::vector<std::string> clipboard_lines; // simple line clipboard (F5/F6)
-    bool quote_next{ false };                 // ^P - quote next character literally
-    bool ctrlx_state{ false };                // ^X prefix state
-    bool insert_mode{ true };                 // insert vs overwrite mode
+    int param_type_{ 0 };               // 0=none, 1=string, -1=area, -2=tag-defined area
+    std::string param_str_;             // string parameter
+    int param_c0_{ 0 }, param_r0_{ 0 }; // area top-left corner
+    int param_c1_{ 0 }, param_r1_{ 0 }; // area bottom-right corner
+    int param_count_{ 0 };              // numeric count parameter
+    std::string last_search_;           // last search needle
+    bool last_search_forward_{ true };
+    std::vector<std::string> clipboard_lines_; // simple line clipboard (F5/F6)
+    bool quote_next_{ false };                 // ^P - quote next character literally
+    bool ctrlx_state_{ false };                // ^X prefix state
+    bool insert_mode_{ true };                 // insert vs overwrite mode
 
     // Signal handling
-    bool interrupt_flag{ false }; // interrupt signal occurred
+    bool interrupt_flag_{ false }; // interrupt signal occurred
 
     // Temporary file management (shared by all workspaces)
     Tempfile tempfile_;
 
     // Two workspaces: main workspace (wksp) and alternative workspace (alt_wksp)
-    std::unique_ptr<Workspace> wksp;
-    std::unique_ptr<Workspace> alt_wksp;
-    std::string alt_filename;
+    std::unique_ptr<Workspace> wksp_;
+    std::unique_ptr<Workspace> alt_wksp_;
+    std::string alt_filename_;
 
     // Help file installed in a public place
     static const std::string DEFAULT_HELP_FILE;
 
     // Enhanced clipboard (supports line ranges)
-    Clipboard clipboard;
+    Clipboard clipboard_;
 
     // Macros (position markers and text buffers)
-    std::map<char, Macro> macros; // char -> macro data
+    std::map<char, Macro> macros_; // char -> macro data
 
     // Journaling
-    int journal_fd{ -1 };
-    std::string jname;
-    std::string tmpname;
-    std::string rfile;
-    int inputfile{ 0 };    // 0=stdin, >=0=journal file fd for replay
-    int restart_mode{ 0 }; // 0=normal, 1=restore, 2=replay
+    int journal_fd_{ -1 };
+    std::string jname_;
+    std::string tmpname_;
+    std::string rfile_;
+    int inputfile_{ 0 };    // 0=stdin, >=0=journal file fd for replay
+    int restart_mode_{ 0 }; // 0=normal, 1=restore, 2=replay
 
 #ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_H_
 private:

@@ -10,27 +10,27 @@
 //
 void Editor::save_state()
 {
-    std::ofstream out(tmpname.c_str());
+    std::ofstream out(tmpname_.c_str());
     if (out) {
-        out << filename << '\n';
-        out << wksp->topline() << '\n';
-        out << wksp->basecol() << '\n';
-        out << cursor_line << '\n';
-        out << cursor_col << '\n';
-        out << insert_mode << '\n';
-        out << cmd_mode << '\n';
-        out << cmd << '\n';
-        out << last_search << '\n';
-        out << last_search_forward << '\n';
-        out << wksp->backup_done() << '\n';
+        out << filename_ << '\n';
+        out << wksp_->topline() << '\n';
+        out << wksp_->basecol() << '\n';
+        out << cursor_line_ << '\n';
+        out << cursor_col_ << '\n';
+        out << insert_mode_ << '\n';
+        out << cmd_mode_ << '\n';
+        out << cmd_ << '\n';
+        out << last_search_ << '\n';
+        out << last_search_forward_ << '\n';
+        out << wksp_->backup_done() << '\n';
         // Save macro positions
-        out << macros.size() << '\n';
-        for (const auto &pair : macros) {
+        out << macros_.size() << '\n';
+        for (const auto &pair : macros_) {
             out << pair.first << '\n';
             pair.second.serialize(out);
         }
-        // Save clipboard
-        clipboard.serialize(out);
+        // Save clipboard_
+        clipboard_.serialize(out);
     }
 }
 
@@ -40,39 +40,39 @@ void Editor::save_state()
 void Editor::load_state_if_requested(int restart, int argc, char **argv)
 {
     if (restart == 1) {
-        // Try to restore from tmpname
-        std::ifstream in(tmpname.c_str());
+        // Try to restore from tmpname_
+        std::ifstream in(tmpname_.c_str());
         if (in) {
             std::string nm;
             std::getline(in, nm);
             if (!nm.empty()) {
-                filename = nm;
-                wksp->set_backup_done(false); // reset backup flag for restored file
+                filename_ = nm;
+                wksp_->set_backup_done(false); // reset backup flag for restored file
             }
             int topline, basecol;
-            in >> topline >> basecol >> cursor_line >> cursor_col;
-            wksp->set_topline(topline);
-            wksp->set_basecol(basecol);
-            in >> insert_mode >> cmd_mode;
-            std::getline(in, cmd); // consume newline
-            std::getline(in, cmd);
-            std::getline(in, last_search);
+            in >> topline >> basecol >> cursor_line_ >> cursor_col_;
+            wksp_->set_topline(topline);
+            wksp_->set_basecol(basecol);
+            in >> insert_mode_ >> cmd_mode_;
+            std::getline(in, cmd_); // consume newline
+            std::getline(in, cmd_);
+            std::getline(in, last_search_);
             bool backup_done;
-            in >> last_search_forward >> backup_done;
-            wksp->set_backup_done(backup_done);
+            in >> last_search_forward_ >> backup_done;
+            wksp_->set_backup_done(backup_done);
 
-            // Load macros
+            // Load macros_
             size_t macro_count;
             in >> macro_count;
-            macros.clear();
+            macros_.clear();
             for (size_t i = 0; i < macro_count; ++i) {
                 char name;
                 in >> name;
-                macros[name].deserialize(in);
+                macros_[name].deserialize(in);
             }
 
-            // Load clipboard
-            clipboard.deserialize(in);
+            // Load clipboard_
+            clipboard_.deserialize(in);
         }
     }
 }
@@ -82,10 +82,10 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
 //
 int Editor::journal_read_key()
 {
-    if (inputfile > 0) {
+    if (inputfile_ > 0) {
         // Replay mode: read from journal
         char buf[1];
-        ssize_t n = read(inputfile, buf, 1);
+        ssize_t n = read(inputfile_, buf, 1);
         if (n <= 0) {
             return ERR; // EOF or error
         }
@@ -101,9 +101,9 @@ int Editor::journal_read_key()
 //
 void Editor::journal_write_key(int ch)
 {
-    if (journal_fd >= 0) {
+    if (journal_fd_ >= 0) {
         char buf[1] = { (char)ch };
-        write(journal_fd, buf, 1);
-        fsync(journal_fd);
+        write(journal_fd_, buf, 1);
+        fsync(journal_fd_);
     }
 }

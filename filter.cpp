@@ -15,12 +15,12 @@
 bool Editor::execute_external_filter(const std::string &command, int start_line, int num_lines)
 {
     // Validate parameters
-    if (start_line < 0 || start_line >= wksp->nlines()) {
+    if (start_line < 0 || start_line >= wksp_->nlines()) {
         return false;
     }
 
     // Limit num_lines to available lines
-    int end_line = std::min(start_line + num_lines, wksp->nlines());
+    int end_line = std::min(start_line + num_lines, wksp_->nlines());
     num_lines    = end_line - start_line;
 
     if (num_lines <= 0) {
@@ -57,7 +57,7 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     // Check if command executed successfully
     if (result != 0) {
         // Debug: print the command that failed
-        status = std::string("Filter command failed: ") + full_command;
+        status_ = std::string("Filter command failed: ") + full_command;
         unlink(input_file.c_str());
         unlink(output_file.c_str());
         return false;
@@ -95,17 +95,17 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     }
 
     // Delete old lines
-    wksp->delete_segments(start_line, start_line + num_lines - 1);
+    wksp_->delete_segments(start_line, start_line + num_lines - 1);
 
     // Build segments from the new lines
     Segment *new_segs = tempfile_.write_lines_to_temp(new_lines);
 
     if (new_segs) {
         // Insert the new segments at the deletion point
-        wksp->insert_segments(new_segs, start_line);
+        wksp_->insert_segments(new_segs, start_line);
 
         // Update line count
-        wksp->set_nlines(wksp->nlines() - num_lines + (int)new_lines.size());
+        wksp_->set_nlines(wksp_->nlines() - num_lines + (int)new_lines.size());
     }
 
     ensure_cursor_visible();

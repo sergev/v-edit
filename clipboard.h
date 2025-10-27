@@ -53,12 +53,12 @@ public:
     void deserialize(std::istream &in);
 
 private:
-    std::vector<std::string> lines;
-    int start_line;
-    int end_line;
-    int start_col;
-    int end_col;
-    bool m_is_rectangular;
+    std::vector<std::string> lines_;
+    int start_line_;
+    int end_line_;
+    int start_col_;
+    int end_col_;
+    bool m_is_rectangular_;
 };
 
 #endif

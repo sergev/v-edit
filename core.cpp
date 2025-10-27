@@ -50,7 +50,7 @@ static std::string ttySuffix()
 //
 void Editor::startup(int restart)
 {
-    restart_mode = restart;
+    restart_mode_ = restart;
     initscr();
     cbreak();
     noecho();
@@ -62,33 +62,33 @@ void Editor::startup(int restart)
         init_pair(1, COLOR_BLACK, COLOR_CYAN); // Status line color pair
     }
 
-    ncols       = COLS;
-    nlines      = LINES;
-    cursor_col  = 0;
-    cursor_line = 0;
+    ncols_       = COLS;
+    nlines_      = LINES;
+    cursor_col_  = 0;
+    cursor_line_ = 0;
 
     // Initialize core data model structures for future segment-based operations
     model_init();
 
     const std::string user = getUserName();
     const std::string suf  = ttySuffix();
-    tmpname                = std::string("/tmp/ret") + suf + user;
-    jname                  = std::string("/tmp/rej") + suf + user;
-    rfile                  = std::string("/tmp/res") + suf + user;
+    tmpname_               = std::string("/tmp/ret") + suf + user;
+    jname_                 = std::string("/tmp/rej") + suf + user;
+    rfile_                 = std::string("/tmp/res") + suf + user;
 
     if (restart == 2) {
         // Replay mode: open existing journal
-        inputfile  = ::open(jname.c_str(), O_RDONLY);
-        journal_fd = -1;
+        inputfile_  = ::open(jname_.c_str(), O_RDONLY);
+        journal_fd_ = -1;
     } else {
         // Normal or restore: create fresh journal
-        unlink(jname.c_str());
-        journal_fd = ::creat(jname.c_str(), 0664);
-        if (journal_fd >= 0) {
-            ::close(journal_fd);
-            journal_fd = ::open(jname.c_str(), O_RDWR);
+        unlink(jname_.c_str());
+        journal_fd_ = ::creat(jname_.c_str(), 0664);
+        if (journal_fd_ >= 0) {
+            ::close(journal_fd_);
+            journal_fd_ = ::open(jname_.c_str(), O_RDWR);
         }
-        inputfile = 0; // use stdin
+        inputfile_ = 0; // use stdin
     }
 }
 
@@ -98,8 +98,8 @@ void Editor::startup(int restart)
 void Editor::model_init()
 {
     // Initialize workspaces (passing tempfile reference)
-    wksp     = std::make_unique<Workspace>(tempfile_);
-    alt_wksp = std::make_unique<Workspace>(tempfile_);
+    wksp_     = std::make_unique<Workspace>(tempfile_);
+    alt_wksp_ = std::make_unique<Workspace>(tempfile_);
 
     // Open shared temp file
     tempfile_.open_temp_file();
@@ -132,21 +132,21 @@ int Editor::run(int argc, char **argv)
         check_interrupt();
 
         // Position cursor at current line and column before reading input
-        move(cursor_line, cursor_col);
+        move(cursor_line_, cursor_col_);
 
         int ch = journal_read_key();
         if (ch == ERR) {
             // no input, still render
             draw();
         } else {
-            if (inputfile == 0 && journal_fd >= 0) {
+            if (inputfile_ == 0 && journal_fd_ >= 0) {
                 // Record keystroke to journal in normal mode
                 journal_write_key(ch);
             }
             handle_key(ch);
             draw();
         }
-        if (quit_flag)
+        if (quit_flag_)
             break;
     }
 
@@ -159,7 +159,7 @@ int Editor::run(int argc, char **argv)
     fputs("Exiting\n", stdout);
     fflush(stdout);
     usleep(200000);
-    if (journal_fd >= 0)
-        close(journal_fd);
+    if (journal_fd_ >= 0)
+        close(journal_fd_);
     return 0;
 }

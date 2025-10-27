@@ -60,7 +60,7 @@ void Workspace::build_segment_chain_from_lines(const std::vector<std::string> &l
 
     if (nlines_ == 0) {
         // Empty file - create a segment with one empty line in temp file
-        Segment *seg = tempfile_.write_lines_to_temp({""});
+        Segment *seg = tempfile_.write_lines_to_temp({ "" });
         if (!seg) {
             // Fallback: create an empty segment
             seg         = new Segment();
@@ -385,7 +385,12 @@ bool Workspace::write_segments_to_file(const std::string &path)
 
         if (seg->fdesc > 0) {
             // Read from source file and write to output
-            lseek(seg->fdesc, seg->seek, SEEK_SET);
+            if (lseek(seg->fdesc, seg->seek, SEEK_SET) < 0) {
+                // Failed to seek - file may have been unlinked
+                // Skip this segment and continue
+                seg = seg->next;
+                continue;
+            }
             while (total_bytes > 0) {
                 int to_read = (total_bytes < (long)sizeof(buffer)) ? total_bytes : sizeof(buffer);
                 int nread   = read(seg->fdesc, buffer, to_read);

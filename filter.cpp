@@ -82,21 +82,31 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
         output_text = "\n";
     }
 
-    // Replace the selected lines with the output
+    // Convert output text to lines vector
+    std::vector<std::string> new_lines;
+    std::string new_line;
+    std::istringstream iss(output_text);
+    while (std::getline(iss, new_line)) {
+        new_lines.push_back(new_line);
+    }
+
+    if (new_lines.empty()) {
+        new_lines.push_back(""); // Ensure at least one line
+    }
+
     // Delete old lines
     wksp->delete_segments(start_line, start_line + num_lines - 1);
 
-    // Insert new content
-    wksp->build_segment_chain_from_text(output_text);
+    // Build segments from the new lines
+    Segment *new_segs = tempfile_.write_lines_to_temp(new_lines);
 
-    // Update line count - TODO: need better integration
-    int new_num_lines = 0;
-    Segment *seg      = wksp->chain();
-    while (seg && seg->fdesc != 0) {
-        new_num_lines += seg->nlines;
-        seg = seg->next;
+    if (new_segs) {
+        // Insert the new segments at the deletion point
+        wksp->insert_segments(new_segs, start_line);
+
+        // Update line count
+        wksp->set_nlines(wksp->nlines() - num_lines + (int)new_lines.size());
     }
-    wksp->set_nlines(wksp->nlines() - num_lines + new_num_lines);
 
     ensure_cursor_visible();
 

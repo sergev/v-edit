@@ -177,6 +177,12 @@ void Editor::save_file()
 {
     ensure_line_saved(); // Save any unsaved line modifications
 
+    // Ensure we have segments to save
+    if (!wksp->has_segments()) {
+        status = "No content to save";
+        return;
+    }
+
     // Create backup file if not already done and file exists
     if (!wksp->backup_done() && filename != "untitled") {
         std::string backup_name = filename + "~";
@@ -197,15 +203,7 @@ void Editor::save_file()
         unlink(filename.c_str());
     }
 
-    // Ensure we have segments to save
-    if (!wksp->has_segments()) {
-        status = "No content to save";
-        return;
-    }
-
     // Use workspace's write_segments_to_file
-    // Note: original file has been unlinked, so unchanged segments won't be readable
-    // But modified segments (in temp file) will be written
     bool saved = wksp->write_segments_to_file(filename);
     if (saved) {
         status = std::string("Saved: ") + filename;

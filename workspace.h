@@ -76,6 +76,7 @@ public:
 
     // Query methods
     bool has_segments() const { return chain_ != nullptr; }
+    Tempfile &get_tempfile() const { return tempfile_; }
 
     // Line count
     int get_line_count(int fallback_count) const;

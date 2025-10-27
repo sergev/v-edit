@@ -51,6 +51,42 @@ void Workspace::reset()
 }
 
 //
+// Set the segment chain for the workspace.
+// Deallocates all segments of the previous chain including the tail segment,
+// then sets the new chain and appends a new tail if missing.
+//
+void Workspace::set_chain(Segment *chain)
+{
+    // Set new chain
+    // TODO: fix memory leak, deallocate old chain first
+    head_    = chain;
+    cursegm_ = head_;
+
+    if (!head_) {
+        // Create an empty chain with just a tail
+        head_     = new Segment();
+        cursegm_  = head_;
+        return;
+    }
+
+    // Find the last segment in the new chain
+    Segment *last = head_;
+    while (last->next && last->next->fdesc != 0) {
+        last = last->next;
+    }
+
+    // Check if the chain already ends with a tail (fdesc == 0)
+    bool has_tail = (last->fdesc == 0) || (last->next && last->next->fdesc == 0);
+
+    // If no tail exists, append a new one
+    if (!has_tail) {
+        Segment *tail = new Segment();
+        tail->prev    = last;
+        last->next    = tail;
+    }
+}
+
+//
 // Build segment chain from in-memory lines vector.
 // Writes lines into temp file.
 //
@@ -132,7 +168,7 @@ int Workspace::set_current_segment(int lno)
             return 1;
         }
         segmline_ += cursegm_->nlines;
-        
+
         // Check if there's a next segment before moving
         if (!cursegm_->next) {
             throw std::runtime_error("set_current_segment: null segment in chain");
@@ -441,9 +477,9 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // line_ was set by set_current_segment to segmline_ of the tail segment
         // Check if workspace is empty (only has a tail segment)
         bool is_empty = (head_->fdesc == 0);
-        
+
         int num_blank_lines;
-        
+
         if (is_empty) {
             // Empty file, create lines from 0 to line_no
             num_blank_lines = line_no + 1;
@@ -451,7 +487,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
             // Normal case: create lines from line_ to line_no
             num_blank_lines = (line_no - line_) + 1;
         }
-        
+
         // Must create at least 1 blank line
         if (num_blank_lines <= 0) {
             num_blank_lines = 1;
@@ -465,7 +501,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         Segment *tail = cursegm_;
         Segment *prev = tail ? tail->prev : nullptr;
 
-        // Remove tail temporarily
+        // Remove tail temporarily (set_chain will create a new one)
         if (prev)
             prev->next = nullptr;
 
@@ -475,36 +511,38 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
             if (last_blank->next->fdesc == 0) {
                 // Found the tail created by create_blank_lines - remove it
                 Segment *extra_tail = last_blank->next;
-                last_blank->next = nullptr;
-                extra_tail->prev = nullptr;
+                last_blank->next    = nullptr;
+                extra_tail->prev    = nullptr;
                 delete extra_tail;
                 break;
             }
             last_blank = last_blank->next;
         }
 
-        // Link blank segments before tail
-        blank_seg->prev     = prev;
-        last_blank->next    = tail;
-        tail->prev          = last_blank;
-
         // Update workspace
         if (prev) {
-            prev->next = blank_seg;
+            // Link blank segments to existing chain and keep the old tail
+            blank_seg->prev = prev;
+            prev->next      = blank_seg;
+
+            // Link tail to the end of blank segments
+            last_blank->next = tail;
+            tail->prev       = last_blank;
         } else {
+            // No existing chain - set_chain will create a new tail
             set_chain(blank_seg);
         }
 
         // Calculate where the blank segments start
-        // line_ is the segmline_ of the tail, which is the first position beyond the last valid line
-        // For empty: line_=0, so blank segments start at 0
-        // For non-empty: line_ is the first position beyond valid, so blank segments start at line_
+        // line_ is the segmline_ of the tail, which is the first position beyond the last valid
+        // line For empty: line_=0, so blank segments start at 0 For non-empty: line_ is the first
+        // position beyond valid, so blank segments start at line_
         int blank_seg_start = line_;
-        
+
         // Position to the first blank segment
-        cursegm_ = blank_seg;
+        cursegm_  = blank_seg;
         segmline_ = blank_seg_start;
-        
+
         // Update nlines to include the blank lines
         nlines_ = line_no + 1;
 
@@ -1010,12 +1048,12 @@ void Workspace::debug_print(std::ostream &out) const
         << "modified_=" << (modified_ ? "true" : "false") << ", "
         << "backup_done_=" << (backup_done_ ? "true" : "false") << ", "
         << "original_fd_=" << original_fd_ << ", "
-        << "cursegm_=" << static_cast<void*>(cursegm_) << ", "
-        << "head_=" << static_cast<void*>(head_) << "]\n";
+        << "cursegm_=" << static_cast<void *>(cursegm_) << ", "
+        << "head_=" << static_cast<void *>(head_) << "]\n";
 
     // Print segment chain
     out << "Segment chain:\n";
-    int seg_idx = 0;
+    int seg_idx  = 0;
     Segment *seg = head_;
     while (seg) {
         out << "  [" << seg_idx << "] ";

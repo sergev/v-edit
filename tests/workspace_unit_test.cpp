@@ -150,7 +150,7 @@ TEST_F(WorkspaceTest, CopySegmentChainPartial)
     Segment *original = Workspace::create_blank_lines(300);
 
     // Copy only first 2 segments (to get a partial copy)
-    Segment *end_marker = original;
+    Segment *end_marker  = original;
     int segments_to_copy = 2;
     for (int i = 0; i < segments_to_copy && end_marker; ++i) {
         if (end_marker->next)
@@ -162,10 +162,10 @@ TEST_F(WorkspaceTest, CopySegmentChainPartial)
     Segment *copy = Workspace::copy_segment_chain(original, end_marker);
 
     EXPECT_NE(copy, nullptr);
-    
+
     // Verify the copy has the expected number of segments
     int copy_count = 0;
-    Segment *curr = copy;
+    Segment *curr  = copy;
     while (curr && curr != end_marker) {
         copy_count++;
         curr = curr->next;

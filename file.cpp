@@ -4,7 +4,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <fstream>
 
 #include "editor.h"
 
@@ -129,52 +128,52 @@ void Editor::put_line()
     } else if (break_result == 1) {
         // breaksegm created blank lines - insert the new segment
         // This matches prototype putline() when flg != 0
-        Segment *wg = wksp->cursegm();
+        Segment *wg      = wksp->cursegm();
         int cur_segmline = wksp->segmline();
-        
-        Segment *w0 = wg ? wg->prev : nullptr;
+
+        Segment *w0    = wg ? wg->prev : nullptr;
         Segment *after = wg ? wg->next : nullptr;
-        
+
         // If wg has multiple lines and we're replacing a line in the middle, need to split
         if (wg && wg->nlines > 1 && cur_segmline < line_no) {
             int rel_line = line_no - cur_segmline;
-            
+
             if (rel_line > 0 && rel_line < wg->nlines) {
                 // Split wg into: [before] + [at line_no] + [after]
                 // Create segment for lines before line_no
                 Segment *before_blank = new Segment();
-                before_blank->nlines = rel_line;
-                before_blank->fdesc = -1;
-                before_blank->seek = 0;
+                before_blank->nlines  = rel_line;
+                before_blank->fdesc   = -1;
+                before_blank->seek    = 0;
                 before_blank->sizes.resize(rel_line);
                 for (int i = 0; i < rel_line; ++i) {
                     before_blank->sizes[i] = 1;
                 }
-                
+
                 // Create segment for lines after line_no
                 Segment *after_blank = nullptr;
                 if (rel_line + 1 < wg->nlines) {
-                    after_blank = new Segment();
+                    after_blank         = new Segment();
                     after_blank->nlines = wg->nlines - rel_line - 1;
-                    after_blank->fdesc = -1;
-                    after_blank->seek = 0;
+                    after_blank->fdesc  = -1;
+                    after_blank->seek   = 0;
                     after_blank->sizes.resize(after_blank->nlines);
                     for (int i = 0; i < after_blank->nlines; ++i) {
                         after_blank->sizes[i] = 1;
                     }
                 }
-                
+
                 // Link: w0 -> before_blank -> new_seg -> after_blank -> after
                 if (w0) {
                     w0->next = before_blank;
                 }
                 before_blank->prev = w0;
                 before_blank->next = new_seg;
-                
+
                 new_seg->prev = before_blank;
-                
+
                 if (after_blank) {
-                    new_seg->next = after_blank;
+                    new_seg->next     = after_blank;
                     after_blank->prev = new_seg;
                     after_blank->next = after;
                     if (after) {
@@ -186,23 +185,23 @@ void Editor::put_line()
                         after->prev = new_seg;
                     }
                 }
-                
+
                 // Update chain head if needed
                 if (!w0) {
                     wksp->set_chain(before_blank);
                 }
-                
+
                 delete wg;
-                
+
                 // Update workspace position
                 wksp->set_cursegm(new_seg);
                 wksp->set_segmline(line_no);
-                
+
                 wksp->set_modified(true);
                 return;
             }
         }
-        
+
         // Simple case: replace the entire blank segment
         delete wg;
 
@@ -215,7 +214,7 @@ void Editor::put_line()
         } else {
             wksp->set_chain(new_seg);
         }
-        
+
         if (after) {
             after->prev = new_seg;
         }

@@ -90,7 +90,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     EXPECT_EQ(result, 0);
 
     // Verify segmentation worked
-    EXPECT_NE(wksp->cursegm(), nullptr);
+    EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
     EXPECT_EQ(wksp->segmline(), 2);
 
     // Cleanup
@@ -329,8 +329,8 @@ TEST_F(WorkspaceTest, BackupDoneStateTests)
 TEST_F(WorkspaceTest, ChainAccessorsEmpty)
 {
     // Test chain access on empty workspace
-    EXPECT_EQ(wksp->chain(), nullptr);
-    EXPECT_EQ(wksp->cursegm(), nullptr);
+    EXPECT_FALSE(wksp->has_segments());
+    EXPECT_EQ(wksp->cursegm(), wksp->get_segments().end());
     EXPECT_FALSE(wksp->has_segments());
 }
 
@@ -394,7 +394,7 @@ TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
     int result = wksp->set_current_segment(3);
     EXPECT_EQ(result, 0);
     EXPECT_EQ(wksp->line(), 3);
-    EXPECT_NE(wksp->cursegm(), nullptr);
+    EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
 
     // Test navigation to line beyond end
     result = wksp->set_current_segment(10);

@@ -72,7 +72,7 @@ void Editor::wksp_redraw()
     for (int r = 0; r < nlines_ - 1; ++r) {
         mvhline(r, 0, ' ', ncols_);
         std::string lineText;
-        if (wksp_->chain() != nullptr && r + wksp_->topline() < wksp_->nlines()) {
+        if (wksp_->has_segments() && r + wksp_->topline() < wksp_->nlines()) {
             lineText = read_line_from_wksp(r + wksp_->topline());
             // horizontal offset and continuation markers
             bool truncated = false;

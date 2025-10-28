@@ -94,7 +94,7 @@ void Editor::put_line()
         auto replace_pos = old_seg_it;
         *replace_pos = std::move(*new_seg_it);  // Copy content from new segment
         segs.erase(new_seg_it);  // Remove the duplicate from the end of list
-        wksp_->set_cursegm(&*replace_pos);
+        wksp_->set_cursegm(replace_pos);
         wksp_->set_segmline(segmline);
 
         // Try to merge adjacent segments (but not if we just created blank lines)
@@ -111,7 +111,7 @@ void Editor::put_line()
         // Replace the segment using iterator-based approach
         *replace_it = std::move(*new_seg_it);
         wksp_->get_segments().erase(new_seg_it);  // Remove duplicate from end
-        wksp_->set_cursegm(&*replace_it);
+        wksp_->set_cursegm(replace_it);
         wksp_->set_segmline(line_no);
 
         // Mark workspace as modified
@@ -177,7 +177,7 @@ bool Editor::load_file_segments(const std::string &path)
 bool Editor::load_file_to_segments(const std::string &path)
 {
     wksp_->load_file_to_segments(path);
-    if (!wksp_->chain()) {
+    if (!wksp_->has_segments()) {
         status_ = std::string("Cannot open file: ") + path;
         return false;
     }

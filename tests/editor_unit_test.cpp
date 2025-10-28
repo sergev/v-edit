@@ -35,7 +35,7 @@ protected:
         editor->wksp_->set_nlines(num_lines);
         std::list<Segment> blank_segs = Workspace::create_blank_lines(num_lines);
         editor->wksp_->set_chain(blank_segs);
-        editor->wksp_->set_cursegm(&blank_segs.front());
+        editor->wksp_->set_cursegm(editor->wksp_->get_segments().begin());
         editor->wksp_->set_segmline(0);
     }
 };
@@ -56,7 +56,7 @@ TEST_F(EditorTest, PutLineCreatesSegments)
 
     // Verify workspace still has segments
     EXPECT_TRUE(editor->wksp_->has_segments());
-    EXPECT_NE(editor->wksp_->chain(), nullptr);
+    EXPECT_TRUE(editor->wksp_->has_segments());
     EXPECT_EQ(editor->wksp_->nlines(), 5);
 
     // Verify we can read the updated line back
@@ -167,11 +167,7 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
         EXPECT_EQ(expected, actual);
     }
 
-    // Check segment chain structure
-    Segment *seg = editor->wksp_->chain();
-    ASSERT_NE(seg, nullptr);
-
-    // Collect segment info - now iterate through std::list
+    // Check segment chain structure - iterate through std::list
     const auto& segments_list = editor->wksp_->get_segments();
     std::vector<const Segment *> segments;
     for (const auto& s : segments_list) {
@@ -198,10 +194,10 @@ TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
     EXPECT_EQ(editor->wksp_->nlines(), 0);
 
     // Verify the tail segment
-    Segment *tail = editor->wksp_->chain();
-    ASSERT_NE(tail, nullptr);
-    EXPECT_EQ(tail->nlines, 0);
-    EXPECT_EQ(tail->fdesc, 0);
+    auto tail_it = editor->wksp_->chain();
+    ASSERT_NE(tail_it, editor->wksp_->get_segments().end());
+    EXPECT_EQ(tail_it->nlines, 0);
+    EXPECT_EQ(tail_it->fdesc, 0);
 
     // Add the first line via put_line (should create it, not fail)
     editor->current_line_          = "First line";
@@ -318,11 +314,7 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
         editor->put_line();
     }
 
-    // Verify segment chain structure
-    Segment *seg = editor->wksp_->chain();
-    ASSERT_NE(seg, nullptr);
-
-    // Collect segments - now iterate through std::list
+    // Verify segment chain structure - iterate through std::list
     const auto& segments_list = editor->wksp_->get_segments();
     std::vector<const Segment *> segments;
     for (const auto& s : segments_list) {
@@ -427,11 +419,11 @@ TEST_F(EditorTest, SetCurrentSegmentUpdatesCursegm)
 
     // Set current segment at line 5
     EXPECT_EQ(editor->wksp_->set_current_segment(5), 0);
-    Segment *seg5 = editor->wksp_->cursegm();
+    auto seg5_it = editor->wksp_->cursegm();
 
     // Set current segment at line 10
     EXPECT_EQ(editor->wksp_->set_current_segment(10), 0);
-    Segment *seg10 = editor->wksp_->cursegm();
+    auto seg10_it = editor->wksp_->cursegm();
 
     // Should potentially be different segments
     EXPECT_EQ(editor->wksp_->line(), 10);
@@ -468,11 +460,11 @@ TEST_F(EditorTest, SetCurrentSegmentBackwardMovement)
 
     // Start at end
     editor->wksp_->set_current_segment(19);
-    Segment *endSeg = editor->wksp_->cursegm();
+    auto endSeg_it = editor->wksp_->cursegm();
 
     // Move backward to beginning
     editor->wksp_->set_current_segment(0);
-    Segment *startSeg = editor->wksp_->cursegm();
+    auto startSeg_it = editor->wksp_->cursegm();
 
     EXPECT_EQ(editor->wksp_->line(), 0);
     EXPECT_EQ(editor->wksp_->segmline(), 0);

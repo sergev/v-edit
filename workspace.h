@@ -21,9 +21,19 @@ public:
     Workspace(Tempfile &tempfile);
     ~Workspace();
 
-    // Accessors
-    Segment *chain() const { return segments_.empty() ? nullptr : const_cast<Segment*>(&segments_.front()); }
-    Segment *cursegm() const { return cursegm_ == segments_.end() ? nullptr : &*cursegm_; }
+    // Iterator-based accessors (enhanced for modern C++)
+    std::list<Segment>::const_iterator chain() const {
+        return segments_.cbegin();
+    }
+    std::list<Segment>::iterator chain() {
+        return segments_.begin();
+    }
+    std::list<Segment>::const_iterator cursegm() const {
+        return cursegm_;
+    }
+    std::list<Segment>::iterator cursegm() {
+        return cursegm_;
+    }
     int writable() const { return writable_; }
     int nlines() const { return nlines_; }
     int topline() const { return topline_; }
@@ -43,16 +53,9 @@ public:
     void set_cursorcol(int cursorcol) { cursorcol_ = cursorcol; }
     void set_cursorrow(int cursorrow) { cursorrow_ = cursorrow; }
 
-    void set_cursegm(Segment *seg) {
-        // Find the iterator for this segment in the list
-        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
-            if (&*it == seg) {
-                cursegm_ = it;
-                return;
-            }
-        }
-        // If not found, this is an error - segment not in our list
-        cursegm_ = segments_.end();
+    // Iterator-based setter (enhanced for modern C++)
+    void set_cursegm(std::list<Segment>::iterator it) {
+        cursegm_ = it;
     }
 
     // Segment chain operations

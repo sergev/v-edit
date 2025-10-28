@@ -871,6 +871,124 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
 }
 
 //
+// Write line content back to workspace at specified line number.
+//
+void Workspace::put_line(int line_no, const std::string &line_content)
+{
+    // Write the modified line to temp file and get a segment for it
+    auto temp_segments = tempfile_.write_line_to_temp(line_content);
+    if (temp_segments.empty()) {
+        // TODO: error message, as we lost contents of the current line.
+        return;
+    }
+
+    // Check if we need to extend the file
+    bool need_extend = (file_state.nlines <= line_no);
+
+    // If the file is currently empty (nlines == 0) and we're adding line 0,
+    // we can just insert the segment without calling breaksegm
+    if (file_state.nlines == 0 && line_no == 0) {
+        // Simple case: empty file, adding first line
+        // Find tail and insert before it
+        auto tail_it   = segments_.end();
+        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
+            if (it->fdesc == 0) {
+                tail_it = it;
+                break;
+            }
+        }
+        segments_.splice(tail_it, temp_segments);
+        auto new_seg_it = std::prev(tail_it);
+
+        file_state.nlines   = 1;
+        cursegm_            = new_seg_it;
+        position.line       = 0;
+        position.segmline   = 0;
+        file_state.modified = true;
+        return;
+    }
+
+    // Break segment at line_no position to split into segments before and at line_no
+    int break_result = breaksegm(line_no, true);
+
+    // If breaksegm didn't extend (break_result == 0), update nlines now if needed
+    if (break_result == 0 && need_extend) {
+        file_state.nlines = line_no + 1;
+    }
+
+    // Get the new segment to use
+    auto new_seg_it = temp_segments.begin();
+
+    if (break_result == 0) {
+        // Normal case: line exists, split it
+        // Now cursegm_ points to the segment starting at line_no
+        // Get iterator to the segment we want to replace (the one containing line_no)
+        auto old_seg_it = cursegm_;
+
+        // Check if the segment only contains one line (or if we're at end of file)
+        int segmline       = position.segmline;
+        bool only_one_line = (old_seg_it->nlines == 1);
+
+        if (!only_one_line) {
+            // Break at line_no + 1 to isolate the line
+            breaksegm(line_no + 1, false);
+            // Now cursegm_ points to segment starting at line_no + 1
+        }
+
+        // Replace old segment with new segment
+        *old_seg_it       = std::move(*new_seg_it);
+        cursegm_          = old_seg_it;
+        position.segmline = segmline;
+
+        // Try to merge adjacent segments (but not if we just created blank lines)
+        if (only_one_line || line_no < file_state.nlines - 1) {
+            catsegm();
+        }
+
+        // Mark workspace as modified
+        file_state.modified = true;
+    } else if (break_result == 1) {
+        // breaksegm created blank lines
+        // The workspace is now positioned at line_no, which may be in the middle of a blank segment
+        auto blank_seg_it = cursegm_;
+        int segmline      = position.segmline;
+
+        // Check if line_no is at the start of the segment
+        bool at_segment_start = (line_no == segmline);
+
+        if (!at_segment_start || blank_seg_it->nlines > 1) {
+            // Need to isolate line_no into its own segment
+            // First, split before line_no if it's not at the start
+            if (!at_segment_start) {
+                breaksegm(line_no, false);
+                // Now cursegm_ points to segment starting at line_no
+                blank_seg_it = cursegm_;
+                segmline     = line_no;
+            }
+
+            // Then split after line_no if there are more lines in the segment
+            if (blank_seg_it->nlines > 1) {
+                breaksegm(line_no + 1, false);
+                // Now cursegm_ points to segment starting at line_no + 1
+                // Go back to the segment containing line_no
+                --blank_seg_it;
+            }
+        }
+
+        // Now blank_seg_it points to a segment containing only line_no
+        // Replace it with the content segment
+        *blank_seg_it = std::move(*new_seg_it);
+
+        cursegm_          = blank_seg_it;
+        position.segmline = segmline;
+        position.line     = line_no;
+
+        // Mark workspace as modified
+        file_state.modified = true;
+    }
+}
+
+//
 // Debug routine: print all fields and segment chain.
 //
 void Workspace::debug_print(std::ostream &out) const

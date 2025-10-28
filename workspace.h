@@ -37,7 +37,7 @@ struct FileState {
     bool modified{ false };    // track if file has been modified
     bool backup_done{ false }; // track if backup file has been created
     int writable{ 0 };         // write permission
-    int nlines{ 0 };           // TODO: remove: line count
+    int nlines{ 0 };           // TODO: remove, use get_line_count() instead
 };
 
 //
@@ -88,8 +88,7 @@ public:
     void reset();
 
     // Query methods
-    bool has_segments() const { return !segments_.empty(); }
-    Tempfile &get_tempfile() const { return tempfile_; }
+    bool has_segments() const { return !segments_.empty(); } // TODO: rename -> is_empty()
 
     // Access to segments list for internal operations
     std::list<Segment> &get_segments() { return segments_; }
@@ -98,11 +97,8 @@ public:
     // Direct iterator access for segment manipulation
     Segment::iterator cursegm() { return cursegm_; }
 
-    // Iterator-based setter (enhanced for modern C++)
-    void set_cursegm(Segment::iterator it) { cursegm_ = it; }
-
     // Line count
-    int get_line_count(int fallback_count) const
+    int get_line_count(int fallback_count) const // TODO: iterate segments_
     {
         return segments_.empty() ? fallback_count : file_state.nlines;
     }
@@ -131,6 +127,10 @@ public:
 
     // Cleanup a segment list (static helper)
     static void cleanup_segments(std::list<Segment> &segments);
+
+    // Write line content back to workspace at specified line number
+    // Replaces or inserts the line in the segment chain
+    void put_line(int line_no, const std::string &line_content);
 
     //
     // View management methods (from prototype)

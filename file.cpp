@@ -38,8 +38,6 @@ void Editor::get_line(int lno)
 
 //
 // Write current line buffer back to workspace if modified.
-// Enhanced version using iterators instead of Segment* pointers for safer access and modern C++
-// practices.
 //
 void Editor::put_line()
 {
@@ -48,124 +46,9 @@ void Editor::put_line()
         return;
     }
 
+    wksp_->put_line(current_line_no_, current_line_);
     current_line_modified_ = false;
-
-    // Write the modified line to temp file and get a segment for it
-    auto temp_segments = tempfile_.write_line_to_temp(current_line_);
-    if (temp_segments.empty()) {
-        // TODO: error message, as we lost contents of the current line.
-        current_line_no_ = -1;
-        return;
-    }
-
-    int line_no      = current_line_no_;
     current_line_no_ = -1;
-
-    // Check if we need to extend the file
-    bool need_extend = (wksp_->file_state.nlines <= line_no);
-
-    // If the file is currently empty (nlines == 0) and we're adding line 0,
-    // we can just insert the segment without calling breaksegm
-    if (wksp_->file_state.nlines == 0 && line_no == 0) {
-        // Simple case: empty file, adding first line
-        // Find tail and insert before it
-        auto &segments = wksp_->get_segments();
-        auto tail_it   = segments.end();
-        for (auto it = segments.begin(); it != segments.end(); ++it) {
-            if (it->fdesc == 0) {
-                tail_it = it;
-                break;
-            }
-        }
-        segments.splice(tail_it, temp_segments);
-        auto new_seg_it = std::prev(tail_it);
-
-        wksp_->file_state.nlines = 1;
-        wksp_->set_cursegm(new_seg_it);
-        wksp_->position.line       = 0;
-        wksp_->position.segmline   = 0;
-        wksp_->file_state.modified = true;
-        return;
-    }
-
-    // Break segment at line_no position to split into segments before and at line_no
-    int break_result = wksp_->breaksegm(line_no, true);
-
-    // If breaksegm didn't extend (break_result == 0), update nlines now if needed
-    if (break_result == 0 && need_extend) {
-        wksp_->file_state.nlines = line_no + 1;
-    }
-
-    // Get the new segment to use
-    auto new_seg_it = temp_segments.begin();
-
-    if (break_result == 0) {
-        // Normal case: line exists, split it
-        // Now cursegm_ points to the segment starting at line_no
-        // Get iterator to the segment we want to replace (the one containing line_no)
-        auto old_seg_it = wksp_->cursegm();
-
-        // Check if the segment only contains one line (or if we're at end of file)
-        int segmline       = wksp_->position.segmline;
-        bool only_one_line = (old_seg_it->nlines == 1);
-
-        if (!only_one_line) {
-            // Break at line_no + 1 to isolate the line
-            wksp_->breaksegm(line_no + 1, false);
-            // Now cursegm_ points to segment starting at line_no + 1
-        }
-
-        // Replace old segment with new segment
-        *old_seg_it = std::move(*new_seg_it);
-        wksp_->set_cursegm(old_seg_it);
-        wksp_->position.segmline = segmline;
-
-        // Try to merge adjacent segments (but not if we just created blank lines)
-        if (only_one_line || line_no < wksp_->file_state.nlines - 1) {
-            wksp_->catsegm();
-        }
-
-        // Mark workspace as modified
-        wksp_->file_state.modified = true;
-    } else if (break_result == 1) {
-        // breaksegm created blank lines
-        // The workspace is now positioned at line_no, which may be in the middle of a blank segment
-        auto blank_seg_it = wksp_->cursegm();
-        int segmline      = wksp_->position.segmline;
-
-        // Check if line_no is at the start of the segment
-        bool at_segment_start = (line_no == segmline);
-
-        if (!at_segment_start || blank_seg_it->nlines > 1) {
-            // Need to isolate line_no into its own segment
-            // First, split before line_no if it's not at the start
-            if (!at_segment_start) {
-                wksp_->breaksegm(line_no, false);
-                // Now cursegm_ points to segment starting at line_no
-                blank_seg_it = wksp_->cursegm();
-                segmline     = line_no;
-            }
-
-            // Then split after line_no if there are more lines in the segment
-            if (blank_seg_it->nlines > 1) {
-                wksp_->breaksegm(line_no + 1, false);
-                // Now cursegm_ points to segment starting at line_no + 1
-                // Go back to the segment containing line_no
-                --blank_seg_it;
-            }
-        }
-
-        // Now blank_seg_it points to a segment containing only line_no
-        // Replace it with the content segment
-        *blank_seg_it = std::move(*new_seg_it);
-
-        wksp_->set_cursegm(blank_seg_it);
-        wksp_->position.segmline = segmline;
-        wksp_->position.line     = line_no;
-
-        // Mark workspace as modified
-        wksp_->file_state.modified = true;
-    }
 }
 
 //

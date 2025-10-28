@@ -116,7 +116,7 @@ public:
     void insert_segments(std::list<Segment> &segments, int at);
 
     // Delete segments from workspace between from and to lines (delete from prototype)
-    Segment *delete_segments(int from, int to);
+    void delete_segments(int from, int to);
 
     // Copy segment list (copysegm from prototype)
     static std::list<Segment> copy_segment_list(Segment::iterator start, Segment::iterator end);

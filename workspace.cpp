@@ -392,36 +392,51 @@ void Workspace::cleanup_segments(std::list<Segment> &segments)
 //
 //
 // Read line content from segment chain at specified index.
+// Enhanced version using iterator instead of Segment* pointer for safer access and modern C++ practices.
 //
 std::string Workspace::read_line_from_segment(int line_no)
 {
+    // Validate iterator is valid and points to a segment
+    if (cursegm_ == segments_.end()) {
+        return "";
+    }
 
-    Segment *seg = &*cursegm_;
+    // Verify the segment has contents (not a tail segment)
+    if (!cursegm_->has_contents()) {
+        return "";
+    }
+
+    // Calculate relative line position within the current segment
     int rel_line = line_no - segmline_;
 
-    // Calculate file offset by accumulating line lengths
-    // Note: seg->seek points to the START of the first line in the segment
-    // We need to skip 'rel_line' lines to get to the line we want
-    long seek_pos = seg->seek;
-    for (int i = 0; i < rel_line; ++i) {
-        int len = seg->sizes[i];
-        seek_pos += len;
+    // Bounds checking: ensure rel_line is within segment bounds
+    if (rel_line < 0 || rel_line >= static_cast<int>(cursegm_->sizes.size())) {
+        return ""; // Line index out of bounds for this segment
     }
 
-    // Get line length
-    int line_len = seg->sizes[rel_line];
-    if (line_len <= 0 || !seg->has_contents())
+    // Calculate file offset by accumulating line lengths
+    // Note: cursegm_->seek points to the START of the first line in the segment
+    // We need to skip 'rel_line' lines to get to the line we want
+    long seek_pos = cursegm_->seek;
+    for (int i = 0; i < rel_line; ++i) {
+        seek_pos += cursegm_->sizes[i];
+    }
+
+    // Get line length for the requested line
+    int line_len = cursegm_->sizes[rel_line];
+    if (line_len <= 0) {
         return "";
+    }
 
     // Handle empty lines (just newline) - return empty string without newline
-    if (line_len == 1 || seg->fdesc < 0) {
+    if (line_len == 1 || cursegm_->fdesc < 0) {
         return "";
     }
 
-    // Read line from file
+    // Read line from file using iterator's segment data
     std::string result(line_len - 1, '\0'); // exclude newline
-    if (lseek(seg->fdesc, seek_pos, SEEK_SET) >= 0) {
-        read(seg->fdesc, static_cast<void*>(&result[0]), result.size());
+    if (lseek(cursegm_->fdesc, seek_pos, SEEK_SET) >= 0) {
+        read(cursegm_->fdesc, static_cast<void*>(&result[0]), result.size());
     }
     return result;
 }
@@ -646,7 +661,7 @@ bool Workspace::catsegm()
             // Erase current segment from list
             cursegm_ = prev_it;
 
-            // Update workspace position 
+            // Update workspace position
             segmline_ -= prev.nlines;
 
             return true;
@@ -692,15 +707,15 @@ void Workspace::insert_segments(std::list<Segment> &segments_to_insert, int at)
 // Delete segments between from and to lines (based on delete from prototype).
 // Returns the deleted segment chain.
 //
-Segment *Workspace::delete_segments(int from, int to)
+void Workspace::delete_segments(int from, int to)
 {
     // Convert to use list operations - simplified version
     // Original implementation used pointer operations, but we need to use list erase
     if (segments_.empty() || from > to)
-        return nullptr;
+        return;
 
     if (nlines_ == 0)
-        return nullptr;
+        return;
 
     // Use breaksegm for positioning (it uses list operations internally now)
     int result = breaksegm(to, true);
@@ -708,7 +723,7 @@ Segment *Workspace::delete_segments(int from, int to)
         if (to + 1 > nlines_) {
             set_current_segment(nlines_);
         } else {
-            return nullptr;
+            return;
         }
     }
 
@@ -717,7 +732,7 @@ Segment *Workspace::delete_segments(int from, int to)
 
     result = breaksegm(from, true);
     if (result != 0) {
-        return nullptr;
+        return;
     }
 
     auto start_delete_it = cursegm_;
@@ -734,7 +749,7 @@ Segment *Workspace::delete_segments(int from, int to)
     // Erase the range from the list
     segments_.erase(start_delete_it, after_delete_it);
 
-    // Update workspace position 
+    // Update workspace position
     if (!segments_.empty()) {
         cursegm_ = (after_delete_it != segments_.end()) ? after_delete_it : std::prev(segments_.end());
         segmline_ = from;
@@ -747,11 +762,7 @@ Segment *Workspace::delete_segments(int from, int to)
     nlines_ -= deleted_lines;
 
     writable_ = 1; // Mark as edited
-
-    return nullptr; // Simplified - don't return the deleted chain for now
 }
-
-
 
 //
 // Scroll workspace by nl lines (based on wksp_forward from prototype).

@@ -105,7 +105,7 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
         wksp_->insert_segments(temp_segments, start_line);
 
         // Update line count
-        wksp_->file_state.nlines = wksp_->nlines( - num_lines + (int)new_lines.size());
+        wksp_->file_state.nlines = wksp_->file_state.nlines - num_lines + (int)new_lines.size();
     }
 
     ensure_cursor_visible();

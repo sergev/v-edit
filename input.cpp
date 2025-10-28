@@ -593,7 +593,7 @@ void Editor::handle_key_edit(int ch)
         if (curLine >= 0 && curLine < wksp_->file_state.nlines) {
             picklines(curLine, 1); // Copy to clipboard_ before deleting
             wksp_->delete_segments(curLine, curLine);
-            wksp_->file_state.nlines = wksp_->nlines( - 1);
+            wksp_->file_state.nlines = wksp_->file_state.nlines - 1;
             if (cursor_line_ >= wksp_->file_state.nlines - 1) {
                 cursor_line_ = wksp_->file_state.nlines - 2;
                 if (cursor_line_ < 0)
@@ -624,7 +624,7 @@ void Editor::handle_key_edit(int ch)
         int curLine = wksp_->view.topline + cursor_line_;
         auto blank  = wksp_->create_blank_lines(1);
         wksp_->insert_segments(blank, curLine + 1);
-        wksp_->file_state.nlines = wksp_->nlines( + 1);
+        wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
         ensure_cursor_visible();
         return;
     }
@@ -662,7 +662,7 @@ void Editor::handle_key_edit(int ch)
     // ^X f - Shift view right
     if (ctrlx_state_ && (ch == 'f' || ch == 'F')) {
         int shift = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
-        wksp_->view.basecol = wksp_->basecol( + shift);
+        wksp_->view.basecol = wksp_->view.basecol + shift;
         params_.set_count(0);
         ctrlx_state_ = false;
         ensure_cursor_visible();
@@ -671,7 +671,7 @@ void Editor::handle_key_edit(int ch)
     // ^X b - Shift view left
     if (ctrlx_state_ && (ch == 'b' || ch == 'B')) {
         int shift = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
-        wksp_->view.basecol = wksp_->basecol( - shift);
+        wksp_->view.basecol = wksp_->view.basecol - shift;
         if (wksp_->view.basecol < 0)
             wksp_->view.basecol = 0;
         params_.set_count(0);
@@ -752,7 +752,7 @@ void Editor::handle_key_edit(int ch)
         int step  = nlines_ - 2;
         if (step < 1)
             step = 1;
-        wksp_->view.topline = wksp_->topline( + step);
+        wksp_->view.topline = wksp_->view.topline + step;
         if (wksp_->view.topline > std::max(0, total - (nlines_ - 1)))
             wksp_->view.topline = std::max(0, total - (nlines_ - 1));
         ensure_cursor_visible();
@@ -762,7 +762,7 @@ void Editor::handle_key_edit(int ch)
         int step = nlines_ - 2;
         if (step < 1)
             step = 1;
-        wksp_->view.topline = wksp_->topline( - step);
+        wksp_->view.topline = wksp_->view.topline - step;
         if (wksp_->view.topline < 0)
             wksp_->view.topline = 0;
         ensure_cursor_visible();
@@ -858,12 +858,12 @@ void Editor::handle_key_edit(int ch)
             cursor_line_++;
         } else {
             // At bottom of viewport: scroll down
-            wksp_->view.topline = wksp_->topline( + 1);
+            wksp_->view.topline = wksp_->view.topline + 1;
             // keep cursor on last content row
             cursor_line_ = nlines_ - 2;
         }
         cursor_col_ = 0;
-        wksp_->file_state.nlines = wksp_->nlines( + 1);
+        wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
         ensure_cursor_visible();
         return;
     }

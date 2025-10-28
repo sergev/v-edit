@@ -60,7 +60,7 @@ void Editor::paste(int afterLine, int atCol)
                 std::advance(insert_pos, afterLine + 1); // Position after the target line
                 wksp_->get_segments().splice(insert_pos, temp_segments);
                 afterLine++;
-                wksp_->file_state.nlines = wksp_->nlines( + 1);
+                wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
             }
         }
     }

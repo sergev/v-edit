@@ -28,7 +28,7 @@ void Editor::move_left()
     if (cursor_col_ > 0) {
         cursor_col_--;
     } else if (wksp_->view.basecol > 0) {
-        wksp_->view.basecol = wksp_->basecol( - 1);
+        wksp_->view.basecol = wksp_->view.basecol - 1;
     } else if (cursor_line_ > 0) {
         cursor_line_--;
         int len     = current_line_length();
@@ -49,7 +49,7 @@ void Editor::move_right()
     if (cursor_col_ < len && cursor_col_ < ncols_ - 1) {
         cursor_col_++;
     } else if (cursor_col_ >= ncols_ - 1) {
-        wksp_->view.basecol = wksp_->basecol( + 1);
+        wksp_->view.basecol = wksp_->view.basecol + 1;
     } else if (cursor_line_ < nlines_ - 2) {
         cursor_line_++;
         cursor_col_ = 0;
@@ -65,7 +65,7 @@ void Editor::move_up()
     if (cursor_line_ > 0) {
         cursor_line_--;
     } else if (wksp_->view.topline > 0) {
-        wksp_->view.topline = wksp_->topline( - 1);
+        wksp_->view.topline = wksp_->view.topline - 1;
     }
     ensure_cursor_visible();
 }
@@ -84,7 +84,7 @@ void Editor::move_down()
     } else {
         int absLine = wksp_->view.topline + cursor_line_ + 1;
         if (absLine < total) {
-            wksp_->view.topline = wksp_->topline( + 1);
+            wksp_->view.topline = wksp_->view.topline + 1;
         }
     }
     ensure_cursor_visible();
@@ -125,7 +125,7 @@ bool Editor::search_forward(const std::string &needle)
             cursor_line_ = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
-                wksp_->view.basecol = (intpos - (ncols_ - 10));
+                wksp_->view.basecol = (int)pos - (ncols_ - 10);
             } else {
                 wksp_->view.basecol = 0;
             }
@@ -152,7 +152,7 @@ bool Editor::search_forward(const std::string &needle)
             cursor_line_ = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
-                wksp_->view.basecol = (intpos - (ncols_ - 10));
+                wksp_->view.basecol = (int)pos - (ncols_ - 10);
             } else {
                 wksp_->view.basecol = 0;
             }
@@ -190,7 +190,7 @@ bool Editor::search_backward(const std::string &needle)
             cursor_line_ = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
-                wksp_->view.basecol = (intpos - (ncols_ - 10));
+                wksp_->view.basecol = (int)pos - (ncols_ - 10);
             } else {
                 wksp_->view.basecol = 0;
             }
@@ -210,7 +210,7 @@ bool Editor::search_backward(const std::string &needle)
             cursor_line_ = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
-                wksp_->view.basecol = (intpos - (ncols_ - 10));
+                wksp_->view.basecol = (int)pos - (ncols_ - 10);
             } else {
                 wksp_->view.basecol = 0;
             }
@@ -270,7 +270,7 @@ void Editor::insertlines(int from, int number)
     // Insert blank lines using workspace segments
     auto blank = wksp_->create_blank_lines(number);
     wksp_->insert_segments(blank, from);
-    wksp_->file_state.nlines = wksp_->nlines( + number);
+    wksp_->file_state.nlines = wksp_->file_state.nlines + number;
 
     ensure_cursor_visible();
 }
@@ -290,7 +290,7 @@ void Editor::deletelines(int from, int number)
 
     // Delete the lines using workspace segments
     wksp_->delete_segments(from, from + number - 1);
-    wksp_->file_state.nlines = std::max(0, wksp_->nlines( - number));
+    wksp_->file_state.nlines = std::max(0, wksp_->file_state.nlines - number);
 
     // Ensure at least one line exists
     if (wksp_->file_state.nlines == 0) {
@@ -337,7 +337,7 @@ void Editor::splitline(int line, int col)
     if (!temp_segments.empty()) {
         // Move the segment into the workspace segments list
         wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
-        wksp_->file_state.nlines = wksp_->nlines( + 1);
+        wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
     } else {
         // Fallback: insert blank line
         insertlines(line + 1, 1);
@@ -381,7 +381,7 @@ void Editor::combineline(int line, int col)
 
     // Delete the next line
     wksp_->delete_segments(line + 1, line + 1);
-    wksp_->file_state.nlines = std::max(1, wksp_->nlines( - 1));
+    wksp_->file_state.nlines = std::max(1, wksp_->file_state.nlines - 1);
 
     ensure_cursor_visible();
 }

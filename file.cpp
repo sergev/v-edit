@@ -76,47 +76,25 @@ void Editor::put_line()
         // Now cursegm_ points to the segment starting at line_no
         // Get the segment we want to replace (the one containing line_no)
         Segment *old_seg = wksp_->cursegm();
-        Segment *prev    = old_seg ? old_seg->prev : nullptr;
 
         // Check if the segment only contains one line (or if we're at end of file)
         int segmline       = wksp_->segmline();
         bool only_one_line = (old_seg->nlines == 1);
 
-        Segment *after = nullptr;
-
-        if (only_one_line) {
-            // Segment already contains only the one line we want to replace
-            // Just get the next segment
-            after = old_seg->next;
-        } else {
+        if (!only_one_line) {
             // Break at line_no + 1 to isolate the line
-            int break2_result = wksp_->breaksegm(line_no + 1, false);
-
-            if (break2_result == 0) {
-                // Now cursegm_ points to segment starting at line_no + 1
-                after = wksp_->cursegm();
-            } else {
-                // Second break created blank lines - we're at end of file
-                after = old_seg->next;
-            }
+            wksp_->breaksegm(line_no + 1, false);
+            // Now cursegm_ points to segment starting at line_no + 1
         }
 
-        // Link new segment in place of old_seg
-        new_seg->prev = prev;
-        new_seg->next = after;
-
-        if (prev) {
-            prev->next = new_seg;
-        } else {
-            wksp_->set_chain(new_seg);
+        // Insert new segment into list
+        std::list<Segment> &segs = wksp_->get_segments();
+        auto it = std::find_if(segs.begin(), segs.end(), [old_seg](const Segment &s) { return &s == old_seg; });
+        if (it != segs.end()) {
+            auto new_it = segs.insert(it, *new_seg);
+            segs.erase(it);
+            wksp_->set_cursegm(&*new_it);
         }
-
-        if (after) {
-            after->prev = new_seg;
-        }
-
-        // Update workspace position
-        wksp_->set_cursegm(new_seg);
         wksp_->set_segmline(segmline);
 
         // Free the old segment
@@ -130,101 +108,17 @@ void Editor::put_line()
         // Mark workspace as modified
         wksp_->set_modified(true);
     } else if (break_result == 1) {
-        // breaksegm created blank lines - insert the new segment
-        // This matches prototype putline() when flg != 0
-        Segment *wg      = wksp_->cursegm();
-        int cur_segmline = wksp_->segmline();
+        // breaksegm created blank lines - replace the current segment with new segment
+        Segment *wg = wksp_->cursegm();
 
-        Segment *w0    = wg ? wg->prev : nullptr;
-        Segment *after = wg ? wg->next : nullptr;
-
-        // If wg has multiple lines and we're replacing a line in the middle, need to split
-        if (wg && wg->nlines > 1 && cur_segmline < line_no) {
-            int rel_line = line_no - cur_segmline;
-
-            if (rel_line > 0 && rel_line < wg->nlines) {
-                // Split wg into: [before] + [at line_no] + [after]
-                // Create segment for lines before line_no
-                Segment *before_blank = new Segment();
-                before_blank->nlines  = rel_line;
-                before_blank->fdesc   = -1;
-                before_blank->seek    = 0;
-                before_blank->sizes.resize(rel_line);
-                for (int i = 0; i < rel_line; ++i) {
-                    before_blank->sizes[i] = 1;
-                }
-
-                // Create segment for lines after line_no
-                Segment *after_blank = nullptr;
-                if (rel_line + 1 < wg->nlines) {
-                    after_blank         = new Segment();
-                    after_blank->nlines = wg->nlines - rel_line - 1;
-                    after_blank->fdesc  = -1;
-                    after_blank->seek   = 0;
-                    after_blank->sizes.resize(after_blank->nlines);
-                    for (int i = 0; i < after_blank->nlines; ++i) {
-                        after_blank->sizes[i] = 1;
-                    }
-                }
-
-                // Link: w0 -> before_blank -> new_seg -> after_blank -> after
-                if (w0) {
-                    w0->next = before_blank;
-                }
-                before_blank->prev = w0;
-                before_blank->next = new_seg;
-
-                new_seg->prev = before_blank;
-
-                if (after_blank) {
-                    new_seg->next     = after_blank;
-                    after_blank->prev = new_seg;
-                    after_blank->next = after;
-                    if (after) {
-                        after->prev = after_blank;
-                    }
-                } else {
-                    new_seg->next = after;
-                    if (after) {
-                        after->prev = new_seg;
-                    }
-                }
-
-                // Update chain head if needed
-                if (!w0) {
-                    wksp_->set_chain(before_blank);
-                }
-
-                delete wg;
-
-                // Update workspace position
-                wksp_->set_cursegm(new_seg);
-                wksp_->set_segmline(line_no);
-
-                wksp_->set_modified(true);
-                return;
-            }
+        // Replace wg with new_seg in the list
+        std::list<Segment> &segs = wksp_->get_segments();
+        auto it = std::find_if(segs.begin(), segs.end(), [wg](const Segment &s) { return &s == wg; });
+        if (it != segs.end()) {
+            *it = *new_seg;
+            wksp_->set_cursegm(&*it);
         }
 
-        // Simple case: replace the entire blank segment
-        delete wg;
-
-        // Link new segment - after should already exist (possibly the tail)
-        new_seg->prev = w0;
-        new_seg->next = after;
-
-        if (w0) {
-            w0->next = new_seg;
-        } else {
-            wksp_->set_chain(new_seg);
-        }
-
-        if (after) {
-            after->prev = new_seg;
-        }
-
-        // Update workspace position
-        wksp_->set_cursegm(new_seg);
         wksp_->set_segmline(line_no);
 
         // Mark workspace as modified

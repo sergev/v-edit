@@ -113,19 +113,19 @@ public:
     bool catsegm();
 
     // Insert segments into workspace before given line (insert from prototype)
-    void insert_segments(Segment *seg, int at);
+    void insert_segments(std::list<Segment> &segments, int at);
 
     // Delete segments from workspace between from and to lines (delete from prototype)
     Segment *delete_segments(int from, int to);
 
-    // Copy segment chain (copysegm from prototype)
-    static Segment *copy_segment_chain(Segment *start, Segment *end = nullptr);
+    // Copy segment list (copysegm from prototype)
+    static std::list<Segment> copy_segment_list(Segment::iterator start, Segment::iterator end);
 
     // Create segments for n empty lines (blanklines from prototype)
-    static Segment *create_blank_lines(int n);
+    static std::list<Segment> create_blank_lines(int n);
 
-    // Cleanup a segment chain (static helper)
-    static void cleanup_segments(Segment *seg);
+    // Cleanup a segment list (static helper)
+    static void cleanup_segments(std::list<Segment> &segments);
 
     // View management methods (from prototype)
     // Scroll workspace by nl lines (negative for up, positive for down)

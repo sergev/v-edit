@@ -268,7 +268,7 @@ void Editor::insertlines(int from, int number)
     ensure_line_saved();
 
     // Insert blank lines using workspace segments
-    Segment *blank = wksp_->create_blank_lines(number);
+    auto blank = wksp_->create_blank_lines(number);
     wksp_->insert_segments(blank, from);
     wksp_->set_nlines(wksp_->nlines() + number);
 
@@ -294,7 +294,7 @@ void Editor::deletelines(int from, int number)
 
     // Ensure at least one line exists
     if (wksp_->nlines() == 0) {
-        Segment *blank = wksp_->create_blank_lines(1);
+        auto blank = wksp_->create_blank_lines(1);
         wksp_->insert_segments(blank, 0);
         wksp_->set_nlines(1);
     }
@@ -337,14 +337,10 @@ void Editor::splitline(int line, int col)
     if (!temp_segments.empty()) {
         // Move the segment into the workspace segments list
         wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
-        // Get pointer to the newly inserted segment
-        Segment *tail_seg = &*std::prev(wksp_->get_segments().end());
-        wksp_->insert_segments(tail_seg, line + 1);
         wksp_->set_nlines(wksp_->nlines() + 1);
     } else {
         // Fallback: insert blank line
         insertlines(line + 1, 1);
-        wksp_->set_nlines(wksp_->nlines() + 1);
     }
 
     ensure_cursor_visible();

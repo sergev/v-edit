@@ -76,8 +76,6 @@ std::list<Segment> Tempfile::write_line_to_temp(const std::string &line_content)
     tempseek_ += nbytes;
 
     Segment seg;
-    seg.prev    = nullptr;
-    seg.next    = nullptr;
     seg.nlines  = 1;
     seg.fdesc   = tempfile_fd_;
     seg.seek    = seek_pos;
@@ -103,8 +101,6 @@ std::list<Segment> Tempfile::write_lines_to_temp(const std::vector<std::string> 
 
     // Write all lines to temp file
     Segment seg;
-    seg.prev    = nullptr;
-    seg.next    = nullptr;
     seg.nlines  = nlines;
     seg.fdesc   = tempfile_fd_;
     seg.seek    = tempseek_;

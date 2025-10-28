@@ -11,10 +11,6 @@ public:
     using iterator       = std::list<Segment>::iterator;
     using const_iterator = std::list<Segment>::const_iterator;
 
-    // Segments a linked in a list.
-    Segment *prev{ nullptr };
-    Segment *next{ nullptr };
-
     // Each segment contains a non-zero number of text lines.
     int nlines{ 0 };
 

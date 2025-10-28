@@ -325,105 +325,68 @@ void Workspace::build_segments_from_file(int fd)
 }
 
 //
-// Copy segment chain (based on copysegm from prototype).
-// Returns a deep copy of the segment chain from start to end.
+// Copy segment list (based on copysegm from prototype).
+// Returns a deep copy of the segment list from start to end.
 //
-Segment *Workspace::copy_segment_chain(Segment *start, Segment *end)
+std::list<Segment> Workspace::copy_segment_list(Segment::iterator start, Segment::iterator end)
 {
-    if (!start)
-        return nullptr;
+    std::list<Segment> copied_segments;
 
-    Segment *copied_first = nullptr;
-    Segment *copied_last  = nullptr;
+    for (auto it = start; it != end; ++it) {
+        Segment copy;
+        copy.nlines = it->nlines;
+        copy.fdesc = it->fdesc;
+        copy.seek = it->seek;
+        copy.sizes = it->sizes; // Copy vector
 
-    Segment *curr = start;
-    while (curr && curr != end) {
-        Segment *copy = new Segment();
-        copy->nlines  = curr->nlines;
-        copy->fdesc   = curr->fdesc;
-        copy->seek    = curr->seek;
-        copy->sizes   = curr->sizes; // Copy vector
-        copy->next    = nullptr;
-        copy->prev    = copied_last;
+        copied_segments.push_back(copy);
 
-        if (copied_last)
-            copied_last->next = copy;
-        else
-            copied_first = copy;
-
-        copied_last = copy;
-
-        if (curr->fdesc == 0)
+        if (it->fdesc == 0)
             break;
-
-        curr = curr->next;
     }
 
-    // Note: we do NOT add a tail segment here - it should already exist in the workspace
-
-    return copied_first;
+    return copied_segments;
 }
 
 //
 // Create segments for n empty lines (based on blanklines from prototype).
 // Each empty line has length 1 (just the newline).
 //
-Segment *Workspace::create_blank_lines(int n)
+std::list<Segment> Workspace::create_blank_lines(int n)
 {
-    if (n <= 0)
-        return nullptr;
-
-    Segment *first = nullptr;
-    Segment *last  = nullptr;
+    std::list<Segment> segments;
 
     while (n > 0) {
         int lines_in_seg = (n > 127) ? 127 : n;
 
-        Segment *seg = new Segment();
-        seg->nlines  = lines_in_seg;
-        seg->fdesc   = -1; // Empty lines not from file
-        seg->seek    = 0;
+        Segment seg;
+        seg.nlines = lines_in_seg;
+        seg.fdesc  = -1; // Empty lines not from file
+        seg.seek   = 0;
 
         // Add line length data: each empty line has length 1 (just newline)
-        seg->sizes.resize(lines_in_seg);
+        seg.sizes.resize(lines_in_seg);
         for (int i = 0; i < lines_in_seg; ++i) {
-            seg->sizes[i] = 1;
+            seg.sizes[i] = 1;
         }
 
-        // Link segments
-        seg->prev = last;
-        if (last)
-            last->next = seg;
-        else
-            first = seg;
-
-        last = seg;
+        segments.push_back(seg);
         n -= lines_in_seg;
     }
 
     // Note: we do NOT add a tail segment here - it should already exist in the workspace
 
-    return first;
+    return segments;
 }
 
 //
-// Cleanup a segment chain (static helper for tests).
+// Cleanup a segment list (static helper for tests).
+// Note: With std::list<Segment>, manual cleanup is not needed since destructors handle it.
+// This method is now a no-op kept for API compatibility during transition.
 //
-void Workspace::cleanup_segments(Segment *seg)
+void Workspace::cleanup_segments(std::list<Segment> &segments)
 {
-    if (!seg)
-        return;
-
-    // First, unlink from chain
-    if (seg->prev)
-        seg->prev->next = nullptr;
-
-    // Delete all segments in chain
-    while (seg) {
-        Segment *next = seg->next;
-        delete seg;
-        seg = next;
-    }
+    segments.clear();
 }
 //
 //
@@ -554,70 +517,26 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
             num_blank_lines = 1;
         }
 
-        Segment *blank_seg = create_blank_lines(num_blank_lines);
-        if (!blank_seg)
-            throw std::runtime_error("breaksegm: failed to create blank lines");
+        // Create blank lines using new list-based approach
+        auto blank_segments = create_blank_lines(num_blank_lines);
 
-        // Get the tail segment (the one we're currently at, beyond EOF)
-        Segment *tail = &*cursegm_;
-        Segment *prev = tail ? tail->prev : nullptr;
+        // Find where to insert blank segments (before tail segment)
+        auto insert_pos = cursegm_;
 
-        // Remove tail temporarily (set_chain will create a new one)
-        if (prev)
-            prev->next = nullptr;
+        // Insert blank segments
+        segments_.splice(insert_pos, blank_segments);
 
-        // Find the last blank segment and remove the tail that was created by create_blank_lines
-        Segment *last_blank = blank_seg;
-        while (last_blank->next) {
-            if (last_blank->next->fdesc == 0) {
-                // Found the tail created by create_blank_lines - remove it
-                Segment *extra_tail = last_blank->next;
-                last_blank->next    = nullptr;
-                extra_tail->prev    = nullptr;
-                delete extra_tail;
-                break;
-            }
-            last_blank = last_blank->next;
-        }
+        // Position to the first blank segment we just inserted
+        cursegm_  = std::prev(insert_pos);
+        segmline_ = line_;
 
-        // Update workspace
-        if (prev) {
-            // Link blank segments to existing chain and keep the old tail
-            blank_seg->prev = prev;
-            prev->next      = blank_seg;
-
-            // Link tail to the end of blank segments
-            last_blank->next = tail;
-            tail->prev       = last_blank;
-        } else {
-            // No existing chain - set_chain will create a new tail
-            set_chain(blank_seg);
-        }
-
-        // Calculate where the blank segments start
-        // line_ is the segmline_ of the tail, which is the first position beyond the last valid
-        // line For empty: line_=0, so blank segments start at 0 For non-empty: line_ is the first
-        // position beyond valid, so blank segments start at line_
-        int blank_seg_start = line_;
-
-        // Position to the first blank segment
-        // Find the iterator for blank_seg in the segments_ list
-        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
-            if (&*it == blank_seg) {
-                cursegm_ = it;
-                break;
-            }
-        }
-        segmline_ = blank_seg_start;
-
-        // Update nlines to include the blank lines
+        // Update line count
         nlines_ = line_no + 1;
 
         return 1; // Signal that we created lines
     }
 
     // Now we're at the segment containing line_no
-    Segment *seg = &*cursegm_;
     int rel_line = line_no - segmline_;
 
     if (rel_line == 0) {
@@ -625,42 +544,33 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     }
 
     // Special case: blank line segment (fdesc == -1) - split by sizes array
-    if (seg->fdesc == -1) {
-        if (rel_line >= seg->nlines) {
+    if (cursegm_->fdesc == -1) {
+        if (rel_line >= cursegm_->nlines) {
             throw std::runtime_error(
                 "breaksegm: inconsistent rel_line after set_current_segment()");
         }
 
-        // Split the blank line segment
-        Segment *new_seg = new Segment();
-        new_seg->nlines  = seg->nlines - rel_line;
-        new_seg->fdesc   = -1; // Still blank lines
-        new_seg->seek    = seg->seek;
+        // Find where to insert the new segment (after current segment)
+        auto insert_pos = std::next(cursegm_);
+
+        // Create new segment in place
+        auto new_it = segments_.insert(insert_pos, Segment());
+        Segment &new_seg = *new_it;
+        new_seg.nlines = cursegm_->nlines - rel_line;
+        new_seg.fdesc = -1; // Still blank lines
+        new_seg.seek = cursegm_->seek;
 
         // Copy remaining sizes
-        for (size_t i = rel_line; i < seg->sizes.size(); ++i) {
-            new_seg->sizes.push_back(seg->sizes[i]);
+        for (size_t i = rel_line; i < cursegm_->sizes.size(); ++i) {
+            new_seg.sizes.push_back(cursegm_->sizes[i]);
         }
-
-        // Link new segment
-        new_seg->next = seg->next;
-        new_seg->prev = seg;
-        if (seg->next)
-            seg->next->prev = new_seg;
-        seg->next = new_seg;
 
         // Truncate original segment sizes
-        seg->sizes.resize(rel_line);
-        seg->nlines = rel_line;
+        cursegm_->sizes.resize(rel_line);
+        cursegm_->nlines = rel_line;
 
         // Update workspace position
-        // Find the iterator for new_seg in the segments_ list
-        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
-            if (&*it == new_seg) {
-                cursegm_ = it;
-                break;
-            }
-        }
+        cursegm_  = new_it;
         segmline_ = line_no;
 
         return 0;
@@ -672,11 +582,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     // Walk through the first rel_line lines to calculate offset
     long offs = 0;
     for (int i = 0; i < rel_line; ++i) {
-        if (i >= seg->nlines) {
-            split_point = seg->nlines;
+        if (i >= cursegm_->nlines) {
+            split_point = cursegm_->nlines;
             break;
         }
-        offs += seg->sizes[i];
+        offs += cursegm_->sizes[i];
     }
 
     // Find where to insert the new segment (after current segment)
@@ -685,18 +595,18 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     // Create new segment in place
     auto new_it = segments_.insert(insert_pos, Segment());
     Segment &new_seg = *new_it;
-    new_seg.nlines  = seg->nlines - rel_line;
-    new_seg.fdesc   = seg->fdesc;
-    new_seg.seek    = seg->seek + offs;
+    new_seg.nlines = cursegm_->nlines - rel_line;
+    new_seg.fdesc = cursegm_->fdesc;
+    new_seg.seek = cursegm_->seek + offs;
 
     // Copy remaining data bytes from split_point to end
-    for (size_t i = split_point; i < seg->nlines; ++i) {
-        new_seg.sizes.push_back(seg->sizes[i]);
+    for (size_t i = split_point; i < cursegm_->nlines; ++i) {
+        new_seg.sizes.push_back(cursegm_->sizes[i]);
     }
 
     // Truncate original segment data - keep only first rel_line data
-    seg->sizes.resize(split_point);
-    seg->nlines = rel_line;
+    cursegm_->sizes.resize(split_point);
+    cursegm_->nlines = rel_line;
 
     // Update workspace position
     cursegm_  = new_it;
@@ -749,47 +659,26 @@ bool Workspace::catsegm()
 //
 // Insert segments into workspace before given line (based on insert from prototype).
 //
-void Workspace::insert_segments(Segment *new_seg, int at)
+void Workspace::insert_segments(std::list<Segment> &segments_to_insert, int at)
 {
-    if (!new_seg)
+    if (segments_to_insert.empty())
         return;
 
-    // Find the last segment in the chain to insert
-    Segment *last      = new_seg;
+    // Calculate total inserted lines
     int inserted_lines = 0;
-    while (last->next && last->next->fdesc != 0) {
-        inserted_lines += last->nlines;
-        last = last->next;
+    for (const auto &seg : segments_to_insert) {
+        inserted_lines += seg.nlines;
     }
-    inserted_lines += last->nlines;
 
     // Split at insertion point
     if (breaksegm(at, true) == 0) {
         // after breaksegm, cursegm_ points to the segment at position 'at'
-        // Link new segments BEFORE cursegm_
-        Segment *insert_before = &*cursegm_;            // The segment at position 'at'
-        Segment *insert_prev   = insert_before->prev; // Segment before position 'at'
+        // Insert new segments BEFORE cursegm_
+        auto insert_pos = cursegm_;
+        segments_.splice(insert_pos, segments_to_insert);
 
-        // Insert new_seg before insert_before
-        new_seg->prev       = insert_prev;
-        new_seg->next       = insert_before;
-        insert_before->prev = last;
-        last->next          = insert_before;
-
-        if (insert_prev)
-            insert_prev->next = new_seg;
-        // If insert_prev is null, new_seg is now the start of the chain
-
-        // Update workspace position
-        // Find the iterator for new_seg in the segments_ list
-        if (new_seg) {
-            for (auto it = segments_.begin(); it != segments_.end(); ++it) {
-                if (&*it == new_seg) {
-                    cursegm_ = it;
-                    break;
-                }
-            }
-        }
+        // Update workspace position to first inserted segment
+        cursegm_  = std::prev(insert_pos);
         segmline_ = at;
 
         // Update line count

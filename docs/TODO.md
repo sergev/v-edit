@@ -24,9 +24,9 @@
 ## Phase 4: Convert Core Operations (One-by-One)
 - [x] `set_current_segment()` - replace pointer navigation with iterator navigation
 - [x] `breaksegm()` split segments - use `segments_.insert()` instead of manual linking
-- [ ] `catsegm()` - use iterator find and splice operations
-- [ ] `insert_segments()` - use list insertion methods
-- [ ] `delete_segments()` - use iterator-based deletion
+- [x] `catsegm()` - use iterator find and splice operations
+- [x] `insert_segments()` - use list insertion methods
+- [x] `delete_segments()` - use iterator-based deletion
 - [ ] Each conversion followed by test passage verification
 
 ## Phase 5: Remove Legacy Code

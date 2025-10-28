@@ -43,7 +43,17 @@ public:
     void set_cursorcol(int cursorcol) { cursorcol_ = cursorcol; }
     void set_cursorrow(int cursorrow) { cursorrow_ = cursorrow; }
 
-    void set_cursegm(Segment *seg) { cursegm_ = seg; }
+    void set_cursegm(Segment *seg) {
+        // Find the iterator for this segment in the list
+        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
+            if (&*it == seg) {
+                cursegm_ = it;
+                return;
+            }
+        }
+        // If not found, this is an error - segment not in our list
+        cursegm_ = segments_.end();
+    }
 
     // Segment chain operations
     // Build segment chain from in-memory lines vector
@@ -87,6 +97,9 @@ public:
     void set_modified(bool modified) { modified_ = modified; }
     bool backup_done() const { return backup_done_; }
     void set_backup_done(bool backup_done) { backup_done_ = backup_done; }
+
+    // Segment chain management (for backward compatibility during transition)
+    void set_chain(Segment *chain);
 
     // Segment manipulation (from prototype)
     // Split segment at given line number (breaksegm from prototype)
@@ -132,7 +145,8 @@ public:
 private:
     Tempfile &tempfile_;          // reference to temp file manager
     std::list<Segment> segments_; // list-based segment chain
-    std::list<Segment>::iterator cursegm_; // current segment iterator
+    std::list<Segment>::iterator cursegm_; // current segment iterator (points into segments_)
+    Segment *head_{ nullptr };    // head of segment chain (for backward compatibility)
     int writable_{ 0 };           // write permission
     int nlines_{ 0 };             // line count
     int topline_{ 0 };            // top line visible on screen

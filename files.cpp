@@ -38,7 +38,7 @@ void Editor::create_alternative_workspace()
     if (!open_help_file()) {
         // If help file fails, create a new empty workspace
         alt_filename_ = "untitled_alt";
-        alt_wksp_->build_segments_from_text("");
+        alt_wksp_->load_text("");
     }
 }
 
@@ -79,7 +79,7 @@ bool Editor::open_help_file()
     // Set alternative workspace to help file
     alt_filename_ = DEFAULT_HELP_FILE;
     alt_wksp_     = std::make_unique<Workspace>(tempfile_);
-    alt_wksp_->build_segments_from_text(help_content);
+    alt_wksp_->load_text(help_content);
 
     return true;
 }
@@ -126,7 +126,7 @@ bool Editor::create_builtin_help()
     // Set alternative workspace to built-in help
     alt_filename_ = "Built-in Help";
     alt_wksp_     = std::make_unique<Workspace>(tempfile_);
-    alt_wksp_->build_segments_from_text(help_text);
+    alt_wksp_->load_text(help_text);
 
     return true;
 }

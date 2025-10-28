@@ -13,7 +13,7 @@
 void Editor::build_segments_from_text(const std::string &text)
 {
     // Build segment chain directly from text in workspace
-    wksp_->build_segments_from_text(text);
+    wksp_->load_text(text);
 }
 
 //
@@ -177,7 +177,7 @@ bool Editor::load_file_segments(const std::string &path)
 //
 bool Editor::load_file_to_segments(const std::string &path)
 {
-    wksp_->load_file_to_segments(path);
+    wksp_->load_file(path);
     if (!wksp_->has_segments()) {
         status_ = std::string("Cannot open file: ") + path;
         return false;

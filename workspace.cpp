@@ -85,7 +85,7 @@ void Workspace::set_chain(std::list<Segment> &segments)
 // Build segment chain from in-memory lines vector.
 // Writes lines into temp file.
 //
-void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
+void Workspace::load_text(const std::vector<std::string> &lines)
 {
     reset();
     file_state.writable = 1;
@@ -96,7 +96,7 @@ void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
         auto segments_from_temp = tempfile_.write_lines_to_temp(lines);
         if (segments_from_temp.empty())
             throw std::runtime_error(
-                "build_segments_from_lines: failed to write lines to temp file");
+                "load_text: failed to write lines to temp file");
         // Move the segment into our segments_ list
         segments_.splice(segments_.end(), segments_from_temp);
     }
@@ -106,7 +106,7 @@ void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
 //
 // Parse text and build segment chain from it.
 //
-void Workspace::build_segments_from_text(const std::string &text)
+void Workspace::load_text(const std::string &text)
 {
     std::vector<std::string> lines_vec;
     std::string cur;
@@ -122,7 +122,7 @@ void Workspace::build_segments_from_text(const std::string &text)
     // In case text doesn't end with newline, keep the last line
     if (!cur.empty() || lines_vec.empty())
         lines_vec.push_back(cur);
-    build_segments_from_lines(lines_vec);
+    load_text(lines_vec);
 }
 
 //
@@ -193,7 +193,7 @@ int Workspace::set_current_segment(int lno)
 //
 // Load file content into segment chain structure.
 //
-void Workspace::load_file_to_segments(const std::string &path)
+void Workspace::load_file(const std::string &path, bool create_if_missing)
 {
     // Open file for reading
     int fd = open(path.c_str(), O_RDONLY);
@@ -206,13 +206,13 @@ void Workspace::load_file_to_segments(const std::string &path)
 
     // Build segment chain from file
     // Note: we keep the fd open because segments reference it via fdesc
-    build_segments_from_file(fd);
+    load_file(fd);
 }
 
 //
 // Build segment chain from file descriptor.
 //
-void Workspace::build_segments_from_file(int fd)
+void Workspace::load_file(int fd)
 {
     file_state.nlines = 0;
 

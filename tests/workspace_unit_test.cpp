@@ -82,7 +82,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     f << content;
     f.close();
 
-    wksp->load_file_to_segments(filename);
+    wksp->load_file(filename);
 
     EXPECT_EQ(wksp->file_state.nlines, 5);
 
@@ -106,7 +106,7 @@ TEST_F(WorkspaceTest, DISABLED_BuildAndReadLines)
     // Test that build_segments_from_lines works
     std::vector<std::string> lines = { "First line", "Second line", "Third line" };
 
-    wksp->build_segments_from_lines(lines);
+    wksp->load_text(lines);
 
     // Verify segments were created
     EXPECT_TRUE(wksp->has_segments());
@@ -127,7 +127,7 @@ TEST_F(WorkspaceTest, InsertBlankLines)
     f << content;
     f.close();
 
-    wksp->load_file_to_segments(filename);
+    wksp->load_file(filename);
     EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Create blank lines to insert
@@ -152,7 +152,7 @@ TEST_F(WorkspaceTest, DeleteLines)
     f << content;
     f.close();
 
-    wksp->load_file_to_segments(filename);
+    wksp->load_file(filename);
     EXPECT_EQ(wksp->file_state.nlines, 4);
 
     // Delete lines 1-2
@@ -204,7 +204,7 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
     f << content;
     f.close();
 
-    wksp->load_file_to_segments(filename);
+    wksp->load_file(filename);
 
     // Break at line 2 to create two segments
     int result = wksp->breaksegm(2, true);
@@ -231,14 +231,14 @@ TEST_F(WorkspaceTest, SaveAndLoadCycle)
     // Create test content and save to file
     std::string content = "Test line 1\nTest line 2\nTest line 3\n";
 
-    wksp->build_segments_from_lines({ "Test line 1", "Test line 2", "Test line 3" });
+    wksp->load_text({ "Test line 1", "Test line 2", "Test line 3" });
     std::string out_filename = std::string(__func__) + ".txt";
 
     bool saved = wksp->write_segments_to_file(out_filename);
     EXPECT_TRUE(saved);
 
     // Load back and verify
-    wksp->load_file_to_segments(out_filename);
+    wksp->load_file(out_filename);
     EXPECT_EQ(wksp->file_state.nlines, 3);
     EXPECT_EQ(wksp->read_line_from_segment(0), "Test line 1");
 
@@ -350,7 +350,7 @@ TEST_F(WorkspaceTest, BuildFromText)
 {
     // Test building segments from multi-line text
     std::string text = "Line one\nLine two\nLine three\nLast line";
-    wksp->build_segments_from_text(text);
+    wksp->load_text(text);
 
     EXPECT_TRUE(wksp->has_segments());
     EXPECT_EQ(wksp->file_state.nlines, 4);
@@ -367,7 +367,7 @@ TEST_F(WorkspaceTest, ResetWorkspace)
     wksp->file_state.modified = true;
 
     // Add some segments
-    wksp->build_segments_from_lines({ "test", "content" });
+    wksp->load_text(std::vector<std::string>{ "test", "content" });
 
     // Verify state is set
     EXPECT_TRUE(wksp->has_segments());
@@ -387,7 +387,7 @@ TEST_F(WorkspaceTest, ResetWorkspace)
 TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
 {
     // Create test content with multiple lines
-    wksp->build_segments_from_lines({ "Line 0", "Line 1", "Line 2", "Line 3", "Line 4", "Line 5" });
+    wksp->load_text({ "Line 0", "Line 1", "Line 2", "Line 3", "Line 4", "Line 5" });
 
     // Navigate to different lines
     int result = wksp->set_current_segment(3);
@@ -402,7 +402,7 @@ TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
 
 TEST_F(WorkspaceTest, BreakSegmentVariations)
 {
-    wksp->build_segments_from_lines({ "Line 0", "Line 1", "Line 2", "Line 3", "Line 4" });
+    wksp->load_text({ "Line 0", "Line 1", "Line 2", "Line 3", "Line 4" });
 
     // Break at line 0 (should be no-op)
     int result = wksp->breaksegm(0, true);
@@ -421,7 +421,7 @@ TEST_F(WorkspaceTest, BreakSegmentVariations)
 
 TEST_F(WorkspaceTest, SegmentCatOperations)
 {
-    wksp->build_segments_from_lines({ "A", "B", "C", "D", "E" });
+    wksp->load_text({ "A", "B", "C", "D", "E" });
 
     // Break to create segments to merge
     wksp->breaksegm(2, true);
@@ -440,7 +440,7 @@ TEST_F(WorkspaceTest, SegmentCatOperations)
 
 TEST_F(WorkspaceTest, SegmentDeleteOperations)
 {
-    wksp->build_segments_from_lines({ "A", "B", "C", "D", "E" });
+    wksp->load_text({ "A", "B", "C", "D", "E" });
     EXPECT_EQ(wksp->file_state.nlines, 5);
 
     // Delete lines 1-2
@@ -488,7 +488,7 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
     // Complex sequence: load -> insert -> break -> merge -> save
 
     // Load initial content
-    wksp->build_segments_from_lines({ "Original 1", "Original 2", "Original 3" });
+    wksp->load_text({ "Original 1", "Original 2", "Original 3" });
     EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Insert blank lines

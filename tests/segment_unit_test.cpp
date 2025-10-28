@@ -43,7 +43,7 @@ TEST_F(SegmentTest, LoadFileToSegments)
 {
     std::string filename = createTestFile("Line 1\nLine 2\nLine 3\n");
 
-    editor->load_file_to_segments(filename);
+    editor->load_file_segments(filename);
 
     // Verify segments were created (test now uses wksp_.chain directly)
     EXPECT_TRUE(editor->wksp_->has_segments());
@@ -55,7 +55,7 @@ TEST_F(SegmentTest, ReadLineFromSegment)
 {
     std::string filename = createTestFile("First line\nSecond line\nThird line\n");
 
-    editor->load_file_to_segments(filename);
+    editor->load_file_segments(filename);
 
     // Verify segments were created
     EXPECT_TRUE(editor->wksp_->has_segments());
@@ -82,7 +82,7 @@ TEST_F(SegmentTest, HandleEmptyFile)
 {
     std::string filename = createTestFile("");
 
-    editor->load_file_to_segments(filename);
+    editor->load_file_segments(filename);
 
     // Should handle empty file without crashing
     // For empty files, don't call set_current_segment - just verify read returns empty
@@ -102,7 +102,7 @@ TEST_F(SegmentTest, HandleLargeFile)
 
     std::string filename = createTestFile(content);
 
-    editor->load_file_to_segments(filename);
+    editor->load_file_segments(filename);
 
     // Read first line - position to line 0 first
     editor->wksp_->set_current_segment(0);
@@ -133,7 +133,7 @@ TEST_F(SegmentTest, HandleVeryLongLines)
     std::string content  = longLine + "\nSecond line\n";
     std::string filename = createTestFile(content);
 
-    editor->load_file_to_segments(filename);
+    editor->load_file_segments(filename);
 
     // Read the long line - position to line 0 first
     editor->wksp_->set_current_segment(0);
@@ -152,7 +152,7 @@ TEST_F(SegmentTest, WriteSegmentsToFile)
 {
     std::string filename = createTestFile("Original content\n");
 
-    editor->load_file_to_segments(filename);
+    editor->load_file_segments(filename);
 
     // Write to a new file
     std::string outputFile = "output_" + filename;
@@ -196,7 +196,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     std::string filename = createTestFile(content);
 
     // Load file to segments
-    editor->load_file_to_segments(filename);
+    editor->load_file_segments(filename);
 
     // Verify segments were created
     EXPECT_TRUE(editor->wksp_->has_segments());

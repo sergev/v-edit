@@ -65,10 +65,10 @@ public:
 
     // Segment chain operations
     // Build segment chain from in-memory lines vector
-    void build_segments_from_lines(const std::vector<std::string> &lines);
+    void load_text(const std::vector<std::string> &lines);
 
     // Build segment chain from text string
-    void build_segments_from_text(const std::string &text);
+    void load_text(const std::string &text);
 
     // Set current segment to the segment containing the specified line
     // Updates cursegm_, segmline_, and line_ to position the workspace at line number
@@ -76,10 +76,10 @@ public:
     int set_current_segment(int lno);
 
     // Load file content into segment chain structure
-    void load_file_to_segments(const std::string &path);
+    void load_file(const std::string &path, bool create_if_missing = true);
 
     // Build segment chain from file descriptor
-    void build_segments_from_file(int fd);
+    void load_file(int fd);
 
     // Read line content from segment chain at specified index
     std::string read_line_from_segment(int line_no);

@@ -100,16 +100,15 @@ void Workspace::load_text(const std::vector<std::string> &lines)
         auto segments_from_temp = tempfile_.write_lines_to_temp(lines);
         if (segments_from_temp.empty())
             throw std::runtime_error("load_text: failed to write lines to temp file");
-        // Move the segment into our segments_ list
-        segments_.splice(segments_.end(), segments_from_temp);
+        // Move the segment into our segments_ list BEFORE the tail
+        // reset() already created a tail segment, so insert before it
+        auto insert_pos = std::prev(segments_.end());
+        segments_.splice(insert_pos, segments_from_temp);
     }
 
-    // Ensure we have a tail segment
-    if (segments_.empty() || segments_.back().fdesc != 0) {
-        segments_.emplace_back();
-    }
+    // Tail segment already exists from reset(), no need to add another
 
-    // Set cursegm_ to the first segment
+    // Set cursegm_ to the first segment (the content, not the tail)
     cursegm_          = segments_.begin();
     position.segmline = 0;
     position.line     = 0;
@@ -696,19 +695,19 @@ void Workspace::insert_segments(std::list<Segment> &segments_to_insert, int at)
     }
 
     // Split at insertion point
-    if (breaksegm(at, true) == 0) {
-        // after breaksegm, cursegm_ points to the segment at position 'at'
-        // Insert new segments BEFORE cursegm_
-        auto insert_pos = cursegm_;
-        segments_.splice(insert_pos, segments_to_insert);
+    breaksegm(at, true);
 
-        // Update workspace position to first inserted segment
-        cursegm_          = std::prev(insert_pos);
-        position.segmline = at;
+    // after breaksegm, cursegm_ points to the segment at position 'at'
+    // Insert new segments BEFORE cursegm_
+    auto insert_pos = cursegm_;
+    segments_.splice(insert_pos, segments_to_insert);
 
-        // Update line count
-        file_state.nlines += inserted_lines;
-    }
+    // Update workspace position to first inserted segment
+    cursegm_          = std::prev(insert_pos);
+    position.segmline = at;
+
+    // Update line count
+    file_state.nlines += inserted_lines;
 
     file_state.writable = 1; // Mark as edited
 }
@@ -728,7 +727,8 @@ void Workspace::delete_segments(int from, int to)
         return;
 
     // Use breaksegm for positioning (it uses list operations internally now)
-    int result = breaksegm(to, true);
+    // Break AFTER the last line to delete (to+1) so we can delete up to and including 'to'
+    int result = breaksegm(to + 1, true);
     if (result != 0) {
         if (to + 1 > file_state.nlines) {
             set_current_segment(file_state.nlines);
@@ -746,7 +746,7 @@ void Workspace::delete_segments(int from, int to)
     }
 
     auto start_delete_it = cursegm_;
-    auto after_delete_it = std::next(end_delete_it);
+    auto after_delete_it = end_delete_it;
 
     // Calculate deleted lines
     int deleted_lines = 0;
@@ -787,10 +787,15 @@ void Workspace::scroll_vertical(int nl, int max_rows, int total_lines)
             // Already at top
             return;
         }
-    } else {
+    } else if (nl > 0) {
         // Scroll down (toward end)
-        if (view.topline + max_rows >= total_lines) {
-            // Already at bottom - can't scroll further
+        // Only return early if we're already at a valid bottom position
+        int max_topline = total_lines - max_rows;
+        if (max_topline < 0)
+            max_topline = 0;
+        // Only prevent scrolling if topline is at the valid maximum (not beyond it)
+        if (view.topline == max_topline) {
+            // Already at the valid bottom position - can't scroll further
             return;
         }
     }
@@ -860,7 +865,11 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
     // Adjust topline when lines are inserted/deleted
     int j = (delta >= 0) ? to : from;
 
-    if (view.topline > j) {
+    // For deletions, use >= to handle boundary case
+    // For insertions, use > to handle boundary case
+    bool should_adjust = (delta >= 0) ? (view.topline > j) : (view.topline >= j);
+
+    if (should_adjust) {
         view.topline += delta;
 
         // Ensure topline doesn't go negative

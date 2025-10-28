@@ -2,12 +2,9 @@
 #include <gtest/gtest.h>
 #include <unistd.h>
 
-#include <filesystem>
 #include <fstream>
 
 #include "editor.h"
-
-namespace fs = std::filesystem;
 
 // Test fixture for Editor::put_line()
 class EditorTest : public ::testing::Test {
@@ -36,9 +33,9 @@ protected:
     void CreateBlankLines(unsigned num_lines)
     {
         editor->wksp_->set_nlines(num_lines);
-        Segment *blank_segs = Workspace::create_blank_lines(num_lines);
+        std::list<Segment> blank_segs = Workspace::create_blank_lines(num_lines);
         editor->wksp_->set_chain(blank_segs);
-        editor->wksp_->set_cursegm(blank_segs);
+        editor->wksp_->set_cursegm(&blank_segs.front());
         editor->wksp_->set_segmline(0);
     }
 };
@@ -174,14 +171,13 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
     Segment *seg = editor->wksp_->chain();
     ASSERT_NE(seg, nullptr);
 
-    // Collect segment info
-    std::vector<Segment *> segments;
-    Segment *curr = seg;
-    while (curr) {
-        if (curr->nlines > 0) {
-            segments.push_back(curr);
+    // Collect segment info - now iterate through std::list
+    const auto& segments_list = editor->wksp_->get_segments();
+    std::vector<const Segment *> segments;
+    for (const auto& s : segments_list) {
+        if (s.nlines > 0) {
+            segments.push_back(&s);
         }
-        curr = curr->next;
     }
 
     // Verify segments
@@ -326,14 +322,13 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
     Segment *seg = editor->wksp_->chain();
     ASSERT_NE(seg, nullptr);
 
-    // Collect segments
-    std::vector<Segment *> segments;
-    Segment *curr = seg;
-    while (curr) {
-        if (curr->nlines > 0) {
-            segments.push_back(curr);
+    // Collect segments - now iterate through std::list
+    const auto& segments_list = editor->wksp_->get_segments();
+    std::vector<const Segment *> segments;
+    for (const auto& s : segments_list) {
+        if (s.nlines > 0) {
+            segments.push_back(&s);
         }
-        curr = curr->next;
     }
 
     // Should have at least one segment

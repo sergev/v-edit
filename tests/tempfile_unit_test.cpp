@@ -44,8 +44,7 @@ TEST_F(TempfileTest, WriteLineToTempBasic)
 
     EXPECT_EQ(seg.nlines, 1);
     EXPECT_GE(seg.fdesc, 0); // Should have opened temp file
-    EXPECT_EQ(seg.prev, nullptr);
-    EXPECT_EQ(seg.next, nullptr);
+    // Segment struct no longer has prev/next pointers in std::list implementation
     EXPECT_EQ(seg.sizes.size(), 1);
     EXPECT_EQ(seg.sizes[0], 12); // "Hello World\n" = 12 bytes
     EXPECT_EQ(seg.seek, 0);      // First write should be at position 0
@@ -218,8 +217,7 @@ TEST_F(TempfileTest, WriteLinesToTempBasic)
 
     EXPECT_EQ(seg.nlines, 3);
     EXPECT_GE(seg.fdesc, 0); // Should have opened temp file
-    EXPECT_EQ(seg.prev, nullptr);
-    EXPECT_EQ(seg.next, nullptr);
+    // Segments are now in std::list - no prev/next pointers
     EXPECT_EQ(seg.sizes.size(), 3);
     EXPECT_EQ(seg.sizes[0], 11); // "First line\n" = 11 bytes
     EXPECT_EQ(seg.sizes[1], 12); // "Second line\n" = 12 bytes

@@ -40,10 +40,71 @@ Test files still use old APIs but that's expected. Phase 3 will update all test 
 - 🔧 tests/workspace_unit_test.cpp (2 errors)
 - 🔧 tests/tempfile_unit_test.cpp (1 error)
 
-## Phase 3: Test Migration ⏳ **PENDING**
-- **Update test implementations** to use new APIs
-- **Remove pointer-based verification** code
+## Phase 3: Comprehensive Test Suite Implementation 🧪 **IN PROGRESS**
+- **Comprehensive workspace testing** - create new unit tests covering all Workspace methods
+- **Remove pointer-based verification** code from existing tests
 - **Add iterator/list-based assertions** for correctness
+
+### Workspace Test Coverage Plan
+Based on the Workspace class API, create comprehensive tests covering:
+
+#### **1. Static Utility Functions**
+- `create_blank_lines(int)` - test segment creation, line splitting
+- `copy_segment_list()` - test copying ranges of segments
+- `cleanup_segments()` (static) - test list cleanup
+
+#### **2. Basic Workspace Operations**
+- Constructor/destructor and lifecycle
+- `has_segments()`, `get_tempfile()`, `get_segments()`
+- `get_line_count()` with various scenarios
+
+#### **3. Accessors & Mutators**
+- All getter/setter pairs: writable, nlines, topline, basecol, line, segmline, cursorcol, cursorrow
+- `modified()`, `backup_done()` state management
+- `chain()` and `cursegm()` accessors, `set_cursegm()` positioning
+
+#### **4. Segment Construction**
+- `build_segments_from_lines()` - creating from string vectors
+- `build_segments_from_text()` - creating from text blocks
+- `build_segments_from_file()` - creating from file descriptors
+
+#### **5. File I/O Operations**
+- `load_file_to_segments()` - loading existing files
+- `write_segments_to_file()` - saving segments to disk
+- `read_line_from_segment()` - reading individual lines with bounds checking
+
+#### **6. Segment Manipulation**
+- `set_current_segment()` - navigation and edge cases
+- `breaksegm()` - splitting segments at various positions
+- `catsegm()` - merging segments and merge conditions
+- `insert_segments()` - adding segments at specific positions
+- `delete_segments()` - removing segments with cleanup
+
+#### **7. View Management**
+- `scroll_vertical()` - up/down scrolling with bounds checking
+- `scroll_horizontal()` - left/right scrolling with bounds checking
+- `goto_line()` - jumping to specific lines with centering
+- `update_topline_after_edit()` - handling line insertions/deletions
+
+#### **8. State Management**
+- `reset()` - clean workspace reset
+- `cleanup_segments()` (instance) - cleanup all segments
+- `set_chain()` - compatibility method testing
+
+#### **9. Integration & Edge Cases**
+- Complete file load/edit/save cycles
+- Complex multi-segment operations
+- Error handling and boundary conditions
+- Performance with large files (should be improved with lists)
+
+### Test Implementation Progress
+- ✅ **Static function tests**: Basic coverage implemented
+- 🔧 **Accessor/mutator tests**: Need comprehensive coverage
+- 🔧 **File I/O operation tests**: Basic tests exist, need expansion
+- 🔧 **Segment manipulation tests**: Core tests exist, need more edge cases
+- 🔧 **View management tests**: Basic scrolling implemented
+- 🔧 **Integration tests**: Need complex multi-operation scenarios
+- ❌ **BuildAndReadLines segfault**: Need debugging and fix
 
 ## Current Status Summary
 - **Core infrastructure:** Fully modernized (`std::list<Segment>` throughout)

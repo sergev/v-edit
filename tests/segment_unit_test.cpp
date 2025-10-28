@@ -199,11 +199,11 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
 
     std::cout << "\n=== Segment Chain Analysis ===\n";
 
-    // Store segments for detailed verification
-    std::vector<Segment *> segments;
-    while (segment) {
-        segments.push_back(segment);
-        segment = segment->next;
+    // Store segments for detailed verification - now iterate through std::list
+    const auto& segments_list = editor->wksp_->get_segments();
+    std::vector<const Segment *> segments;
+    for (const auto& seg : segments_list) {
+        segments.push_back(&seg);
     }
 
     // Verify segment count

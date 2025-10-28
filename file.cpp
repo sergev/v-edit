@@ -221,7 +221,7 @@ void Editor::save_file()
     // Use workspace's write_segments_to_file
     bool saved = wksp_->write_segments_to_file(filename_);
     if (saved) {
-        status_ = std::string("Saved: ") + filename_;
+        status_                    = std::string("Saved: ") + filename_;
         wksp_->file_state.modified = false; // Clear modified flag after save
     } else {
         status_ = std::string("Cannot write: ") + filename_;

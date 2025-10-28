@@ -14,8 +14,8 @@ void Editor::goto_line(int lineNumber)
         lineNumber = 0;
 
     wksp_->view.topline = lineNumber;
-    cursor_line_ = 0;
-    cursor_col_  = 0;
+    cursor_line_        = 0;
+    cursor_col_         = 0;
     wksp_->view.basecol = 0;
     ensure_cursor_visible();
 }
@@ -35,7 +35,7 @@ void Editor::move_left()
         cursor_col_ = len;
         if (cursor_col_ >= ncols_ - 1) {
             wksp_->view.basecol = len - (ncols_ - 2);
-            cursor_col_ = ncols_ - 2;
+            cursor_col_         = ncols_ - 2;
         }
     }
 }
@@ -52,7 +52,7 @@ void Editor::move_right()
         wksp_->view.basecol = wksp_->view.basecol + 1;
     } else if (cursor_line_ < nlines_ - 2) {
         cursor_line_++;
-        cursor_col_ = 0;
+        cursor_col_         = 0;
         wksp_->view.basecol = 0;
     }
 }
@@ -122,7 +122,7 @@ bool Editor::search_forward(const std::string &needle)
         if (pos != std::string::npos) {
             // Found it - position cursor
             wksp_->view.topline = i;
-            cursor_line_ = 0;
+            cursor_line_        = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
                 wksp_->view.basecol = (int)pos - (ncols_ - 10);
@@ -149,7 +149,7 @@ bool Editor::search_forward(const std::string &needle)
         }
         if (pos != std::string::npos) {
             wksp_->view.topline = i;
-            cursor_line_ = 0;
+            cursor_line_        = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
                 wksp_->view.basecol = (int)pos - (ncols_ - 10);
@@ -187,7 +187,7 @@ bool Editor::search_backward(const std::string &needle)
         }
         if (pos != std::string::npos) {
             wksp_->view.topline = i;
-            cursor_line_ = 0;
+            cursor_line_        = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
                 wksp_->view.basecol = (int)pos - (ncols_ - 10);
@@ -207,7 +207,7 @@ bool Editor::search_backward(const std::string &needle)
         size_t pos       = line.rfind(needle);
         if (pos != std::string::npos) {
             wksp_->view.topline = i;
-            cursor_line_ = 0;
+            cursor_line_        = 0;
             // Only set horizontal offset if the match is far to the right
             if (pos > (size_t)(ncols_ - 10)) {
                 wksp_->view.basecol = (int)pos - (ncols_ - 10);

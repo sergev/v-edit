@@ -56,9 +56,10 @@ void Editor::draw()
         }
     } else {
         std::string modeStr = insert_mode_ ? "INSERT" : "OVERWRITE";
-        std::string s = std::string("Line=") + std::to_string(wksp_->view.topline + cursor_line_ + 1) +
-                        "    Col=" + std::to_string(wksp_->view.basecol + cursor_col_ + 1) + "    " +
-                        modeStr + "    \"" + filename_ + "\"";
+        std::string s       = std::string("Line=") +
+                        std::to_string(wksp_->view.topline + cursor_line_ + 1) +
+                        "    Col=" + std::to_string(wksp_->view.basecol + cursor_col_ + 1) +
+                        "    " + modeStr + "    \"" + filename_ + "\"";
         draw_status(s);
     }
     refresh();

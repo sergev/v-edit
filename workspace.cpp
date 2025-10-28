@@ -40,6 +40,10 @@ void Workspace::reset()
     view.cursorrow         = 0;
     file_state.modified    = false;
     file_state.backup_done = false;
+
+    // Create initial tail segment (empty workspace still has a tail)
+    segments_.emplace_back();
+    cursegm_ = segments_.begin();
 }
 
 //
@@ -95,12 +99,20 @@ void Workspace::load_text(const std::vector<std::string> &lines)
         // Write lines to temp file and get a segment
         auto segments_from_temp = tempfile_.write_lines_to_temp(lines);
         if (segments_from_temp.empty())
-            throw std::runtime_error(
-                "load_text: failed to write lines to temp file");
+            throw std::runtime_error("load_text: failed to write lines to temp file");
         // Move the segment into our segments_ list
         segments_.splice(segments_.end(), segments_from_temp);
     }
-    // cursegm_ set by reset() to begin()
+
+    // Ensure we have a tail segment
+    if (segments_.empty() || segments_.back().fdesc != 0) {
+        segments_.emplace_back();
+    }
+
+    // Set cursegm_ to the first segment
+    cursegm_          = segments_.begin();
+    position.segmline = 0;
+    position.line     = 0;
 }
 
 //
@@ -388,8 +400,7 @@ void Workspace::cleanup_segments(std::list<Segment> &segments)
 {
     segments.clear();
 }
-//
-//
+
 //
 // Read line content from segment chain at specified index.
 // Enhanced version using iterator instead of Segment* pointer for safer access and modern C++

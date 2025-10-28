@@ -37,7 +37,8 @@ void Editor::paste(int afterLine, int atCol)
 
     if (clipboard_.is_rectangular()) {
         // Paste as rectangular block - insert at column position
-        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp_->file_state.nlines; ++i) {
+        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp_->file_state.nlines;
+             ++i) {
             get_line(afterLine + i);
             if (atCol < (int)current_line_.size()) {
                 current_line_.insert(atCol, clip_lines[i]);
@@ -170,7 +171,7 @@ bool Editor::goto_macro_position(char name)
     auto pos = it->second.getPosition();
     goto_line(pos.first);
     wksp_->view.basecol = pos.second;
-    cursor_col_ = 0;
+    cursor_col_         = 0;
     ensure_cursor_visible();
     return true;
 }
@@ -279,7 +280,7 @@ bool Editor::mdeftag(char tag_name)
         params_.get_area_start(col, row);
         goto_line(row);
         wksp_->view.basecol = col;
-        cursor_col_ = 0;
+        cursor_col_         = 0;
         ensure_cursor_visible();
     }
 

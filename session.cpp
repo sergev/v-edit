@@ -46,7 +46,7 @@ void Editor::load_state_if_requested(int restart, int argc, char **argv)
             std::string nm;
             std::getline(in, nm);
             if (!nm.empty()) {
-                filename_ = nm;
+                filename_                     = nm;
                 wksp_->file_state.backup_done = false; // reset backup flag for restored file
             }
             int topline, basecol;

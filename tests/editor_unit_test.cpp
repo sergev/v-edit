@@ -33,7 +33,7 @@ protected:
     void CreateBlankLines(unsigned num_lines)
     {
         editor->wksp_->file_state.nlines = num_lines;
-        std::list<Segment> blank_segs = Workspace::create_blank_lines(num_lines);
+        std::list<Segment> blank_segs    = Workspace::create_blank_lines(num_lines);
         editor->wksp_->set_chain(blank_segs);
         editor->wksp_->set_cursegm(editor->wksp_->get_segments().begin());
         editor->wksp_->position.segmline = 0;

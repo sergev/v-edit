@@ -220,10 +220,10 @@ void Editor::handle_key_cmd(int ch)
                 // w + to make writable (or other w commands)
                 if (cmd_.size() >= 3 && cmd_[2] == '+') {
                     wksp_->file_state.writable = 1;
-                    status_ = "File marked writable";
+                    status_                    = "File marked writable";
                 } else {
                     wksp_->file_state.writable = 0;
-                    status_ = "File marked read-only";
+                    status_                    = "File marked read-only";
                 }
             } else if (cmd_ == "s") {
                 save_file();
@@ -661,7 +661,7 @@ void Editor::handle_key_edit(int ch)
     }
     // ^X f - Shift view right
     if (ctrlx_state_ && (ch == 'f' || ch == 'F')) {
-        int shift = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
+        int shift           = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
         wksp_->view.basecol = wksp_->view.basecol + shift;
         params_.set_count(0);
         ctrlx_state_ = false;
@@ -670,7 +670,7 @@ void Editor::handle_key_edit(int ch)
     }
     // ^X b - Shift view left
     if (ctrlx_state_ && (ch == 'b' || ch == 'B')) {
-        int shift = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
+        int shift           = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
         wksp_->view.basecol = wksp_->view.basecol - shift;
         if (wksp_->view.basecol < 0)
             wksp_->view.basecol = 0;
@@ -729,7 +729,7 @@ void Editor::handle_key_edit(int ch)
 
     if (ch == KEY_HOME) {
         wksp_->view.basecol = 0;
-        cursor_col_ = 0;
+        cursor_col_         = 0;
         return;
     }
     if (ch == KEY_END) {
@@ -743,7 +743,7 @@ void Editor::handle_key_edit(int ch)
                 cursor_col_ = ncols_ - 2;
         } else {
             wksp_->view.basecol = 0;
-            cursor_col_ = len;
+            cursor_col_         = len;
         }
         return;
     }
@@ -862,7 +862,7 @@ void Editor::handle_key_edit(int ch)
             // keep cursor on last content row
             cursor_line_ = nlines_ - 2;
         }
-        cursor_col_ = 0;
+        cursor_col_              = 0;
         wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
         ensure_cursor_visible();
         return;

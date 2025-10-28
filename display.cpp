@@ -56,8 +56,8 @@ void Editor::draw()
         }
     } else {
         std::string modeStr = insert_mode_ ? "INSERT" : "OVERWRITE";
-        std::string s = std::string("Line=") + std::to_string(wksp_->topline() + cursor_line_ + 1) +
-                        "    Col=" + std::to_string(wksp_->basecol() + cursor_col_ + 1) + "    " +
+        std::string s = std::string("Line=") + std::to_string(wksp_->view.topline + cursor_line_ + 1) +
+                        "    Col=" + std::to_string(wksp_->view.basecol + cursor_col_ + 1) + "    " +
                         modeStr + "    \"" + filename_ + "\"";
         draw_status(s);
     }
@@ -72,13 +72,13 @@ void Editor::wksp_redraw()
     for (int r = 0; r < nlines_ - 1; ++r) {
         mvhline(r, 0, ' ', ncols_);
         std::string lineText;
-        if (wksp_->has_segments() && r + wksp_->topline() < wksp_->nlines()) {
-            lineText = read_line_from_wksp(r + wksp_->topline());
+        if (wksp_->has_segments() && r + wksp_->view.topline < wksp_->file_state.nlines) {
+            lineText = read_line_from_wksp(r + wksp_->view.topline);
             // horizontal offset and continuation markers
             bool truncated = false;
-            if (wksp_->basecol() > 0 && (int)lineText.size() > wksp_->basecol()) {
-                lineText.erase(0, (size_t)wksp_->basecol());
-            } else if (wksp_->basecol() > 0 && (int)lineText.size() <= wksp_->basecol()) {
+            if (wksp_->view.basecol > 0 && (int)lineText.size() > wksp_->view.basecol) {
+                lineText.erase(0, (size_t)wksp_->view.basecol);
+            } else if (wksp_->view.basecol > 0 && (int)lineText.size() <= wksp_->view.basecol) {
                 lineText.clear();
             }
             if ((int)lineText.size() > ncols_ - 1) {
@@ -89,7 +89,7 @@ void Editor::wksp_redraw()
             if (truncated) {
                 mvaddch(r, ncols_ - 2, '~');
             }
-            if (wksp_->basecol() > 0 && !lineText.empty()) {
+            if (wksp_->view.basecol > 0 && !lineText.empty()) {
                 mvaddch(r, 0, '<');
             }
         } else {
@@ -110,14 +110,14 @@ void Editor::ensure_cursor_visible()
         cursor_line_ = nlines_ - 2;
 
     // Now adjust wksp_->topline so that the absolute line is visible
-    int absLine      = wksp_->topline() + cursor_line_;
+    int absLine      = wksp_->view.topline + cursor_line_;
     int visible_rows = nlines_ - 1;
 
-    if (absLine < wksp_->topline()) {
+    if (absLine < wksp_->view.topline) {
         // Scroll up to show cursor
-        wksp_->set_topline(absLine);
-    } else if (absLine > wksp_->topline() + (visible_rows - 1)) {
+        wksp_->view.topline = absLine;
+    } else if (absLine > wksp_->view.topline + (visible_rows - 1)) {
         // Scroll down to show cursor
-        wksp_->set_topline(absLine - (visible_rows - 1));
+        wksp_->view.topline = absLine - (visible_rows - 1);
     }
 }

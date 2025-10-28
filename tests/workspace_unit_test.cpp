@@ -84,7 +84,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
 
     wksp->load_file_to_segments(filename);
 
-    EXPECT_EQ(wksp->nlines(), 5);
+    EXPECT_EQ(wksp->file_state.nlines, 5);
 
     // Break at line 2
     int result = wksp->breaksegm(2, true);
@@ -92,7 +92,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
 
     // Verify segmentation worked
     EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
-    EXPECT_EQ(wksp->segmline(), 2);
+    EXPECT_EQ(wksp->position.segmline, 2);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -110,7 +110,7 @@ TEST_F(WorkspaceTest, DISABLED_BuildAndReadLines)
 
     // Verify segments were created
     EXPECT_TRUE(wksp->has_segments());
-    EXPECT_EQ(wksp->nlines(), 3);
+    EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Verify we can read the lines back
     EXPECT_EQ(wksp->read_line_from_segment(0), "First line");
@@ -128,7 +128,7 @@ TEST_F(WorkspaceTest, InsertBlankLines)
     f.close();
 
     wksp->load_file_to_segments(filename);
-    EXPECT_EQ(wksp->nlines(), 3);
+    EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Create blank lines to insert
     std::list<Segment> to_insert = Workspace::create_blank_lines(2);
@@ -137,7 +137,7 @@ TEST_F(WorkspaceTest, InsertBlankLines)
     wksp->insert_segments(to_insert, 1);
 
     // Verify line count increased
-    EXPECT_EQ(wksp->nlines(), 5);
+    EXPECT_EQ(wksp->file_state.nlines, 5);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -153,13 +153,13 @@ TEST_F(WorkspaceTest, DeleteLines)
     f.close();
 
     wksp->load_file_to_segments(filename);
-    EXPECT_EQ(wksp->nlines(), 4);
+    EXPECT_EQ(wksp->file_state.nlines, 4);
 
     // Delete lines 1-2
     wksp->delete_segments(1, 2);
 
     // Verify line count decreased
-    EXPECT_EQ(wksp->nlines(), 2);
+    EXPECT_EQ(wksp->file_state.nlines, 2);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -170,26 +170,26 @@ TEST_F(WorkspaceTest, DeleteLines)
 //
 TEST_F(WorkspaceTest, ScrollVertical)
 {
-    wksp->set_nlines(100);
-    wksp->set_topline(0);
+    wksp->file_state.nlines = 100;
+    wksp->view.topline = 0;
 
     // Scroll down by 10 lines
     wksp->scroll_vertical(10, 20, 100);
 
-    EXPECT_EQ(wksp->topline(), 10);
+    EXPECT_EQ(wksp->view.topline, 10);
 }
 
 TEST_F(WorkspaceTest, GotoLine)
 {
-    wksp->set_nlines(100);
-    wksp->set_topline(0);
+    wksp->file_state.nlines = 100;
+    wksp->view.topline = 0;
 
     // Go to line 50 with 20 visible rows
     wksp->goto_line(50, 20);
 
     // Should position line 50 in visible range
-    EXPECT_LE(wksp->topline(), 50);
-    EXPECT_GE(wksp->topline(), 30); // 50 - 20
+    EXPECT_LE(wksp->view.topline, 50);
+    EXPECT_GE(wksp->view.topline, 30); // 50 - 20
 }
 
 //
@@ -217,7 +217,7 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
     bool merged = wksp->catsegm();
 
     // Merge result depends on segment structure, but no crash should occur
-    EXPECT_GE(wksp->nlines(), 0);
+    EXPECT_GE(wksp->file_state.nlines, 0);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -239,7 +239,7 @@ TEST_F(WorkspaceTest, SaveAndLoadCycle)
 
     // Load back and verify
     wksp->load_file_to_segments(out_filename);
-    EXPECT_EQ(wksp->nlines(), 3);
+    EXPECT_EQ(wksp->file_state.nlines, 3);
     EXPECT_EQ(wksp->read_line_from_segment(0), "Test line 1");
 
     // Cleanup
@@ -249,31 +249,31 @@ TEST_F(WorkspaceTest, SaveAndLoadCycle)
 TEST_F(WorkspaceTest, ScrollAndGotoOperations)
 {
     // Test basic scrolling functionality
-    wksp->set_nlines(100);
-    wksp->set_topline(50);
+    wksp->file_state.nlines = 100;
+    wksp->view.topline = 50;
 
     wksp->scroll_vertical(10, 25, 100);
-    EXPECT_EQ(wksp->topline(), 60);
+    EXPECT_EQ(wksp->view.topline, 60);
 
     wksp->scroll_horizontal(5, 80);
-    EXPECT_EQ(wksp->basecol(), 5);
+    EXPECT_EQ(wksp->view.basecol, 5);
 
     wksp->goto_line(25, 10);
-    EXPECT_GE(wksp->topline(), 15); // Should center around line 25
+    EXPECT_GE(wksp->view.topline, 15); // Should center around line 25
 }
 
 TEST_F(WorkspaceTest, ToplineUpdateAfterEdit)
 {
-    wksp->set_nlines(100);
-    wksp->set_topline(50);
+    wksp->file_state.nlines = 100;
+    wksp->view.topline = 50;
 
     // Simulate inserting lines
     wksp->update_topline_after_edit(40, 45, 5);
-    EXPECT_GE(wksp->topline(), 55);
+    EXPECT_GE(wksp->view.topline, 55);
 
     // Simulate deleting lines
     wksp->update_topline_after_edit(60, 65, -3);
-    EXPECT_LE(wksp->topline(), 52);
+    EXPECT_LE(wksp->view.topline, 52);
 }
 
 //
@@ -282,49 +282,49 @@ TEST_F(WorkspaceTest, ToplineUpdateAfterEdit)
 TEST_F(WorkspaceTest, AccessorMutatorTests)
 {
     // Test basic getters/setters
-    wksp->set_writable(1);
-    EXPECT_EQ(wksp->writable(), 1);
+    wksp->file_state.writable = 1;
+    EXPECT_EQ(wksp->file_state.writable, 1);
 
-    wksp->set_nlines(42);
-    EXPECT_EQ(wksp->nlines(), 42);
+    wksp->file_state.nlines = 42;
+    EXPECT_EQ(wksp->file_state.nlines, 42);
 
-    wksp->set_topline(10);
-    EXPECT_EQ(wksp->topline(), 10);
+    wksp->view.topline = 10;
+    EXPECT_EQ(wksp->view.topline, 10);
 
-    wksp->set_basecol(5);
-    EXPECT_EQ(wksp->basecol(), 5);
+    wksp->view.basecol = 5;
+    EXPECT_EQ(wksp->view.basecol, 5);
 
-    wksp->set_line(20);
-    EXPECT_EQ(wksp->line(), 20);
+    wksp->position.line = 20;
+    EXPECT_EQ(wksp->position.line, 20);
 
-    wksp->set_segmline(15);
-    EXPECT_EQ(wksp->segmline(), 15);
+    wksp->position.segmline = 15;
+    EXPECT_EQ(wksp->position.segmline, 15);
 
-    wksp->set_cursorcol(3);
-    EXPECT_EQ(wksp->cursorcol(), 3);
+    wksp->view.cursorcol = 3;
+    EXPECT_EQ(wksp->view.cursorcol, 3);
 
-    wksp->set_cursorrow(7);
-    EXPECT_EQ(wksp->cursorrow(), 7);
+    wksp->view.cursorrow = 7;
+    EXPECT_EQ(wksp->view.cursorrow, 7);
 }
 
 TEST_F(WorkspaceTest, ModifiedStateTests)
 {
     // Test modification tracking
-    EXPECT_FALSE(wksp->modified());
-    wksp->set_modified(true);
-    EXPECT_TRUE(wksp->modified());
-    wksp->set_modified(false);
-    EXPECT_FALSE(wksp->modified());
+    EXPECT_FALSE(wksp->file_state.modified);
+    wksp->file_state.modified = true;
+    EXPECT_TRUE(wksp->file_state.modified);
+    wksp->file_state.modified = false;
+    EXPECT_FALSE(wksp->file_state.modified);
 }
 
 TEST_F(WorkspaceTest, BackupDoneStateTests)
 {
     // Test backup completion tracking
-    EXPECT_FALSE(wksp->backup_done());
-    wksp->set_backup_done(true);
-    EXPECT_TRUE(wksp->backup_done());
-    wksp->set_backup_done(false);
-    EXPECT_FALSE(wksp->backup_done());
+    EXPECT_FALSE(wksp->file_state.backup_done);
+    wksp->file_state.backup_done = true;
+    EXPECT_TRUE(wksp->file_state.backup_done);
+    wksp->file_state.backup_done = false;
+    EXPECT_FALSE(wksp->file_state.backup_done);
 }
 
 TEST_F(WorkspaceTest, ChainAccessorsEmpty)
@@ -338,11 +338,11 @@ TEST_F(WorkspaceTest, ChainAccessorsEmpty)
 TEST_F(WorkspaceTest, LineCountTests)
 {
     // Test line counting with different scenarios
-    wksp->set_nlines(50);
+    wksp->file_state.nlines = 50;
     EXPECT_EQ(wksp->get_line_count(25), 50); // Use nlines when segments exist
 
     // Simulate empty workspace
-    wksp->set_nlines(0);
+    wksp->file_state.nlines = 0;
     EXPECT_EQ(wksp->get_line_count(25), 25); // Use fallback when no segments
 }
 
@@ -353,7 +353,7 @@ TEST_F(WorkspaceTest, BuildFromText)
     wksp->build_segments_from_text(text);
 
     EXPECT_TRUE(wksp->has_segments());
-    EXPECT_EQ(wksp->nlines(), 4);
+    EXPECT_EQ(wksp->file_state.nlines, 4);
 
     EXPECT_EQ(wksp->read_line_from_segment(0), "Line one");
     EXPECT_EQ(wksp->read_line_from_segment(3), "Last line");
@@ -362,26 +362,26 @@ TEST_F(WorkspaceTest, BuildFromText)
 TEST_F(WorkspaceTest, ResetWorkspace)
 {
     // Set up some state
-    wksp->set_writable(1);
-    wksp->set_nlines(100);
-    wksp->set_modified(true);
+    wksp->file_state.writable = 1;
+    wksp->file_state.nlines = 100;
+    wksp->file_state.modified = true;
 
     // Add some segments
     wksp->build_segments_from_lines({ "test", "content" });
 
     // Verify state is set
     EXPECT_TRUE(wksp->has_segments());
-    EXPECT_EQ(wksp->nlines(), 100);
-    EXPECT_TRUE(wksp->modified());
+    EXPECT_EQ(wksp->file_state.nlines, 100);
+    EXPECT_TRUE(wksp->file_state.modified);
 
     // Reset workspace
     wksp->reset();
 
     EXPECT_FALSE(wksp->has_segments());
-    EXPECT_EQ(wksp->nlines(), 0);
-    EXPECT_FALSE(wksp->modified());
+    EXPECT_EQ(wksp->file_state.nlines, 0);
+    EXPECT_FALSE(wksp->file_state.modified);
     // writable should also be reset
-    EXPECT_EQ(wksp->writable(), 0);
+    EXPECT_EQ(wksp->file_state.writable, 0);
 }
 
 TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
@@ -392,7 +392,7 @@ TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
     // Navigate to different lines
     int result = wksp->set_current_segment(3);
     EXPECT_EQ(result, 0);
-    EXPECT_EQ(wksp->line(), 3);
+    EXPECT_EQ(wksp->position.line, 3);
     EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
 
     // Test navigation to line beyond end
@@ -411,12 +411,12 @@ TEST_F(WorkspaceTest, BreakSegmentVariations)
     // Break at line 3
     result = wksp->breaksegm(3, true);
     EXPECT_EQ(result, 0);
-    EXPECT_EQ(wksp->line(), 3);
+    EXPECT_EQ(wksp->position.line, 3);
 
     // Break beyond end (should create blank lines)
     result = wksp->breaksegm(8, true);
     EXPECT_EQ(result, 1); // Should extend file
-    EXPECT_EQ(wksp->nlines(), 9);
+    EXPECT_EQ(wksp->file_state.nlines, 9);
 }
 
 TEST_F(WorkspaceTest, SegmentCatOperations)
@@ -441,15 +441,15 @@ TEST_F(WorkspaceTest, SegmentCatOperations)
 TEST_F(WorkspaceTest, SegmentDeleteOperations)
 {
     wksp->build_segments_from_lines({ "A", "B", "C", "D", "E" });
-    EXPECT_EQ(wksp->nlines(), 5);
+    EXPECT_EQ(wksp->file_state.nlines, 5);
 
     // Delete lines 1-2
     wksp->delete_segments(1, 2);
-    EXPECT_EQ(wksp->nlines(), 3);
+    EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Delete line 1
     wksp->delete_segments(1, 1);
-    EXPECT_EQ(wksp->nlines(), 2);
+    EXPECT_EQ(wksp->file_state.nlines, 2);
 
     // Delete invalid range (should be safe)
     wksp->delete_segments(10, 15); // Should handle gracefully
@@ -457,30 +457,30 @@ TEST_F(WorkspaceTest, SegmentDeleteOperations)
 
 TEST_F(WorkspaceTest, ViewManagementComprehensive)
 {
-    wksp->set_nlines(100);
+    wksp->file_state.nlines = 100;
 
     // Test vertical scrolling boundaries
-    wksp->set_topline(0);
+    wksp->view.topline = 0;
     wksp->scroll_vertical(-10, 20, 100); // Scroll up from top
-    EXPECT_EQ(wksp->topline(), 0);       // Should clamp to 0
+    EXPECT_EQ(wksp->view.topline, 0);       // Should clamp to 0
 
-    wksp->set_topline(85);
+    wksp->view.topline = 85;
     wksp->scroll_vertical(20, 20, 100); // Scroll down from bottom
-    EXPECT_EQ(wksp->topline(), 80);     // Should clamp to 80
+    EXPECT_EQ(wksp->view.topline, 80);     // Should clamp to 80
 
     // Test horizontal scrolling
-    wksp->set_basecol(0);
+    wksp->view.basecol = 0;
     wksp->scroll_horizontal(-5, 80); // Scroll left from 0
-    EXPECT_EQ(wksp->basecol(), 0);   // Should clamp
+    EXPECT_EQ(wksp->view.basecol, 0);   // Should clamp
 
-    wksp->set_basecol(10);
+    wksp->view.basecol = 10;
     wksp->scroll_horizontal(-15, 80); // Scroll left past 0
-    EXPECT_EQ(wksp->basecol(), 0);    // Should clamp
+    EXPECT_EQ(wksp->view.basecol, 0);    // Should clamp
 
     // Test goto_line positioning
     wksp->goto_line(50, 15);
-    EXPECT_GE(wksp->topline(), 35); // 50 - 15
-    EXPECT_LE(wksp->topline(), 50);
+    EXPECT_GE(wksp->view.topline, 35); // 50 - 15
+    EXPECT_LE(wksp->view.topline, 50);
 }
 
 TEST_F(WorkspaceTest, ComplexEditWorkflow)
@@ -489,12 +489,12 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
 
     // Load initial content
     wksp->build_segments_from_lines({ "Original 1", "Original 2", "Original 3" });
-    EXPECT_EQ(wksp->nlines(), 3);
+    EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Insert blank lines
     std::list<Segment> blanks = Workspace::create_blank_lines(3);
     wksp->insert_segments(blanks, 1);
-    EXPECT_EQ(wksp->nlines(), 6);
+    EXPECT_EQ(wksp->file_state.nlines, 6);
 
     // Break at various points
     wksp->breaksegm(2, true);
@@ -510,7 +510,7 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
 
     // Final state verification
     EXPECT_TRUE(wksp->has_segments());
-    EXPECT_GE(wksp->nlines(), 3); // Should have at least original lines
+    EXPECT_GE(wksp->file_state.nlines, 3); // Should have at least original lines
 
     // Test saving (shouldn't crash)
     bool saved = wksp->write_segments_to_file("complex_test_out.txt");

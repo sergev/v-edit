@@ -66,9 +66,9 @@ void Editor::put_line()
     int line_no      = current_line_no_;
     current_line_no_ = -1;
 
-    if (wksp_->nlines() <= line_no) {
+    if (wksp_->file_state.nlines <= line_no) {
         // Is it safe to increase nlines before extending the segment chain?
-        wksp_->set_nlines(line_no + 1);
+        wksp_->file_state.nlines = line_no + 1;
     }
 
     // Break segment at line_no position to split into segments before and at line_no
@@ -81,7 +81,7 @@ void Editor::put_line()
         auto old_seg_it = wksp_->cursegm();
 
         // Check if the segment only contains one line (or if we're at end of file)
-        int segmline       = wksp_->segmline();
+        int segmline       = wksp_->position.segmline;
         bool only_one_line = (old_seg_it->nlines == 1);
 
         if (!only_one_line) {
@@ -96,15 +96,15 @@ void Editor::put_line()
         *replace_pos             = std::move(*new_seg_it); // Copy content from new segment
         segs.erase(new_seg_it); // Remove the duplicate from the end of list
         wksp_->set_cursegm(replace_pos);
-        wksp_->set_segmline(segmline);
+        wksp_->position.segmline = segmline;
 
         // Try to merge adjacent segments (but not if we just created blank lines)
-        if (only_one_line || line_no < wksp_->nlines() - 1) {
+        if (only_one_line || line_no < wksp_->file_state.nlines - 1) {
             wksp_->catsegm();
         }
 
         // Mark workspace as modified
-        wksp_->set_modified(true);
+        wksp_->file_state.modified = true;
     } else if (break_result == 1) {
         // breaksegm created blank lines - replace the current segment with new segment
         auto replace_it = wksp_->cursegm();
@@ -113,10 +113,10 @@ void Editor::put_line()
         *replace_it = std::move(*new_seg_it);
         wksp_->get_segments().erase(new_seg_it); // Remove duplicate from end
         wksp_->set_cursegm(replace_it);
-        wksp_->set_segmline(line_no);
+        wksp_->position.segmline = line_no;
 
         // Mark workspace as modified
-        wksp_->set_modified(true);
+        wksp_->file_state.modified = true;
     }
 }
 
@@ -199,7 +199,7 @@ void Editor::save_file()
     }
 
     // Create backup file if not already done and file exists
-    if (!wksp_->backup_done() && filename_ != "untitled") {
+    if (!wksp_->file_state.backup_done && filename_ != "untitled") {
         std::string backup_name = filename_ + "~";
         // Remove existing backup
         unlink(backup_name.c_str());
@@ -208,7 +208,7 @@ void Editor::save_file()
             // Backup failed, but continue with save
             status_ = std::string("Backup failed, continuing save");
         } else {
-            wksp_->set_backup_done(true);
+            wksp_->file_state.backup_done = true;
         }
     }
 
@@ -222,7 +222,7 @@ void Editor::save_file()
     bool saved = wksp_->write_segments_to_file(filename_);
     if (saved) {
         status_ = std::string("Saved: ") + filename_;
-        wksp_->set_modified(false); // Clear modified flag after save
+        wksp_->file_state.modified = false; // Clear modified flag after save
     } else {
         status_ = std::string("Cannot write: ") + filename_;
     }

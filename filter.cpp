@@ -15,12 +15,12 @@
 bool Editor::execute_external_filter(const std::string &command, int start_line, int num_lines)
 {
     // Validate parameters
-    if (start_line < 0 || start_line >= wksp_->nlines()) {
+    if (start_line < 0 || start_line >= wksp_->file_state.nlines) {
         return false;
     }
 
     // Limit num_lines to available lines
-    int end_line = std::min(start_line + num_lines, wksp_->nlines());
+    int end_line = std::min(start_line + num_lines, wksp_->file_state.nlines);
     num_lines    = end_line - start_line;
 
     if (num_lines <= 0) {
@@ -105,7 +105,7 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
         wksp_->insert_segments(temp_segments, start_line);
 
         // Update line count
-        wksp_->set_nlines(wksp_->nlines() - num_lines + (int)new_lines.size());
+        wksp_->file_state.nlines = wksp_->nlines( - num_lines + (int)new_lines.size());
     }
 
     ensure_cursor_visible();

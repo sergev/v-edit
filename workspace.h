@@ -103,7 +103,7 @@ public:
     void set_backup_done(bool backup_done) { backup_done_ = backup_done; }
 
     // Segment chain management (for backward compatibility during transition)
-    void set_chain(Segment *chain);
+    void set_chain(std::list<Segment> &segments);
 
     // Segment manipulation (from prototype)
     // Split segment at given line number (breaksegm from prototype)

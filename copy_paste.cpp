@@ -55,15 +55,12 @@ void Editor::paste(int afterLine, int atCol)
             // Create a segment for this line
             auto temp_segments = tempfile_.write_line_to_temp(line);
             if (!temp_segments.empty()) {
-                // Move the segment into the workspace segments list
-                wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
-                // Get pointer to the newly inserted segment
-                Segment *new_seg = &*std::prev(wksp_->get_segments().end());
-                if (new_seg) {
-                    wksp_->insert_segments(new_seg, afterLine + 1);
-                    afterLine++;
-                    wksp_->set_nlines(wksp_->nlines() + 1);
-                }
+                // Splice the segments into workspace at the correct position
+                auto insert_pos = wksp_->get_segments().begin();
+                std::advance(insert_pos, afterLine + 1);  // Position after the target line
+                wksp_->get_segments().splice(insert_pos, temp_segments);
+                afterLine++;
+                wksp_->set_nlines(wksp_->nlines() + 1);
             }
         }
     }
@@ -144,8 +141,8 @@ void Editor::openspaces(int line, int col, int number, int nl)
             current_line_modified_ = true;
             put_line();
         } else {
-            // Create new line if needed - TODO: need proper implementation
-            Segment *blank = wksp_->create_blank_lines(1);
+            // Create new line if needed
+            auto blank = wksp_->create_blank_lines(1);
             wksp_->insert_segments(blank, line + i);
         }
     }

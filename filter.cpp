@@ -101,22 +101,8 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     auto temp_segments = tempfile_.write_lines_to_temp(new_lines);
 
     if (!temp_segments.empty()) {
-        // For backward compatibility, create a pointer chain from the list segments
-        // First, add all segments to the workspace list
-        auto insert_pos = wksp_->get_segments().end();
-        for (auto &seg : temp_segments) {
-            insert_pos = wksp_->get_segments().insert(insert_pos, std::move(seg));
-            ++insert_pos;
-        }
-        temp_segments.clear(); // moved
-
-        // Now get the first inserted segment as a pointer
-        auto first_inserted = wksp_->get_segments().end();
-        --first_inserted; // last inserted
-        Segment *new_segs = &*first_inserted;
-
-        // Insert the new segments at the deletion point (already in list)
-        wksp_->insert_segments(new_segs, start_line);
+        // Insert the new segments at the deletion point
+        wksp_->insert_segments(temp_segments, start_line);
 
         // Update line count
         wksp_->set_nlines(wksp_->nlines() - num_lines + (int)new_lines.size());

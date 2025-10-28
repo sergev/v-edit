@@ -501,14 +501,14 @@ void Editor::handle_area_selection(int ch)
         params_.set_area_start(curCol, r0);
     }
 
-    if (curLine > r0) {
-        int c;
-        params_.get_area_end(c, r1);
-        params_.set_area_end(c, curLine);
-        } else {
-            Segment *blank = wksp_->create_blank_lines(1);
-            wksp_->insert_segments(blank, curLine + 1);
-        }
+        if (curLine > r0) {
+            int c;
+            params_.get_area_end(c, r1);
+            params_.set_area_end(c, curLine);
+            } else {
+                auto blank = wksp_->create_blank_lines(1);
+                wksp_->insert_segments(blank, curLine + 1);
+            }
 }
 
 //
@@ -622,7 +622,7 @@ void Editor::handle_key_edit(int ch)
     // ^O - Insert blank line
     if (ch == 15) { // Ctrl-O
         int curLine    = wksp_->topline() + cursor_line_;
-        Segment *blank = wksp_->create_blank_lines(1);
+        auto blank = wksp_->create_blank_lines(1);
         wksp_->insert_segments(blank, curLine + 1);
         wksp_->set_nlines(wksp_->nlines() + 1);
         ensure_cursor_visible();
@@ -842,22 +842,16 @@ void Editor::handle_key_edit(int ch)
         // Insert new line with tail content
         if (!tail.empty()) {
             auto temp_segments = tempfile_.write_line_to_temp(tail);
-            Segment *tail_seg = nullptr;
             if (!temp_segments.empty()) {
-                // Move the segment into the workspace segments list
-                wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
-                // Get pointer to the newly inserted segment
-                tail_seg = &*std::prev(wksp_->get_segments().end());
-            }
-            if (tail_seg) {
-                wksp_->insert_segments(tail_seg, curLine + 1);
+                // Insert the segments into workspace
+                wksp_->insert_segments(temp_segments, curLine + 1);
             } else {
                 // Fallback: insert blank line
-                Segment *blank = wksp_->create_blank_lines(1);
+                auto blank = wksp_->create_blank_lines(1);
                 wksp_->insert_segments(blank, curLine + 1);
             }
         } else {
-            Segment *blank = wksp_->create_blank_lines(1);
+            auto blank = wksp_->create_blank_lines(1);
             wksp_->insert_segments(blank, curLine + 1);
         }
         if (cursor_line_ + 1 < nlines_ - 1) {

@@ -44,40 +44,40 @@ void Workspace::reset()
 
 //
 // Set the segment chain for the workspace.
-// Converts the external pointer-based chain to the internal std::list.
-// This method is used for backward compatibility with external segment chains.
+// Copies the provided list of segments to the internal std::list.
+// This method is used for compatibility with external segment chains during transition.
 //
-void Workspace::set_chain(Segment *chain)
+void Workspace::set_chain(std::list<Segment> &segments)
 {
-    if (!chain)
+    if (segments.empty())
         return;
 
     // Clear existing segments but keep the tail structure
-    segments_.clear();
-    cursegm_ = segments_.end();
+    this->segments_.clear();
+    cursegm_ = this->segments_.end();
 
-    // Walk the chain and add segments to the list
-    Segment *current = chain;
-    while (current) {
-        segments_.emplace_back(*current); // Copy segment data
+    // Copy all segments from the input list
+    for (const auto &seg : segments) {
+        this->segments_.emplace_back(seg); // Copy segment data
+    }
 
-        // Stop at tail segment, but don't copy it since workspace manages its own tail
-        if (current->fdesc == 0)
-            break;
-
-        current = current->next;
+    nlines_ = 0;
+    for (const auto &seg : this->segments_) {
+        if (seg.fdesc == 0)
+            break; // Don't count tail segment
+        nlines_ += seg.nlines;
     }
 
     // Ensure we have a tail segment
-    if (segments_.empty() || segments_.back().fdesc != 0) {
-        segments_.emplace_back();
+    if (this->segments_.empty() || this->segments_.back().fdesc != 0) {
+        this->segments_.emplace_back();
     }
 
     // Set cursegm_ to the first non-tail segment
-    cursegm_ = segments_.begin();
-    if (!segments_.empty() && segments_.front().fdesc == 0) {
+    cursegm_ = this->segments_.begin();
+    if (!this->segments_.empty() && this->segments_.front().fdesc == 0) {
         // Only tail - set to end
-        cursegm_ = segments_.end();
+        cursegm_ = this->segments_.end();
     }
 }
 

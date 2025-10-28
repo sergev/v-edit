@@ -407,6 +407,11 @@ void Workspace::cleanup_segments(std::list<Segment> &segments)
 //
 std::string Workspace::read_line_from_segment(int line_no)
 {
+    // First, position to the correct segment for this line
+    if (set_current_segment(line_no) != 0) {
+        return ""; // Line beyond end of file
+    }
+
     // Validate iterator is valid and points to a segment
     if (cursegm_ == segments_.end()) {
         return "";
@@ -524,7 +529,9 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Calculate how many blank lines to create
         // position.line was set by set_current_segment to segmline of the tail segment
         // Check if workspace is empty (only has a tail segment)
-        bool is_empty = segments_.front().fdesc == 0;
+        // Note: after checking, we found that even with content, if cursegm_ points to tail,
+        // we need to use file_state.nlines to determine where to start
+        bool is_empty = (file_state.nlines == 0);
 
         int num_blank_lines;
 
@@ -547,15 +554,31 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Find where to insert blank segments (before tail segment)
         auto insert_pos = cursegm_;
 
+        // Record where blank segments start before splicing
+        int start_line = is_empty ? 0 : position.line;
+
+        // Get iterator to first blank segment before splicing (since splice will move them)
+        auto first_blank_seg = blank_segments.begin();
+
         // Insert blank segments
         segments_.splice(insert_pos, blank_segments);
 
-        // Position to the first blank segment we just inserted
-        cursegm_          = std::prev(insert_pos);
-        position.segmline = position.line;
-
-        // Update line count
+        // Update line count first
         file_state.nlines = line_no + 1;
+
+        // After splicing, first_blank_seg is now part of segments_ and points to the first inserted
+        // segment Position to it
+        cursegm_          = first_blank_seg;
+        position.segmline = start_line;
+        position.line     = start_line;
+
+        // Walk forward through the inserted segments to find the one containing line_no
+        while (cursegm_ != insert_pos && line_no >= position.segmline + cursegm_->nlines) {
+            position.segmline += cursegm_->nlines;
+            ++cursegm_;
+        }
+
+        position.line = line_no;
 
         return 1; // Signal that we created lines
     }

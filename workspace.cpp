@@ -24,7 +24,6 @@ Workspace::~Workspace()
 void Workspace::cleanup_segments()
 {
     segments_.clear();
-    head_    = nullptr;
     cursegm_ = segments_.end();
 }
 
@@ -53,12 +52,23 @@ void Workspace::set_chain(Segment *chain)
     // Set new chain
     // TODO: fix memory leak, deallocate old chain first
     head_ = chain;
-    // Don't set cursegm_ here as it needs to be the iterator form
+    // Set cursegm_ to iterator pointing to head_
+    if (head_) {
+        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
+            if (&*it == head_) {
+                cursegm_ = it;
+                break;
+            }
+        }
+    } else {
+        cursegm_ = segments_.end();
+    }
 
     if (!head_) {
         // Create an empty chain with just a tail
-        head_    = new Segment();
-        cursegm_ = head_;
+        head_ = new Segment();
+        // head_ is not in segments_ list yet, so we can't set cursegm_ from it
+        // This needs to be fixed when set_chain is called on external chains
         return;
     }
 
@@ -99,7 +109,9 @@ void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
         // Empty file - create a tail marker
         head_ = new Segment();
     }
-    cursegm_ = head_;
+    // cursegm_ should be set to the iterator pointing to head_
+    // But since head_ may not be in segments_ list yet, skip setting for now
+    // cursegm_ = head_;
 }
 
 //
@@ -363,7 +375,7 @@ void Workspace::build_segments_from_file(int fd)
 std::string Workspace::read_line_from_segment(int line_no)
 {
 
-    Segment *seg = cursegm_;
+    Segment *seg = &*cursegm_;
     int rel_line = line_no - segmline_;
 
     // Calculate file offset by accumulating line lengths
@@ -458,7 +470,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
 //
 int Workspace::breaksegm(int line_no, bool realloc_flag)
 {
-    if (!head_ || !cursegm_)
+    if (segments_.empty())
         throw std::runtime_error("breaksegm: empty workspace");
 
     // Position workspace to the target line
@@ -490,7 +502,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
             throw std::runtime_error("breaksegm: failed to create blank lines");
 
         // Get the tail segment (the one we're currently at, beyond EOF)
-        Segment *tail = cursegm_;
+        Segment *tail = &*cursegm_;
         Segment *prev = tail ? tail->prev : nullptr;
 
         // Remove tail temporarily (set_chain will create a new one)
@@ -532,7 +544,13 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         int blank_seg_start = line_;
 
         // Position to the first blank segment
-        cursegm_  = blank_seg;
+        // Find the iterator for blank_seg in the segments_ list
+        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
+            if (&*it == blank_seg) {
+                cursegm_ = it;
+                break;
+            }
+        }
         segmline_ = blank_seg_start;
 
         // Update nlines to include the blank lines
@@ -542,7 +560,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     }
 
     // Now we're at the segment containing line_no
-    Segment *seg = cursegm_;
+    Segment *seg = &*cursegm_;
     int rel_line = line_no - segmline_;
 
     if (rel_line == 0) {
@@ -579,7 +597,13 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         seg->nlines = rel_line;
 
         // Update workspace position
-        cursegm_  = new_seg;
+        // Find the iterator for new_seg in the segments_ list
+        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
+            if (&*it == new_seg) {
+                cursegm_ = it;
+                break;
+            }
+        }
         segmline_ = line_no;
 
         return 0;

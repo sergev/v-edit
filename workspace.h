@@ -145,7 +145,7 @@ public:
 private:
     Tempfile &tempfile_;          // reference to temp file manager
     std::list<Segment> segments_; // list-based segment chain
-    std::list<Segment>::iterator cursegm_; // current segment iterator (points into segments_)
+    Segment::iterator cursegm_;   // current segment iterator (points into segments_)
     Segment *head_{ nullptr };    // head of segment chain (for backward compatibility)
     int writable_{ 0 };           // write permission
     int nlines_{ 0 };             // line count

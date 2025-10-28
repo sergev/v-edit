@@ -2,11 +2,15 @@
 #define SEGMENT_H
 
 #include <cstddef>
+#include <list>
 #include <ostream>
 #include <vector>
 
 class Segment {
 public:
+    using iterator       = std::list<Segment>::iterator;
+    using const_iterator = std::list<Segment>::const_iterator;
+
     // Segments a linked in a list.
     Segment *prev{ nullptr };
     Segment *next{ nullptr };

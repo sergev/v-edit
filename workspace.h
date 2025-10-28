@@ -107,9 +107,6 @@ public:
         return segments_.empty() ? fallback_count : file_state.nlines;
     }
 
-    // Segment chain management (for backward compatibility during transition)
-    void set_chain(std::list<Segment> &segments);
-
     // Segment manipulation (from prototype)
     // Split segment at given line number (breaksegm from prototype)
     int breaksegm(int line_no, bool realloc_flag = true);

@@ -12,16 +12,13 @@ protected:
     void SetUp() override
     {
         editor = std::make_unique<Editor>();
+
         // Manually initialize editor state needed for tests
         editor->wksp_     = std::make_unique<Workspace>(editor->tempfile_);
         editor->alt_wksp_ = std::make_unique<Workspace>(editor->tempfile_);
 
         // Open shared temp file
         editor->tempfile_.open_temp_file();
-
-        // editor->current_line_no_       = -1;
-        // editor->current_line_modified_ = false;
-        // editor->current_line_          = "";
     }
 
     void TearDown() override { editor.reset(); }
@@ -32,11 +29,8 @@ protected:
     // put_line() only updates existing lines, doesn't create new ones.
     void CreateBlankLines(unsigned num_lines)
     {
-        editor->wksp_->file_state.nlines = num_lines;
-        std::list<Segment> blank_segs    = Workspace::create_blank_lines(num_lines);
-        editor->wksp_->set_chain(blank_segs);
-        editor->wksp_->set_cursegm(editor->wksp_->get_segments().begin());
-        editor->wksp_->position.segmline = 0;
+        auto blank = Workspace::create_blank_lines(num_lines);
+        editor->wksp_->insert_segments(blank, 1);
     }
 };
 

@@ -47,45 +47,6 @@ void Workspace::reset()
 }
 
 //
-// Set the segment chain for the workspace.
-// Copies the provided list of segments to the internal std::list.
-// This method is used for compatibility with external segment chains during transition.
-//
-void Workspace::set_chain(std::list<Segment> &segments)
-{
-    if (segments.empty())
-        return;
-
-    // Clear existing segments but keep the tail structure
-    this->segments_.clear();
-    cursegm_ = this->segments_.end();
-
-    // Copy all segments from the input list
-    for (const auto &seg : segments) {
-        this->segments_.emplace_back(seg); // Copy segment data
-    }
-
-    file_state.nlines = 0;
-    for (const auto &seg : this->segments_) {
-        if (seg.fdesc == 0)
-            break; // Don't count tail segment
-        file_state.nlines += seg.nlines;
-    }
-
-    // Ensure we have a tail segment
-    if (this->segments_.empty() || this->segments_.back().fdesc != 0) {
-        this->segments_.emplace_back();
-    }
-
-    // Set cursegm_ to the first non-tail segment
-    cursegm_ = this->segments_.begin();
-    if (!this->segments_.empty() && this->segments_.front().fdesc == 0) {
-        // Only tail - set to end
-        cursegm_ = this->segments_.end();
-    }
-}
-
-//
 // Build segment chain from in-memory lines vector.
 // Writes lines into temp file.
 //

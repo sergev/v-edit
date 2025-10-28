@@ -202,7 +202,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     EXPECT_TRUE(editor->wksp_->has_segments());
 
     // Check segment chain structure
-    auto segment_it         = editor->wksp_->chain();
+    auto segment_it         = editor->wksp_->get_segments().begin();
     int segment_count       = 0;
     int total_segment_lines = 0;
 

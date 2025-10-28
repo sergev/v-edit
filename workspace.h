@@ -54,31 +54,11 @@ public:
     PositionState position;
     FileState file_state;
 
-    // Deprecated: Legacy accessors (will be removed after call sites are updated)
-    // Iterator-based accessors (enhanced for modern C++)
-    std::list<Segment>::const_iterator chain() const { return segments_.cbegin(); }
-    std::list<Segment>::iterator chain() { return segments_.begin(); }
+    // Advanced: Direct iterator access for segment manipulation
+    // Note: These methods expose internal iterators for efficient std::list operations
+    // Use with caution - prefer higher-level methods when available
     std::list<Segment>::const_iterator cursegm() const { return cursegm_; }
     std::list<Segment>::iterator cursegm() { return cursegm_; }
-    // Deprecated: Legacy getters (wrapped to access struct members)
-    int writable() const { return file_state.writable; }
-    int nlines() const { return file_state.nlines; }
-    int topline() const { return view.topline; }
-    int basecol() const { return view.basecol; }
-    int line() const { return position.line; }
-    int segmline() const { return position.segmline; }
-    int cursorcol() const { return view.cursorcol; }
-    int cursorrow() const { return view.cursorrow; }
-
-    // Deprecated: Legacy setters (wrapped to access struct members)
-    void set_writable(int writable) { file_state.writable = writable; }
-    void set_nlines(int nlines) { file_state.nlines = nlines; }
-    void set_topline(int topline) { view.topline = topline; }
-    void set_basecol(int basecol) { view.basecol = basecol; }
-    void set_line(int line) { position.line = line; }
-    void set_segmline(int segmline) { position.segmline = segmline; }
-    void set_cursorcol(int cursorcol) { view.cursorcol = cursorcol; }
-    void set_cursorrow(int cursorrow) { view.cursorrow = cursorrow; }
 
     // Iterator-based setter (enhanced for modern C++)
     void set_cursegm(std::list<Segment>::iterator it) { cursegm_ = it; }
@@ -127,11 +107,6 @@ public:
         return segments_.empty() ? fallback_count : file_state.nlines;
     }
 
-    // Deprecated: Legacy file state accessors (wrapped to access struct members)
-    bool modified() const { return file_state.modified; }
-    void set_modified(bool modified) { file_state.modified = modified; }
-    bool backup_done() const { return file_state.backup_done; }
-    void set_backup_done(bool backup_done) { file_state.backup_done = backup_done; }
 
     // Segment chain management (for backward compatibility during transition)
     void set_chain(std::list<Segment> &segments);
@@ -182,9 +157,6 @@ private:
     std::list<Segment> segments_; // list-based segment chain
     Segment::iterator cursegm_;   // current segment iterator (points into segments_)
     int original_fd_{ -1 };       // file descriptor for original file
-
-    // Helper to update current segment iterator
-    void update_current_segment(std::list<Segment>::iterator it) { cursegm_ = it; }
 };
 
 #endif // WORKSPACE_H

@@ -194,7 +194,7 @@ TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
     EXPECT_EQ(editor->wksp_->nlines(), 0);
 
     // Verify the tail segment
-    auto tail_it = editor->wksp_->chain();
+    auto tail_it = editor->wksp_->get_segments().begin();
     ASSERT_NE(tail_it, editor->wksp_->get_segments().end());
     EXPECT_EQ(tail_it->nlines, 0);
     EXPECT_EQ(tail_it->fdesc, 0);
@@ -358,7 +358,7 @@ TEST_F(EditorTest, SetCurrentSegmentFirstLine)
     // Set current segment at first line
     EXPECT_EQ(editor->wksp_->set_current_segment(0), 0);
     EXPECT_EQ(editor->wksp_->line(), 0);
-    EXPECT_EQ(editor->wksp_->cursegm(), editor->wksp_->chain());
+    EXPECT_EQ(editor->wksp_->cursegm(), editor->wksp_->get_segments().begin());
 }
 
 TEST_F(EditorTest, SetCurrentSegmentLastLine)

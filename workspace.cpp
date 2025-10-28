@@ -30,16 +30,16 @@ void Workspace::cleanup_segments()
 void Workspace::reset()
 {
     cleanup_segments();
-    writable_    = 0;
-    nlines_      = 0;
-    topline_     = 0;
-    basecol_     = 0;
-    line_        = 0;
-    segmline_    = 0;
-    cursorcol_   = 0;
-    cursorrow_   = 0;
-    modified_    = false;
-    backup_done_ = false;
+    file_state.writable    = 0;
+    file_state.nlines      = 0;
+    view.topline           = 0;
+    view.basecol           = 0;
+    position.line          = 0;
+    position.segmline      = 0;
+    view.cursorcol         = 0;
+    view.cursorrow         = 0;
+    file_state.modified    = false;
+    file_state.backup_done = false;
 }
 
 //
@@ -61,11 +61,11 @@ void Workspace::set_chain(std::list<Segment> &segments)
         this->segments_.emplace_back(seg); // Copy segment data
     }
 
-    nlines_ = 0;
+    file_state.nlines = 0;
     for (const auto &seg : this->segments_) {
         if (seg.fdesc == 0)
             break; // Don't count tail segment
-        nlines_ += seg.nlines;
+        file_state.nlines += seg.nlines;
     }
 
     // Ensure we have a tail segment
@@ -88,10 +88,10 @@ void Workspace::set_chain(std::list<Segment> &segments)
 void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
 {
     reset();
-    writable_ = 1;
-    nlines_   = lines.size();
+    file_state.writable = 1;
+    file_state.nlines   = lines.size();
 
-    if (nlines_ > 0) {
+    if (file_state.nlines > 0) {
         // Write lines to temp file and get a segment
         auto segments_from_temp = tempfile_.write_lines_to_temp(lines);
         if (segments_from_temp.empty())
@@ -154,14 +154,14 @@ int Workspace::set_current_segment(int lno)
         throw std::runtime_error("set_current_segment: empty workspace");
 
     // Move forward to find the segment containing lno
-    while (lno >= segmline_ + cursegm_->nlines) {
+    while (lno >= position.segmline + cursegm_->nlines) {
         if (cursegm_->fdesc == 0) {
             // Hit tail segment - line is beyond end of file
             // Return 1 to signal that line is beyond end of file
-            line_ = segmline_;
+            position.line = position.segmline;
             return 1;
         }
-        segmline_ += cursegm_->nlines;
+        position.segmline += cursegm_->nlines;
 
         // Check if there's a next segment before moving
         auto next_it = std::next(cursegm_);
@@ -172,20 +172,20 @@ int Workspace::set_current_segment(int lno)
     }
 
     // Move backward to find the segment containing lno
-    while (lno < segmline_) {
+    while (lno < position.segmline) {
         if (cursegm_ == segments_.begin())
             throw std::runtime_error("set_current_segment: null previous segment");
         --cursegm_;
-        segmline_ -= cursegm_->nlines;
+        position.segmline -= cursegm_->nlines;
     }
 
-    // Consistency check: segmline_ should not be negative
-    if (segmline_ < 0) {
-        throw std::runtime_error("set_current_segment: line count lost (segmline_ < 0)");
+    // Consistency check: segmline should not be negative
+    if (position.segmline < 0) {
+        throw std::runtime_error("set_current_segment: line count lost (segmline < 0)");
     }
 
     // Update workspace state
-    line_ = lno;
+    position.line = lno;
 
     return 0;
 }
@@ -214,7 +214,7 @@ void Workspace::load_file_to_segments(const std::string &path)
 //
 void Workspace::build_segments_from_file(int fd)
 {
-    nlines_ = 0;
+    file_state.nlines = 0;
 
     // Clean up old chain
     cleanup_segments();
@@ -244,12 +244,12 @@ void Workspace::build_segments_from_file(int fd)
                     // Create final segment in list
                     segments_.emplace_back();
                     Segment &seg = segments_.back();
-                    seg.nlines  = lines_in_seg;
-                    seg.fdesc   = fd;
-                    seg.seek    = seg_seek;
-                    seg.sizes   = std::move(temp_seg.sizes);
+                    seg.nlines   = lines_in_seg;
+                    seg.fdesc    = fd;
+                    seg.seek     = seg_seek;
+                    seg.sizes    = std::move(temp_seg.sizes);
 
-                    nlines_ += lines_in_seg;
+                    file_state.nlines += lines_in_seg;
                 }
                 break;
             }
@@ -303,12 +303,12 @@ void Workspace::build_segments_from_file(int fd)
         if (lines_in_seg >= 127 || temp_seg.sizes.size() >= 4000) {
             segments_.emplace_back();
             Segment &seg = segments_.back();
-            seg.nlines  = lines_in_seg;
-            seg.fdesc   = fd;
-            seg.seek    = seg_seek;
-            seg.sizes   = std::move(temp_seg.sizes);
+            seg.nlines   = lines_in_seg;
+            seg.fdesc    = fd;
+            seg.seek     = seg_seek;
+            seg.sizes    = std::move(temp_seg.sizes);
 
-            nlines_ += lines_in_seg;
+            file_state.nlines += lines_in_seg;
 
             lines_in_seg = 0;
         }
@@ -319,9 +319,9 @@ void Workspace::build_segments_from_file(int fd)
         segments_.emplace_back();
     }
 
-    cursegm_  = segments_.begin();
-    segmline_ = 0;
-    line_     = 0;
+    cursegm_          = segments_.begin();
+    position.segmline = 0;
+    position.line     = 0;
 }
 
 //
@@ -335,9 +335,9 @@ std::list<Segment> Workspace::copy_segment_list(Segment::iterator start, Segment
     for (auto it = start; it != end; ++it) {
         Segment copy;
         copy.nlines = it->nlines;
-        copy.fdesc = it->fdesc;
-        copy.seek = it->seek;
-        copy.sizes = it->sizes; // Copy vector
+        copy.fdesc  = it->fdesc;
+        copy.seek   = it->seek;
+        copy.sizes  = it->sizes; // Copy vector
 
         copied_segments.push_back(copy);
 
@@ -392,7 +392,8 @@ void Workspace::cleanup_segments(std::list<Segment> &segments)
 //
 //
 // Read line content from segment chain at specified index.
-// Enhanced version using iterator instead of Segment* pointer for safer access and modern C++ practices.
+// Enhanced version using iterator instead of Segment* pointer for safer access and modern C++
+// practices.
 //
 std::string Workspace::read_line_from_segment(int line_no)
 {
@@ -407,7 +408,7 @@ std::string Workspace::read_line_from_segment(int line_no)
     }
 
     // Calculate relative line position within the current segment
-    int rel_line = line_no - segmline_;
+    int rel_line = line_no - position.segmline;
 
     // Bounds checking: ensure rel_line is within segment bounds
     if (rel_line < 0 || rel_line >= static_cast<int>(cursegm_->sizes.size())) {
@@ -436,7 +437,7 @@ std::string Workspace::read_line_from_segment(int line_no)
     // Read line from file using iterator's segment data
     std::string result(line_len - 1, '\0'); // exclude newline
     if (lseek(cursegm_->fdesc, seek_pos, SEEK_SET) >= 0) {
-        read(cursegm_->fdesc, static_cast<void*>(&result[0]), result.size());
+        read(cursegm_->fdesc, static_cast<void *>(&result[0]), result.size());
     }
     return result;
 }
@@ -495,8 +496,6 @@ bool Workspace::write_segments_to_file(const std::string &path)
     return true;
 }
 
-
-
 //
 // Split segment at given line number (based on breaksegm from prototype).
 // When the needed line is beyond the end of file, creates empty segments
@@ -513,7 +512,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Line is beyond end of file - create blank lines to extend it
         // This matches the prototype behavior
         // Calculate how many blank lines to create
-        // line_ was set by set_current_segment to segmline_ of the tail segment
+        // position.line was set by set_current_segment to segmline of the tail segment
         // Check if workspace is empty (only has a tail segment)
         bool is_empty = segments_.front().fdesc == 0;
 
@@ -523,8 +522,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
             // Empty file, create lines from 0 to line_no
             num_blank_lines = line_no + 1;
         } else {
-            // Normal case: create lines from line_ to line_no
-            num_blank_lines = (line_no - line_) + 1;
+            // Normal case: create lines from position.line to line_no
+            num_blank_lines = (line_no - position.line) + 1;
         }
 
         // Must create at least 1 blank line
@@ -542,17 +541,17 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         segments_.splice(insert_pos, blank_segments);
 
         // Position to the first blank segment we just inserted
-        cursegm_  = std::prev(insert_pos);
-        segmline_ = line_;
+        cursegm_          = std::prev(insert_pos);
+        position.segmline = position.line;
 
         // Update line count
-        nlines_ = line_no + 1;
+        file_state.nlines = line_no + 1;
 
         return 1; // Signal that we created lines
     }
 
     // Now we're at the segment containing line_no
-    int rel_line = line_no - segmline_;
+    int rel_line = line_no - position.segmline;
 
     if (rel_line == 0) {
         return 0; // Already at the right position
@@ -569,11 +568,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         auto insert_pos = std::next(cursegm_);
 
         // Create new segment in place
-        auto new_it = segments_.insert(insert_pos, Segment());
+        auto new_it      = segments_.insert(insert_pos, Segment());
         Segment &new_seg = *new_it;
-        new_seg.nlines = cursegm_->nlines - rel_line;
-        new_seg.fdesc = -1; // Still blank lines
-        new_seg.seek = cursegm_->seek;
+        new_seg.nlines   = cursegm_->nlines - rel_line;
+        new_seg.fdesc    = -1; // Still blank lines
+        new_seg.seek     = cursegm_->seek;
 
         // Copy remaining sizes
         for (size_t i = rel_line; i < cursegm_->sizes.size(); ++i) {
@@ -585,8 +584,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         cursegm_->nlines = rel_line;
 
         // Update workspace position
-        cursegm_  = new_it;
-        segmline_ = line_no;
+        cursegm_          = new_it;
+        position.segmline = line_no;
 
         return 0;
     }
@@ -608,11 +607,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     auto insert_pos = std::next(cursegm_);
 
     // Create new segment in place
-    auto new_it = segments_.insert(insert_pos, Segment());
+    auto new_it      = segments_.insert(insert_pos, Segment());
     Segment &new_seg = *new_it;
-    new_seg.nlines = cursegm_->nlines - rel_line;
-    new_seg.fdesc = cursegm_->fdesc;
-    new_seg.seek = cursegm_->seek + offs;
+    new_seg.nlines   = cursegm_->nlines - rel_line;
+    new_seg.fdesc    = cursegm_->fdesc;
+    new_seg.seek     = cursegm_->seek + offs;
 
     // Copy remaining data bytes from split_point to end
     for (size_t i = split_point; i < cursegm_->nlines; ++i) {
@@ -624,8 +623,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     cursegm_->nlines = rel_line;
 
     // Update workspace position
-    cursegm_  = new_it;
-    segmline_ = line_no;
+    cursegm_          = new_it;
+    position.segmline = line_no;
 
     return 0;
 }
@@ -662,7 +661,7 @@ bool Workspace::catsegm()
             cursegm_ = prev_it;
 
             // Update workspace position
-            segmline_ -= prev.nlines;
+            position.segmline -= prev.nlines;
 
             return true;
         }
@@ -693,14 +692,14 @@ void Workspace::insert_segments(std::list<Segment> &segments_to_insert, int at)
         segments_.splice(insert_pos, segments_to_insert);
 
         // Update workspace position to first inserted segment
-        cursegm_  = std::prev(insert_pos);
-        segmline_ = at;
+        cursegm_          = std::prev(insert_pos);
+        position.segmline = at;
 
         // Update line count
-        nlines_ += inserted_lines;
+        file_state.nlines += inserted_lines;
     }
 
-    writable_ = 1; // Mark as edited
+    file_state.writable = 1; // Mark as edited
 }
 
 //
@@ -714,14 +713,14 @@ void Workspace::delete_segments(int from, int to)
     if (segments_.empty() || from > to)
         return;
 
-    if (nlines_ == 0)
+    if (file_state.nlines == 0)
         return;
 
     // Use breaksegm for positioning (it uses list operations internally now)
     int result = breaksegm(to, true);
     if (result != 0) {
-        if (to + 1 > nlines_) {
-            set_current_segment(nlines_);
+        if (to + 1 > file_state.nlines) {
+            set_current_segment(file_state.nlines);
         } else {
             return;
         }
@@ -740,7 +739,7 @@ void Workspace::delete_segments(int from, int to)
 
     // Calculate deleted lines
     int deleted_lines = 0;
-    auto temp_it = start_delete_it;
+    auto temp_it      = start_delete_it;
     while (temp_it != after_delete_it) {
         deleted_lines += temp_it->nlines;
         ++temp_it;
@@ -751,17 +750,18 @@ void Workspace::delete_segments(int from, int to)
 
     // Update workspace position
     if (!segments_.empty()) {
-        cursegm_ = (after_delete_it != segments_.end()) ? after_delete_it : std::prev(segments_.end());
-        segmline_ = from;
+        cursegm_ =
+            (after_delete_it != segments_.end()) ? after_delete_it : std::prev(segments_.end());
+        position.segmline = from;
     } else {
-        cursegm_ = segments_.begin();
-        segmline_ = 0;
+        cursegm_          = segments_.begin();
+        position.segmline = 0;
     }
 
     // Update line count
-    nlines_ -= deleted_lines;
+    file_state.nlines -= deleted_lines;
 
-    writable_ = 1; // Mark as edited
+    file_state.writable = 1; // Mark as edited
 }
 
 //
@@ -772,31 +772,31 @@ void Workspace::scroll_vertical(int nl, int max_rows, int total_lines)
 {
     if (nl < 0) {
         // Scroll up (toward beginning)
-        if (topline_ == 0) {
+        if (view.topline == 0) {
             // Already at top
             return;
         }
     } else {
         // Scroll down (toward end)
-        if (topline_ + max_rows >= total_lines) {
+        if (view.topline + max_rows >= total_lines) {
             // Already at bottom - can't scroll further
             return;
         }
     }
 
-    topline_ += nl;
+    view.topline += nl;
 
     // Clamp topline to valid range
-    if (topline_ > total_lines - max_rows)
-        topline_ = total_lines - max_rows;
-    if (topline_ < 0)
-        topline_ = 0;
+    if (view.topline > total_lines - max_rows)
+        view.topline = total_lines - max_rows;
+    if (view.topline < 0)
+        view.topline = 0;
 
     // Update current line to stay in visible range
-    if (line_ > topline_ + max_rows - 1)
-        line_ = topline_ + max_rows - 1;
-    if (line_ < topline_)
-        line_ = topline_;
+    if (position.line > view.topline + max_rows - 1)
+        position.line = view.topline + max_rows - 1;
+    if (position.line < view.topline)
+        position.line = view.topline;
 }
 
 //
@@ -806,14 +806,14 @@ void Workspace::scroll_vertical(int nl, int max_rows, int total_lines)
 void Workspace::scroll_horizontal(int nc, int max_cols)
 {
     // Adjust offset with bounds checking
-    if ((basecol_ + nc) < 0)
-        nc = -basecol_;
+    if ((view.basecol + nc) < 0)
+        nc = -view.basecol;
 
-    basecol_ += nc;
+    view.basecol += nc;
 
     // Clamp to non-negative
-    if (basecol_ < 0)
-        basecol_ = 0;
+    if (view.basecol < 0)
+        view.basecol = 0;
 }
 
 //
@@ -828,17 +828,17 @@ void Workspace::goto_line(int target_line, int max_rows)
     int half_screen = max_rows / 2;
 
     // Position to show target_line around middle of screen
-    scroll_vertical(target_line - topline_ - half_screen, max_rows, nlines_);
+    scroll_vertical(target_line - view.topline - half_screen, max_rows, file_state.nlines);
 
     // Ensure target_line is in visible range
-    if (target_line < topline_)
-        topline_ = target_line;
-    else if (target_line >= topline_ + max_rows)
-        topline_ = target_line - max_rows + 1;
+    if (target_line < view.topline)
+        view.topline = target_line;
+    else if (target_line >= view.topline + max_rows)
+        view.topline = target_line - max_rows + 1;
 
     // Update current position
-    line_ = target_line;
-    set_current_segment(line_);
+    position.line = target_line;
+    set_current_segment(position.line);
 }
 
 //
@@ -849,12 +849,12 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
     // Adjust topline when lines are inserted/deleted
     int j = (delta >= 0) ? to : from;
 
-    if (topline_ > j) {
-        topline_ += delta;
+    if (view.topline > j) {
+        view.topline += delta;
 
         // Ensure topline doesn't go negative
-        if (topline_ < 0)
-            topline_ = 0;
+        if (view.topline < 0)
+            view.topline = 0;
     }
 }
 
@@ -864,23 +864,23 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
 void Workspace::debug_print(std::ostream &out) const
 {
     out << "Workspace["
-        << "writable_=" << writable_ << ", "
-        << "nlines_=" << nlines_ << ", "
-        << "topline_=" << topline_ << ", "
-        << "basecol_=" << basecol_ << ", "
-        << "line_=" << line_ << ", "
-        << "segmline_=" << segmline_ << ", "
-        << "cursorcol_=" << cursorcol_ << ", "
-        << "cursorrow_=" << cursorrow_ << ", "
-        << "modified_=" << (modified_ ? "true" : "false") << ", "
-        << "backup_done_=" << (backup_done_ ? "true" : "false") << ", "
-        << "original_fd_=" << original_fd_ << ", "
-        << "cursegm_=" << (cursegm_ == segments_.end() ? nullptr : &*cursegm_) << ", "
-        << "head_=" << (segments_.empty() ? nullptr : &segments_.front()) << "]\n";
+        << "writable=" << file_state.writable << ", "
+        << "nlines=" << file_state.nlines << ", "
+        << "topline=" << view.topline << ", "
+        << "basecol=" << view.basecol << ", "
+        << "line=" << position.line << ", "
+        << "segmline=" << position.segmline << ", "
+        << "cursorcol=" << view.cursorcol << ", "
+        << "cursorrow=" << view.cursorrow << ", "
+        << "modified=" << (file_state.modified ? "true" : "false") << ", "
+        << "backup_done=" << (file_state.backup_done ? "true" : "false") << ", "
+        << "original_fd=" << original_fd_ << ", "
+        << "cursegm=" << (cursegm_ == segments_.end() ? nullptr : &*cursegm_) << ", "
+        << "head=" << (segments_.empty() ? nullptr : &segments_.front()) << "]\n";
 
     // Print segment chain
     out << "Segment chain:\n";
-    int seg_idx  = 0;
+    int seg_idx = 0;
     for (const auto &seg : segments_) {
         out << "  [" << seg_idx << "] ";
         seg.debug_print(out);

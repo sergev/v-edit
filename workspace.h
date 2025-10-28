@@ -1,8 +1,8 @@
 #ifndef WORKSPACE_H
 #define WORKSPACE_H
 
-#include <list>
 #include <fstream>
+#include <list>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -13,6 +13,34 @@
 class Tempfile;
 
 //
+// View-related state (display and cursor position)
+//
+struct ViewState {
+    int topline{ 0 };   // top line visible on screen
+    int basecol{ 0 };   // horizontal scroll base column
+    int cursorcol{ 0 }; // saved cursor column
+    int cursorrow{ 0 }; // saved cursor row
+};
+
+//
+// Position state (navigation within file)
+//
+struct PositionState {
+    int line{ 0 };     // current line number
+    int segmline{ 0 }; // first line in current segment
+};
+
+//
+// File metadata state
+//
+struct FileState {
+    bool modified{ false };    // track if file has been modified
+    bool backup_done{ false }; // track if backup file has been created
+    int writable{ 0 };         // write permission
+    int nlines{ 0 };           // line count
+};
+
+//
 // Workspace class - manages segment chain and file workspace state.
 // Encapsulates segment chain operations and positioning.
 //
@@ -21,42 +49,39 @@ public:
     Workspace(Tempfile &tempfile);
     ~Workspace();
 
-    // Iterator-based accessors (enhanced for modern C++)
-    std::list<Segment>::const_iterator chain() const {
-        return segments_.cbegin();
-    }
-    std::list<Segment>::iterator chain() {
-        return segments_.begin();
-    }
-    std::list<Segment>::const_iterator cursegm() const {
-        return cursegm_;
-    }
-    std::list<Segment>::iterator cursegm() {
-        return cursegm_;
-    }
-    int writable() const { return writable_; }
-    int nlines() const { return nlines_; }
-    int topline() const { return topline_; }
-    int basecol() const { return basecol_; }
-    int line() const { return line_; }
-    int segmline() const { return segmline_; }
-    int cursorcol() const { return cursorcol_; }
-    int cursorrow() const { return cursorrow_; }
+    // Public state access via structs
+    ViewState view;
+    PositionState position;
+    FileState file_state;
 
-    // Mutators
-    void set_writable(int writable) { writable_ = writable; }
-    void set_nlines(int nlines) { nlines_ = nlines; }
-    void set_topline(int topline) { topline_ = topline; }
-    void set_basecol(int basecol) { basecol_ = basecol; }
-    void set_line(int line) { line_ = line; }
-    void set_segmline(int segmline) { segmline_ = segmline; }
-    void set_cursorcol(int cursorcol) { cursorcol_ = cursorcol; }
-    void set_cursorrow(int cursorrow) { cursorrow_ = cursorrow; }
+    // Deprecated: Legacy accessors (will be removed after call sites are updated)
+    // Iterator-based accessors (enhanced for modern C++)
+    std::list<Segment>::const_iterator chain() const { return segments_.cbegin(); }
+    std::list<Segment>::iterator chain() { return segments_.begin(); }
+    std::list<Segment>::const_iterator cursegm() const { return cursegm_; }
+    std::list<Segment>::iterator cursegm() { return cursegm_; }
+    // Deprecated: Legacy getters (wrapped to access struct members)
+    int writable() const { return file_state.writable; }
+    int nlines() const { return file_state.nlines; }
+    int topline() const { return view.topline; }
+    int basecol() const { return view.basecol; }
+    int line() const { return position.line; }
+    int segmline() const { return position.segmline; }
+    int cursorcol() const { return view.cursorcol; }
+    int cursorrow() const { return view.cursorrow; }
+
+    // Deprecated: Legacy setters (wrapped to access struct members)
+    void set_writable(int writable) { file_state.writable = writable; }
+    void set_nlines(int nlines) { file_state.nlines = nlines; }
+    void set_topline(int topline) { view.topline = topline; }
+    void set_basecol(int basecol) { view.basecol = basecol; }
+    void set_line(int line) { position.line = line; }
+    void set_segmline(int segmline) { position.segmline = segmline; }
+    void set_cursorcol(int cursorcol) { view.cursorcol = cursorcol; }
+    void set_cursorrow(int cursorrow) { view.cursorrow = cursorrow; }
 
     // Iterator-based setter (enhanced for modern C++)
-    void set_cursegm(std::list<Segment>::iterator it) {
-        cursegm_ = it;
-    }
+    void set_cursegm(std::list<Segment>::iterator it) { cursegm_ = it; }
 
     // Segment chain operations
     // Build segment chain from in-memory lines vector
@@ -97,13 +122,16 @@ public:
     const std::list<Segment> &get_segments() const { return segments_; }
 
     // Line count
-    int get_line_count(int fallback_count) const { return segments_.empty() ? fallback_count : nlines_; }
+    int get_line_count(int fallback_count) const
+    {
+        return segments_.empty() ? fallback_count : file_state.nlines;
+    }
 
-    // File state tracking
-    bool modified() const { return modified_; }
-    void set_modified(bool modified) { modified_ = modified; }
-    bool backup_done() const { return backup_done_; }
-    void set_backup_done(bool backup_done) { backup_done_ = backup_done; }
+    // Deprecated: Legacy file state accessors (wrapped to access struct members)
+    bool modified() const { return file_state.modified; }
+    void set_modified(bool modified) { file_state.modified = modified; }
+    bool backup_done() const { return file_state.backup_done; }
+    void set_backup_done(bool backup_done) { file_state.backup_done = backup_done; }
 
     // Segment chain management (for backward compatibility during transition)
     void set_chain(std::list<Segment> &segments);
@@ -153,16 +181,6 @@ private:
     Tempfile &tempfile_;          // reference to temp file manager
     std::list<Segment> segments_; // list-based segment chain
     Segment::iterator cursegm_;   // current segment iterator (points into segments_)
-    int writable_{ 0 };           // write permission
-    int nlines_{ 0 };             // line count
-    int topline_{ 0 };            // top line visible on screen
-    int basecol_{ 0 };            // horizontal scroll base column
-    int line_{ 0 };               // current line number
-    int segmline_{ 0 };           // first line in current segment
-    int cursorcol_{ 0 };          // saved cursor column
-    int cursorrow_{ 0 };          // saved cursor row
-    bool modified_{ false };      // track if file has been modified
-    bool backup_done_{ false };   // track if backup file has been created
     int original_fd_{ -1 };       // file descriptor for original file
 
     // Helper to update current segment iterator

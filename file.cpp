@@ -38,7 +38,8 @@ void Editor::get_line(int lno)
 
 //
 // Write current line buffer back to workspace if modified.
-// Enhanced version using iterators instead of Segment* pointers for safer access and modern C++ practices.
+// Enhanced version using iterators instead of Segment* pointers for safer access and modern C++
+// practices.
 //
 void Editor::put_line()
 {
@@ -91,9 +92,9 @@ void Editor::put_line()
 
         // Replace old segment with new segment using iterator-based approach
         std::list<Segment> &segs = wksp_->get_segments();
-        auto replace_pos = old_seg_it;
-        *replace_pos = std::move(*new_seg_it);  // Copy content from new segment
-        segs.erase(new_seg_it);  // Remove the duplicate from the end of list
+        auto replace_pos         = old_seg_it;
+        *replace_pos             = std::move(*new_seg_it); // Copy content from new segment
+        segs.erase(new_seg_it); // Remove the duplicate from the end of list
         wksp_->set_cursegm(replace_pos);
         wksp_->set_segmline(segmline);
 
@@ -110,7 +111,7 @@ void Editor::put_line()
 
         // Replace the segment using iterator-based approach
         *replace_it = std::move(*new_seg_it);
-        wksp_->get_segments().erase(new_seg_it);  // Remove duplicate from end
+        wksp_->get_segments().erase(new_seg_it); // Remove duplicate from end
         wksp_->set_cursegm(replace_it);
         wksp_->set_segmline(line_no);
 

@@ -92,7 +92,7 @@ TEST_F(TempfileTest, WriteLineToTempMultiple)
     const Segment &s3 = seg3.front();
 
     EXPECT_EQ(s1.seek, 0);
-    EXPECT_EQ(s2.seek, 11);    // After "First line\n" (11 bytes)
+    EXPECT_EQ(s2.seek, 11);      // After "First line\n" (11 bytes)
     EXPECT_EQ(s3.seek, 11 + 12); // After "Second line\n" (12 bytes)
 
     EXPECT_EQ(s1.sizes[0], 11); // "First line\n" = 10 + 1 = 11 bytes
@@ -118,7 +118,7 @@ TEST_F(TempfileTest, WriteLineToTempOpensFile)
 TEST_F(TempfileTest, WriteLineToTempVerifyContent)
 {
     std::string test_content = "Test content for verification";
-    auto segments = tempfile->write_line_to_temp(test_content);
+    auto segments            = tempfile->write_line_to_temp(test_content);
 
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
@@ -158,16 +158,16 @@ TEST_F(TempfileTest, WriteLineToTempLongLine)
 // Test write_lines_to_temp for comparison
 TEST_F(TempfileTest, WriteLineToTempVsWriteLines)
 {
-    std::vector<std::string> lines = {"Single line"};
+    std::vector<std::string> lines = { "Single line" };
 
     auto segments_lines = tempfile->write_lines_to_temp(lines);
-    auto segments_line = tempfile->write_line_to_temp("Single line");
+    auto segments_line  = tempfile->write_line_to_temp("Single line");
 
     ASSERT_EQ(segments_lines.size(), 1);
     ASSERT_EQ(segments_line.size(), 1);
 
     const Segment &seg_lines = segments_lines.front();
-    const Segment &seg_line = segments_line.front();
+    const Segment &seg_line  = segments_line.front();
 
     EXPECT_EQ(seg_lines.nlines, 1);
     EXPECT_EQ(seg_line.nlines, 1);
@@ -200,15 +200,15 @@ TEST_F(TempfileTest, WriteLineToTempPositionTracking)
     EXPECT_EQ(s2.seek, s1.sizes[0]);
     EXPECT_EQ(s3.seek, s1.sizes[0] + s2.sizes[0]);
 
-    EXPECT_EQ(s1.sizes[0], 6);  // "12345\n"
-    EXPECT_EQ(s2.sizes[0], 7);  // "abcdef\n"
-    EXPECT_EQ(s3.sizes[0], 4);  // "XYZ\n"
+    EXPECT_EQ(s1.sizes[0], 6); // "12345\n"
+    EXPECT_EQ(s2.sizes[0], 7); // "abcdef\n"
+    EXPECT_EQ(s3.sizes[0], 4); // "XYZ\n"
 }
 
 // Test write_lines_to_temp with basic strings
 TEST_F(TempfileTest, WriteLinesToTempBasic)
 {
-    std::vector<std::string> lines = {"First line", "Second line", "Third line"};
+    std::vector<std::string> lines = { "First line", "Second line", "Third line" };
 
     auto segments = tempfile->write_lines_to_temp(lines);
 
@@ -228,7 +228,7 @@ TEST_F(TempfileTest, WriteLinesToTempBasic)
 // Test write_lines_to_temp with strings already ending with newlines
 TEST_F(TempfileTest, WriteLinesToTempWithNewlines)
 {
-    std::vector<std::string> lines = {"Line with newline\n", "Another line"};
+    std::vector<std::string> lines = { "Line with newline\n", "Another line" };
 
     auto segments = tempfile->write_lines_to_temp(lines);
 
@@ -244,7 +244,7 @@ TEST_F(TempfileTest, WriteLinesToTempWithNewlines)
 // Test write_lines_to_temp with empty string in vector
 TEST_F(TempfileTest, WriteLinesToTempEmptyStringInVector)
 {
-    std::vector<std::string> lines = {"", "Non-empty"};
+    std::vector<std::string> lines = { "", "Non-empty" };
 
     auto segments = tempfile->write_lines_to_temp(lines);
 
@@ -253,7 +253,7 @@ TEST_F(TempfileTest, WriteLinesToTempEmptyStringInVector)
 
     EXPECT_EQ(seg.nlines, 2);
     EXPECT_EQ(seg.sizes.size(), 2);
-    EXPECT_EQ(seg.sizes[0], 1); // Just '\n' = 1 byte
+    EXPECT_EQ(seg.sizes[0], 1);  // Just '\n' = 1 byte
     EXPECT_EQ(seg.sizes[1], 10); // "Non-empty\n" = 10 bytes
 }
 
@@ -270,8 +270,8 @@ TEST_F(TempfileTest, WriteLinesToTempEmptyVector)
 // Test write_lines_to_temp multiple calls
 TEST_F(TempfileTest, WriteLinesToTempMultiple)
 {
-    std::vector<std::string> lines1 = {"First", "Second"};
-    std::vector<std::string> lines2 = {"Third", "Fourth", "Fifth"};
+    std::vector<std::string> lines1 = { "First", "Second" };
+    std::vector<std::string> lines2 = { "Third", "Fourth", "Fifth" };
 
     auto seg1 = tempfile->write_lines_to_temp(lines1);
     auto seg2 = tempfile->write_lines_to_temp(lines2);
@@ -289,11 +289,11 @@ TEST_F(TempfileTest, WriteLinesToTempMultiple)
     EXPECT_EQ(s2.nlines, 3);
     EXPECT_EQ(s1.sizes.size(), 2);
     EXPECT_EQ(s2.sizes.size(), 3);
-    EXPECT_EQ(s1.sizes[0], 6);  // "First\n"
-    EXPECT_EQ(s1.sizes[1], 7);  // "Second\n"
-    EXPECT_EQ(s2.sizes[0], 6);  // "Third\n"
-    EXPECT_EQ(s2.sizes[1], 7);  // "Fourth\n"
-    EXPECT_EQ(s2.sizes[2], 6);  // "Fifth\n"
+    EXPECT_EQ(s1.sizes[0], 6); // "First\n"
+    EXPECT_EQ(s1.sizes[1], 7); // "Second\n"
+    EXPECT_EQ(s2.sizes[0], 6); // "Third\n"
+    EXPECT_EQ(s2.sizes[1], 7); // "Fourth\n"
+    EXPECT_EQ(s2.sizes[2], 6); // "Fifth\n"
 }
 
 // Test that write_lines_to_temp opens temp file automatically if needed
@@ -301,8 +301,8 @@ TEST_F(TempfileTest, WriteLinesToTempOpensFile)
 {
     EXPECT_EQ(tempfile->fd(), -1); // Initially not open
 
-    std::vector<std::string> lines = {"Test line"};
-    auto segments = tempfile->write_lines_to_temp(lines);
+    std::vector<std::string> lines = { "Test line" };
+    auto segments                  = tempfile->write_lines_to_temp(lines);
 
     EXPECT_GE(tempfile->fd(), 0); // Should be opened now
 
@@ -314,8 +314,8 @@ TEST_F(TempfileTest, WriteLinesToTempOpensFile)
 // Test reading back the written data from write_lines_to_temp
 TEST_F(TempfileTest, WriteLinesToTempVerifyContent)
 {
-    std::vector<std::string> lines = {"Line one", "Line two", "Line three"};
-    auto segments = tempfile->write_lines_to_temp(lines);
+    std::vector<std::string> lines = { "Line one", "Line two", "Line three" };
+    auto segments                  = tempfile->write_lines_to_temp(lines);
 
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
@@ -339,7 +339,7 @@ TEST_F(TempfileTest, WriteLinesToTempVerifyContent)
 // Test write_lines_to_temp with mixed lines (some with newlines, some without)
 TEST_F(TempfileTest, WriteLinesToTempMixedNewlines)
 {
-    std::vector<std::string> lines = {"Normal line", "Line with newline\n", "", "Another normal"};
+    std::vector<std::string> lines = { "Normal line", "Line with newline\n", "", "Another normal" };
 
     auto segments = tempfile->write_lines_to_temp(lines);
 
@@ -388,13 +388,13 @@ TEST_F(TempfileTest, WriteLinesToTempPositionTracking)
     EXPECT_GE(tempfile->fd(), 0);
 
     // Mixed calls: write_lines_to_temp then write_line_to_temp
-    std::vector<std::string> lines_block1 = {"Block1 Line1", "Block1 Line2"};
-    auto seg1 = tempfile->write_lines_to_temp(lines_block1);
+    std::vector<std::string> lines_block1 = { "Block1 Line1", "Block1 Line2" };
+    auto seg1                             = tempfile->write_lines_to_temp(lines_block1);
 
     auto seg2 = tempfile->write_line_to_temp("Single line");
 
-    std::vector<std::string> lines_block2 = {"Block2 Line1"};
-    auto seg3 = tempfile->write_lines_to_temp(lines_block2);
+    std::vector<std::string> lines_block2 = { "Block2 Line1" };
+    auto seg3                             = tempfile->write_lines_to_temp(lines_block2);
 
     ASSERT_EQ(seg1.size(), 1);
     ASSERT_EQ(seg2.size(), 1);
@@ -406,7 +406,7 @@ TEST_F(TempfileTest, WriteLinesToTempPositionTracking)
 
     EXPECT_EQ(s1.seek, 0);
     EXPECT_EQ(s2.seek, s1.seek + s1.sizes[0] + s1.sizes[1]); // After both lines in block1
-    EXPECT_EQ(s3.seek, s2.seek + s2.sizes[0]); // After the single line
+    EXPECT_EQ(s3.seek, s2.seek + s2.sizes[0]);               // After the single line
 
     // Verify sizes
     EXPECT_EQ(s1.sizes[0], 13); // "Block1 Line1\n"

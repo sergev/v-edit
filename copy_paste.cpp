@@ -57,7 +57,7 @@ void Editor::paste(int afterLine, int atCol)
             if (!temp_segments.empty()) {
                 // Splice the segments into workspace at the correct position
                 auto insert_pos = wksp_->get_segments().begin();
-                std::advance(insert_pos, afterLine + 1);  // Position after the target line
+                std::advance(insert_pos, afterLine + 1); // Position after the target line
                 wksp_->get_segments().splice(insert_pos, temp_segments);
                 afterLine++;
                 wksp_->set_nlines(wksp_->nlines() + 1);

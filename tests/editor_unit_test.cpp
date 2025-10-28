@@ -168,9 +168,9 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
     }
 
     // Check segment chain structure - iterate through std::list
-    const auto& segments_list = editor->wksp_->get_segments();
+    const auto &segments_list = editor->wksp_->get_segments();
     std::vector<const Segment *> segments;
-    for (const auto& s : segments_list) {
+    for (const auto &s : segments_list) {
         if (s.nlines > 0) {
             segments.push_back(&s);
         }
@@ -315,9 +315,9 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
     }
 
     // Verify segment chain structure - iterate through std::list
-    const auto& segments_list = editor->wksp_->get_segments();
+    const auto &segments_list = editor->wksp_->get_segments();
     std::vector<const Segment *> segments;
-    for (const auto& s : segments_list) {
+    for (const auto &s : segments_list) {
         if (s.nlines > 0) {
             segments.push_back(&s);
         }

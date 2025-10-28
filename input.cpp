@@ -501,14 +501,14 @@ void Editor::handle_area_selection(int ch)
         params_.set_area_start(curCol, r0);
     }
 
-        if (curLine > r0) {
-            int c;
-            params_.get_area_end(c, r1);
-            params_.set_area_end(c, curLine);
-            } else {
-                auto blank = wksp_->create_blank_lines(1);
-                wksp_->insert_segments(blank, curLine + 1);
-            }
+    if (curLine > r0) {
+        int c;
+        params_.get_area_end(c, r1);
+        params_.set_area_end(c, curLine);
+    } else {
+        auto blank = wksp_->create_blank_lines(1);
+        wksp_->insert_segments(blank, curLine + 1);
+    }
 }
 
 //
@@ -621,8 +621,8 @@ void Editor::handle_key_edit(int ch)
     }
     // ^O - Insert blank line
     if (ch == 15) { // Ctrl-O
-        int curLine    = wksp_->topline() + cursor_line_;
-        auto blank = wksp_->create_blank_lines(1);
+        int curLine = wksp_->topline() + cursor_line_;
+        auto blank  = wksp_->create_blank_lines(1);
         wksp_->insert_segments(blank, curLine + 1);
         wksp_->set_nlines(wksp_->nlines() + 1);
         ensure_cursor_visible();

@@ -30,7 +30,7 @@ protected:
     void CreateBlankLines(unsigned num_lines)
     {
         auto blank = Workspace::create_blank_lines(num_lines);
-        editor->wksp_->insert_segments(blank, 1);
+        editor->wksp_->insert_segments(blank, 0);
     }
 };
 

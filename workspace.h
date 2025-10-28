@@ -26,8 +26,8 @@ struct ViewState {
 // Position state (navigation within file)
 //
 struct PositionState {
-    int line{ 0 };     // current line number
-    int segmline{ 0 }; // first line in current segment
+    int line{ 0 };     // TODO: remove: current line number
+    int segmline{ 0 }; // TODO: remove: first line in current segment
 };
 
 //
@@ -37,12 +37,12 @@ struct FileState {
     bool modified{ false };    // track if file has been modified
     bool backup_done{ false }; // track if backup file has been created
     int writable{ 0 };         // write permission
-    int nlines{ 0 };           // line count
+    int nlines{ 0 };           // TODO: remove: line count
 };
 
 //
-// Workspace class - manages segment chain and file workspace state.
-// Encapsulates segment chain operations and positioning.
+// Workspace class - manages segment list and file workspace state.
+// Encapsulates segment list operations and positioning.
 //
 class Workspace {
 public:
@@ -54,40 +54,34 @@ public:
     PositionState position;
     FileState file_state;
 
-    // Advanced: Direct iterator access for segment manipulation
-    // Note: These methods expose internal iterators for efficient std::list operations
-    // Use with caution - prefer higher-level methods when available
-    std::list<Segment>::const_iterator cursegm() const { return cursegm_; }
-    std::list<Segment>::iterator cursegm() { return cursegm_; }
+    //
+    // Segment list operations
+    //
 
-    // Iterator-based setter (enhanced for modern C++)
-    void set_cursegm(std::list<Segment>::iterator it) { cursegm_ = it; }
-
-    // Segment chain operations
-    // Build segment chain from in-memory lines vector
+    // Build segment list from in-memory lines vector
     void load_text(const std::vector<std::string> &lines);
 
-    // Build segment chain from text string
+    // Build segment list from text string
     void load_text(const std::string &text);
 
     // Change current segment to the segment containing the specified line
     // Updates cursegm_, segmline_, and line_ to position the workspace at line number
-    // Throws std::runtime_error for invalid line numbers or corrupted segment chain
+    // Throws std::runtime_error for invalid line numbers or corrupted segment list
     int change_current_line(int lno);
 
-    // Load file content into segment chain structure
-    void load_file(const std::string &path, bool create_if_missing = true);
+    // Load file content into segment list structure
+    void load_file(const std::string &path, bool create_if_missing = true); // TODO: set original_fd_
 
-    // Build segment chain from file descriptor
-    void load_file(int fd);
+    // Build segment list from file descriptor
+    void load_file(int fd); // TODO: clone to original_fd_
 
-    // Read line content from segment chain at specified index
-    std::string read_line_from_segment(int line_no);
+    // Read line content from segment list at specified index
+    std::string read_line_from_segment(int line_no); // TODO: remove 'segment' from method names
 
-    // Write segment chain content to file
+    // Write segment list content to file
     bool write_segments_to_file(const std::string &path);
 
-    // Clean up segment chain
+    // Clean up segment list
     void cleanup_segments();
 
     // Reset workspace state
@@ -101,13 +95,22 @@ public:
     std::list<Segment> &get_segments() { return segments_; }
     const std::list<Segment> &get_segments() const { return segments_; }
 
+    // Direct iterator access for segment manipulation
+    Segment::iterator cursegm() { return cursegm_; }
+
+    // Iterator-based setter (enhanced for modern C++)
+    void set_cursegm(Segment::iterator it) { cursegm_ = it; }
+
     // Line count
     int get_line_count(int fallback_count) const
     {
         return segments_.empty() ? fallback_count : file_state.nlines;
     }
 
+    //
     // Segment manipulation (from prototype)
+    //
+
     // Split segment at given line number (breaksegm from prototype)
     int breaksegm(int line_no, bool realloc_flag = true);
 
@@ -129,7 +132,10 @@ public:
     // Cleanup a segment list (static helper)
     static void cleanup_segments(std::list<Segment> &segments);
 
+    //
     // View management methods (from prototype)
+    //
+
     // Scroll workspace by nl lines (negative for up, positive for down)
     // max_rows: maximum visible rows in display
     // total_lines: total lines in file
@@ -145,13 +151,13 @@ public:
     // Update topline when file changes (used by wksp_redraw)
     void update_topline_after_edit(int from, int to, int delta);
 
-    // Debug routine: print all fields and segment chain
+    // Debug routine: print all fields and segment list
     void debug_print(std::ostream &out) const;
 
 private:
-    Tempfile &tempfile_;          // reference to temp file manager
-    std::list<Segment> segments_; // list-based segment chain
+    std::list<Segment> segments_; // list of segments
     Segment::iterator cursegm_;   // current segment iterator (points into segments_)
+    Tempfile &tempfile_;          // reference to temp file manager
     int original_fd_{ -1 };       // file descriptor for original file
 };
 

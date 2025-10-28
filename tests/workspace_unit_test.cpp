@@ -33,7 +33,7 @@ TEST_F(WorkspaceTest, CreateBlankLines)
 {
     std::list<Segment> seg_list = Workspace::create_blank_lines(5);
 
-    EXPECT_FALSE(seg_list.empty());
+    EXPECT_EQ(seg_list.size(), 1);
     EXPECT_EQ(seg_list.front().nlines, 5);
     EXPECT_EQ(seg_list.front().fdesc, -1);
 }

@@ -38,6 +38,7 @@ void Editor::get_line(int lno)
 
 //
 // Write current line buffer back to workspace if modified.
+// Enhanced version using iterators instead of Segment* pointers for safer access and modern C++ practices.
 //
 void Editor::put_line()
 {
@@ -56,9 +57,10 @@ void Editor::put_line()
         return;
     }
 
-    // Extract the segment and add it to the workspace segments list
+    // Move the segment from temp list to workspace segments list using modern approach
     wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
-    Segment *new_seg = &*std::prev(wksp_->get_segments().end());
+    // Get iterator to the newly added segment
+    auto new_seg_it = std::prev(wksp_->get_segments().end());
 
     int line_no      = current_line_no_;
     current_line_no_ = -1;
@@ -74,12 +76,12 @@ void Editor::put_line()
     if (break_result == 0) {
         // Normal case: line exists, split it
         // Now cursegm_ points to the segment starting at line_no
-        // Get the segment we want to replace (the one containing line_no)
-        Segment *old_seg = wksp_->cursegm();
+        // Get iterator to the segment we want to replace (the one containing line_no)
+        auto old_seg_it = wksp_->cursegm();
 
         // Check if the segment only contains one line (or if we're at end of file)
         int segmline       = wksp_->segmline();
-        bool only_one_line = (old_seg->nlines == 1);
+        bool only_one_line = (old_seg_it->nlines == 1);
 
         if (!only_one_line) {
             // Break at line_no + 1 to isolate the line
@@ -87,18 +89,13 @@ void Editor::put_line()
             // Now cursegm_ points to segment starting at line_no + 1
         }
 
-        // Insert new segment into list
+        // Replace old segment with new segment using iterator-based approach
         std::list<Segment> &segs = wksp_->get_segments();
-        auto it = std::find_if(segs.begin(), segs.end(), [old_seg](const Segment &s) { return &s == old_seg; });
-        if (it != segs.end()) {
-            auto new_it = segs.insert(it, *new_seg);
-            segs.erase(it);
-            wksp_->set_cursegm(&*new_it);
-        }
+        auto replace_pos = old_seg_it;
+        *replace_pos = std::move(*new_seg_it);  // Copy content from new segment
+        segs.erase(new_seg_it);  // Remove the duplicate from the end of list
+        wksp_->set_cursegm(&*replace_pos);
         wksp_->set_segmline(segmline);
-
-        // Free the old segment
-        delete old_seg;
 
         // Try to merge adjacent segments (but not if we just created blank lines)
         if (only_one_line || line_no < wksp_->nlines() - 1) {
@@ -109,16 +106,12 @@ void Editor::put_line()
         wksp_->set_modified(true);
     } else if (break_result == 1) {
         // breaksegm created blank lines - replace the current segment with new segment
-        Segment *wg = wksp_->cursegm();
+        auto replace_it = wksp_->cursegm();
 
-        // Replace wg with new_seg in the list
-        std::list<Segment> &segs = wksp_->get_segments();
-        auto it = std::find_if(segs.begin(), segs.end(), [wg](const Segment &s) { return &s == wg; });
-        if (it != segs.end()) {
-            *it = *new_seg;
-            wksp_->set_cursegm(&*it);
-        }
-
+        // Replace the segment using iterator-based approach
+        *replace_it = std::move(*new_seg_it);
+        wksp_->get_segments().erase(new_seg_it);  // Remove duplicate from end
+        wksp_->set_cursegm(&*replace_it);
         wksp_->set_segmline(line_no);
 
         // Mark workspace as modified

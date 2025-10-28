@@ -85,9 +85,8 @@ TEST_F(SegmentTest, HandleEmptyFile)
     editor->load_file_segments(filename);
 
     // Should handle empty file without crashing
-    // For empty files, don't call set_current_segment - just verify read returns empty
     std::string line = editor->wksp_->read_line_from_segment(0);
-    EXPECT_EQ("", line);
+    EXPECT_EQ("", line);  // Line 0 is beyond end of empty file, returns empty string
 
     cleanupTestFile(filename);
 }

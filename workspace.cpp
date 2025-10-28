@@ -164,6 +164,12 @@ int Workspace::set_current_segment(int lno)
     if (cursegm_ == segments_.end())
         throw std::runtime_error("set_current_segment: empty workspace");
 
+    // Special case: if we're positioned on a tail segment, all lines are beyond end of file
+    if (cursegm_->fdesc == 0) {
+        position.line = lno;
+        return 1; // Line is beyond end of file
+    }
+
     // Move forward to find the segment containing lno
     while (lno >= position.segmline + cursegm_->nlines) {
         if (cursegm_->fdesc == 0) {
@@ -326,7 +332,7 @@ void Workspace::load_file(int fd)
     }
 
     // Create tail segment if needed
-    if (!segments_.empty() && segments_.back().fdesc != 0) {
+    if (segments_.empty() || segments_.back().fdesc != 0) {
         segments_.emplace_back();
     }
 

@@ -333,8 +333,12 @@ void Editor::splitline(int line, int col)
     put_line();
 
     // Insert new line with tail content
-    Segment *tail_seg = tempfile_.write_line_to_temp(tail);
-    if (tail_seg) {
+    auto temp_segments = tempfile_.write_line_to_temp(tail);
+    if (!temp_segments.empty()) {
+        // Move the segment into the workspace segments list
+        wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
+        // Get pointer to the newly inserted segment
+        Segment *tail_seg = &*std::prev(wksp_->get_segments().end());
         wksp_->insert_segments(tail_seg, line + 1);
         wksp_->set_nlines(wksp_->nlines() + 1);
     } else {

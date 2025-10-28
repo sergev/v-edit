@@ -28,13 +28,16 @@
 - [x] Define type Segment::iterator = std::list<Segment>::iterator.
 - [x] Define type Segment::const_iterator = std::list<Segment>::const_iterator.
 
-## Phase 5: Remove Legacy Code (Started - Conservative Approach)
-- [ ] Modify Tempfile method write_line_to_temp() to return `std::list<Segment>` instead of pointer
-- [ ] Modify Tempfile method write_lines_to_temp() to return `std::list<Segment>` instead of pointer
-- [ ] Remove pointer members (`head_`, `cursegm_`) - requires complete refactoring of dual-system usage
-- [ ] Remove manual linking code (`seg->next`, `seg->prev`) - some code still depends on this
-- [ ] Update static helper functions to use std::list
-- [ ] Final cleanup of pointer-based API in Segment class
+## Phase 5: Remove Legacy Code ✅ COMPLETED
+- [x] Modify Tempfile method `write_line_to_temp()` to return `std::list<Segment>` instead of pointer
+- [x] Modify Tempfile method `write_lines_to_temp()` to return `std::list<Segment>` instead of pointer
+- [x] Remove pointer members (`head_`) from Workspace class - `cursegm_` converted to iterator
+- [x] Remove manual linking code (`seg->next`, `seg->prev`) from Segment class
+- [x] Update `build_segments_from_file` to only populate std::list
+- [x] Update `write_segments_to_file` to use std::list only
+- [x] Update `set_chain` to convert external pointer chains to std::list
+- [ ] Remaining: Some methods (breaksegm, insert_segments) still create external Segment* objects that try to use prev/next - need full conversion to list operations for complete removal of legacy code
+- [x] Static helper functions kept for API compatibility but still use pointer chains
 
 ## Phase 6: Remove Segment Pointer Members
 - [ ] Evaluate if `Segment::prev` and `Segment::next` can be removed

@@ -619,8 +619,9 @@ TEST_F(WorkspaceTest, WriteLineToTempAndSave)
 
     // Create a temp segment with modified line content
     // Use tempfile to write the modified line
-    Segment *temp_seg = tempfile->write_line_to_temp("modified_line2");
-    ASSERT_NE(temp_seg, nullptr);
+    auto temp_segments = tempfile->write_line_to_temp("modified_line2");
+    ASSERT_FALSE(temp_segments.empty());
+    Segment *temp_seg = &temp_segments.front();
     EXPECT_EQ(temp_seg->nlines, 1);
     EXPECT_NE(temp_seg->fdesc, 0); // Should not be 0
     EXPECT_GT(temp_seg->fdesc, 0); // Should be a valid file descriptor

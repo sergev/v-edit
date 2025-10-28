@@ -34,6 +34,7 @@ set(TEST_SOURCES
     segment_test.cpp
     segment_unit_test.cpp
     workspace_unit_test.cpp
+    tempfile_unit_test.cpp
     command_mode_test.cpp
     editor_unit_test.cpp
     TmuxDriver.cpp

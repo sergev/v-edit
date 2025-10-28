@@ -505,11 +505,10 @@ void Editor::handle_area_selection(int ch)
         int c;
         params_.get_area_end(c, r1);
         params_.set_area_end(c, curLine);
-    } else {
-        int c;
-        params_.get_area_start(c, r0);
-        params_.set_area_start(c, curLine);
-    }
+        } else {
+            Segment *blank = wksp_->create_blank_lines(1);
+            wksp_->insert_segments(blank, curLine + 1);
+        }
 }
 
 //
@@ -842,7 +841,14 @@ void Editor::handle_key_edit(int ch)
         put_line();
         // Insert new line with tail content
         if (!tail.empty()) {
-            Segment *tail_seg = tempfile_.write_line_to_temp(tail);
+            auto temp_segments = tempfile_.write_line_to_temp(tail);
+            Segment *tail_seg = nullptr;
+            if (!temp_segments.empty()) {
+                // Move the segment into the workspace segments list
+                wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
+                // Get pointer to the newly inserted segment
+                tail_seg = &*std::prev(wksp_->get_segments().end());
+            }
             if (tail_seg) {
                 wksp_->insert_segments(tail_seg, curLine + 1);
             } else {

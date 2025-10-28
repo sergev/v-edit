@@ -49,12 +49,16 @@ void Editor::put_line()
     current_line_modified_ = false;
 
     // Write the modified line to temp file and get a segment for it
-    Segment *new_seg = tempfile_.write_line_to_temp(current_line_);
-    if (!new_seg) {
+    auto temp_segments = tempfile_.write_line_to_temp(current_line_);
+    if (temp_segments.empty()) {
         // TODO: error message, as we lost contents of the current line.
         current_line_no_ = -1;
         return;
     }
+
+    // Extract the segment and add it to the workspace segments list
+    wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
+    Segment *new_seg = &*std::prev(wksp_->get_segments().end());
 
     int line_no      = current_line_no_;
     current_line_no_ = -1;

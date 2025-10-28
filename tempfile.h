@@ -1,6 +1,7 @@
 #ifndef TEMPFILE_H
 #define TEMPFILE_H
 
+#include <list>
 #include <string>
 
 #include "segment.h"
@@ -25,10 +26,10 @@ public:
     void close_temp_file();
 
     // Write a line to the temporary file and return a segment for it
-    Segment *write_line_to_temp(const std::string &line_content);
+    std::list<Segment> write_line_to_temp(const std::string &line_content);
 
     // Write multiple lines to temporary file and return a segment for them
-    Segment *write_lines_to_temp(const std::vector<std::string> &lines);
+    std::list<Segment> write_lines_to_temp(const std::vector<std::string> &lines);
 
     // Get current file descriptor
     int fd() const { return tempfile_fd_; }

@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <list>
 #include <vector>
 
 Tempfile::Tempfile() = default;
@@ -48,10 +49,10 @@ void Tempfile::close_temp_file()
 //
 // Write a line to the temporary file and return a segment for it.
 //
-Segment *Tempfile::write_line_to_temp(const std::string &line_content)
+std::list<Segment> Tempfile::write_line_to_temp(const std::string &line_content)
 {
     if (tempfile_fd_ < 0 && !open_temp_file()) {
-        return nullptr;
+        return {};
     }
 
     std::string line = line_content;
@@ -65,53 +66,52 @@ Segment *Tempfile::write_line_to_temp(const std::string &line_content)
 
     // Seek to the correct position before writing
     if (lseek(tempfile_fd_, seek_pos, SEEK_SET) < 0) {
-        return nullptr;
+        return {};
     }
 
     if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
-        return nullptr;
+        return {};
     }
 
     tempseek_ += nbytes;
 
-    Segment *seg = new Segment();
-    seg->prev    = nullptr;
-    seg->next    = nullptr;
-    seg->nlines  = 1;
-    seg->fdesc   = tempfile_fd_;
-    seg->seek    = seek_pos;
-    seg->sizes.push_back(nbytes);
+    Segment seg;
+    seg.prev    = nullptr;
+    seg.next    = nullptr;
+    seg.nlines  = 1;
+    seg.fdesc   = tempfile_fd_;
+    seg.seek    = seek_pos;
+    seg.sizes.push_back(nbytes);
 
-    return seg;
+    return {seg};
 }
 
 //
 // Write multiple lines to temporary file and return a segment for them.
 //
-Segment *Tempfile::write_lines_to_temp(const std::vector<std::string> &lines)
+std::list<Segment> Tempfile::write_lines_to_temp(const std::vector<std::string> &lines)
 {
     if (tempfile_fd_ < 0 && !open_temp_file()) {
-        return nullptr;
+        return {};
     }
 
     if (lines.empty()) {
-        return nullptr;
+        return {};
     }
 
     int nlines = lines.size();
 
     // Write all lines to temp file
-    Segment *seg = new Segment();
-    seg->prev    = nullptr;
-    seg->next    = nullptr;
-    seg->nlines  = nlines;
-    seg->fdesc   = tempfile_fd_;
-    seg->seek    = tempseek_;
+    Segment seg;
+    seg.prev    = nullptr;
+    seg.next    = nullptr;
+    seg.nlines  = nlines;
+    seg.fdesc   = tempfile_fd_;
+    seg.seek    = tempseek_;
 
     // Seek to the correct position before writing
     if (lseek(tempfile_fd_, tempseek_, SEEK_SET) < 0) {
-        delete seg;
-        return nullptr;
+        return {};
     }
 
     // Write lines and record their sizes
@@ -124,13 +124,12 @@ Segment *Tempfile::write_lines_to_temp(const std::vector<std::string> &lines)
 
         int nbytes = line.size();
         if (write(tempfile_fd_, line.c_str(), nbytes) != nbytes) {
-            delete seg;
-            return nullptr;
+            return {};
         }
 
-        seg->sizes.push_back(nbytes);
+        seg.sizes.push_back(nbytes);
         tempseek_ += nbytes;
     }
 
-    return seg;
+    return {seg};
 }

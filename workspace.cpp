@@ -44,48 +44,40 @@ void Workspace::reset()
 
 //
 // Set the segment chain for the workspace.
-// Deallocates all segments of the previous chain including the tail segment,
-// then sets the new chain and appends a new tail if missing.
+// Converts the external pointer-based chain to the internal std::list.
+// This method is used for backward compatibility with external segment chains.
 //
 void Workspace::set_chain(Segment *chain)
 {
-    // Set new chain
-    // TODO: fix memory leak, deallocate old chain first
-    head_ = chain;
-    // Set cursegm_ to iterator pointing to head_
-    if (head_) {
-        for (auto it = segments_.begin(); it != segments_.end(); ++it) {
-            if (&*it == head_) {
-                cursegm_ = it;
-                break;
-            }
-        }
-    } else {
-        cursegm_ = segments_.end();
-    }
-
-    if (!head_) {
-        // Create an empty chain with just a tail
-        head_ = new Segment();
-        // head_ is not in segments_ list yet, so we can't set cursegm_ from it
-        // This needs to be fixed when set_chain is called on external chains
+    if (!chain)
         return;
+
+    // Clear existing segments but keep the tail structure
+    segments_.clear();
+    cursegm_ = segments_.end();
+
+    // Walk the chain and add segments to the list
+    Segment *current = chain;
+    while (current) {
+        segments_.emplace_back(*current); // Copy segment data
+
+        // Stop at tail segment, but don't copy it since workspace manages its own tail
+        if (current->fdesc == 0)
+            break;
+
+        current = current->next;
     }
 
-    // Find the last segment in the new chain
-    Segment *last = head_;
-    while (last->next && last->next->fdesc != 0) {
-        last = last->next;
+    // Ensure we have a tail segment
+    if (segments_.empty() || segments_.back().fdesc != 0) {
+        segments_.emplace_back();
     }
 
-    // Check if the chain already ends with a tail (fdesc == 0)
-    bool has_tail = (last->fdesc == 0) || (last->next && last->next->fdesc == 0);
-
-    // If no tail exists, append a new one
-    if (!has_tail) {
-        Segment *tail = new Segment();
-        tail->prev    = last;
-        last->next    = tail;
+    // Set cursegm_ to the first non-tail segment
+    cursegm_ = segments_.begin();
+    if (!segments_.empty() && segments_.front().fdesc == 0) {
+        // Only tail - set to end
+        cursegm_ = segments_.end();
     }
 }
 
@@ -101,17 +93,14 @@ void Workspace::build_segments_from_lines(const std::vector<std::string> &lines)
 
     if (nlines_ > 0) {
         // Write lines to temp file and get a segment
-        head_ = tempfile_.write_lines_to_temp(lines);
-        if (!head_)
+        auto segments_from_temp = tempfile_.write_lines_to_temp(lines);
+        if (segments_from_temp.empty())
             throw std::runtime_error(
                 "build_segments_from_lines: failed to write lines to temp file");
-    } else {
-        // Empty file - create a tail marker
-        head_ = new Segment();
+        // Move the segment into our segments_ list
+        segments_.splice(segments_.end(), segments_from_temp);
     }
-    // cursegm_ should be set to the iterator pointing to head_
-    // But since head_ may not be in segments_ list yet, skip setting for now
-    // cursegm_ = head_;
+    // cursegm_ set by reset() to begin()
 }
 
 //
@@ -231,9 +220,6 @@ void Workspace::build_segments_from_file(int fd)
     cleanup_segments();
 
     // Build segment chain by reading file
-    Segment *first_seg = nullptr;
-    Segment *last_seg  = nullptr;
-
     // Clear any existing segments list
     segments_.clear();
 
@@ -247,35 +233,27 @@ void Workspace::build_segments_from_file(int fd)
     int lines_in_seg = 0;
     long seg_seek    = 0;
 
-            for (;;) {
-                // Read buffer if needed
-                if (buf_next >= buf_count) {
-                    buf_next  = 0;
-                    buf_count = read(fd, read_buf, sizeof(read_buf));
-                    if (buf_count <= 0) {
-                        // EOF
-                        if (lines_in_seg > 0) {
-                            // Create final segment in list
-                            segments_.emplace_back();
-                            Segment *seg = &segments_.back();
-                            seg->prev    = last_seg;
-                            seg->next    = nullptr;
-                            seg->nlines  = lines_in_seg;
-                            seg->fdesc   = fd;
-                            seg->seek    = seg_seek;
-                            seg->sizes   = std::move(temp_seg.sizes);
+    for (;;) {
+        // Read buffer if needed
+        if (buf_next >= buf_count) {
+            buf_next  = 0;
+            buf_count = read(fd, read_buf, sizeof(read_buf));
+            if (buf_count <= 0) {
+                // EOF
+                if (lines_in_seg > 0) {
+                    // Create final segment in list
+                    segments_.emplace_back();
+                    Segment &seg = segments_.back();
+                    seg.nlines  = lines_in_seg;
+                    seg.fdesc   = fd;
+                    seg.seek    = seg_seek;
+                    seg.sizes   = std::move(temp_seg.sizes);
 
-                            if (last_seg)
-                                last_seg->next = seg;
-                            else
-                                first_seg = seg;
-
-                            last_seg = seg;
-                            nlines_ += lines_in_seg;
-                        }
-                        break;
-                    }
+                    nlines_ += lines_in_seg;
                 }
+                break;
+            }
+        }
 
         // Process line - handle lines that span buffer boundaries
         int line_len       = 0;
@@ -324,48 +302,128 @@ void Workspace::build_segments_from_file(int fd)
         // Create new segment if we've hit limits
         if (lines_in_seg >= 127 || temp_seg.sizes.size() >= 4000) {
             segments_.emplace_back();
-            Segment *seg = &segments_.back();
-            seg->prev    = last_seg;
-            seg->next    = nullptr;
-            seg->nlines  = lines_in_seg;
-            seg->fdesc   = fd;
-            seg->seek    = seg_seek;
-            seg->sizes   = std::move(temp_seg.sizes);
+            Segment &seg = segments_.back();
+            seg.nlines  = lines_in_seg;
+            seg.fdesc   = fd;
+            seg.seek    = seg_seek;
+            seg.sizes   = std::move(temp_seg.sizes);
 
-            if (last_seg)
-                last_seg->next = seg;
-            else
-                first_seg = seg;
-
-            last_seg = seg;
             nlines_ += lines_in_seg;
 
             lines_in_seg = 0;
         }
     }
 
-    // Create tail segment
-    if (first_seg) {
+    // Create tail segment if needed
+    if (!segments_.empty() && segments_.back().fdesc != 0) {
         segments_.emplace_back();
-        Segment *tail = &segments_.back();
-        tail->prev    = last_seg;
-        tail->seek    = file_offset;
-
-        if (last_seg)
-            last_seg->next = tail;
-        else
-            first_seg = tail;
-    } else {
-        // Empty file - create a tail segment
-        segments_.emplace_back();
-        first_seg = &segments_.back();
     }
 
-    head_     = first_seg;
-    cursegm_  = first_seg ? segments_.begin() : segments_.end();
+    cursegm_  = segments_.begin();
     segmline_ = 0;
     line_     = 0;
+}
 
+//
+// Copy segment chain (based on copysegm from prototype).
+// Returns a deep copy of the segment chain from start to end.
+//
+Segment *Workspace::copy_segment_chain(Segment *start, Segment *end)
+{
+    if (!start)
+        return nullptr;
+
+    Segment *copied_first = nullptr;
+    Segment *copied_last  = nullptr;
+
+    Segment *curr = start;
+    while (curr && curr != end) {
+        Segment *copy = new Segment();
+        copy->nlines  = curr->nlines;
+        copy->fdesc   = curr->fdesc;
+        copy->seek    = curr->seek;
+        copy->sizes   = curr->sizes; // Copy vector
+        copy->next    = nullptr;
+        copy->prev    = copied_last;
+
+        if (copied_last)
+            copied_last->next = copy;
+        else
+            copied_first = copy;
+
+        copied_last = copy;
+
+        if (curr->fdesc == 0)
+            break;
+
+        curr = curr->next;
+    }
+
+    // Note: we do NOT add a tail segment here - it should already exist in the workspace
+
+    return copied_first;
+}
+
+//
+// Create segments for n empty lines (based on blanklines from prototype).
+// Each empty line has length 1 (just the newline).
+//
+Segment *Workspace::create_blank_lines(int n)
+{
+    if (n <= 0)
+        return nullptr;
+
+    Segment *first = nullptr;
+    Segment *last  = nullptr;
+
+    while (n > 0) {
+        int lines_in_seg = (n > 127) ? 127 : n;
+
+        Segment *seg = new Segment();
+        seg->nlines  = lines_in_seg;
+        seg->fdesc   = -1; // Empty lines not from file
+        seg->seek    = 0;
+
+        // Add line length data: each empty line has length 1 (just newline)
+        seg->sizes.resize(lines_in_seg);
+        for (int i = 0; i < lines_in_seg; ++i) {
+            seg->sizes[i] = 1;
+        }
+
+        // Link segments
+        seg->prev = last;
+        if (last)
+            last->next = seg;
+        else
+            first = seg;
+
+        last = seg;
+        n -= lines_in_seg;
+    }
+
+    // Note: we do NOT add a tail segment here - it should already exist in the workspace
+
+    return first;
+}
+
+//
+// Cleanup a segment chain (static helper for tests).
+//
+void Workspace::cleanup_segments(Segment *seg)
+{
+    if (!seg)
+        return;
+
+    // First, unlink from chain
+    if (seg->prev)
+        seg->prev->next = nullptr;
+
+    // Delete all segments in chain
+    while (seg) {
+        Segment *next = seg->next;
+        delete seg;
+        seg = next;
+    }
 }
 //
 //
@@ -400,7 +458,7 @@ std::string Workspace::read_line_from_segment(int line_no)
     // Read line from file
     std::string result(line_len - 1, '\0'); // exclude newline
     if (lseek(seg->fdesc, seek_pos, SEEK_SET) >= 0) {
-        read(seg->fdesc, result.data(), result.size());
+        read(seg->fdesc, static_cast<void*>(&result[0]), result.size());
     }
     return result;
 }
@@ -410,7 +468,7 @@ std::string Workspace::read_line_from_segment(int line_no)
 //
 bool Workspace::write_segments_to_file(const std::string &path)
 {
-    if (!head_) {
+    if (segments_.empty()) {
         // No segment chain - write empty file
         int out_fd = creat(path.c_str(), 0664);
         if (out_fd >= 0) {
@@ -423,24 +481,25 @@ bool Workspace::write_segments_to_file(const std::string &path)
     if (out_fd < 0)
         return false;
 
-    Segment *seg = head_;
     char buffer[8192];
 
-    while (seg && seg->has_contents()) {
-        // Calculate total bytes for this segment
-        long total_bytes = seg->get_total_bytes();
+    for (const auto &seg : segments_) {
+        if (!seg.has_contents())
+            continue; // Skip tail segment
 
-        if (seg->fdesc > 0) {
+        // Calculate total bytes for this segment
+        long total_bytes = seg.get_total_bytes();
+
+        if (seg.fdesc > 0) {
             // Read from source file and write to output
-            if (lseek(seg->fdesc, seg->seek, SEEK_SET) < 0) {
+            if (lseek(seg.fdesc, seg.seek, SEEK_SET) < 0) {
                 // Failed to seek - file may have been unlinked
                 // Skip this segment and continue
-                seg = seg->next;
                 continue;
             }
             while (total_bytes > 0) {
                 int to_read = (total_bytes < (long)sizeof(buffer)) ? total_bytes : sizeof(buffer);
-                int nread   = read(seg->fdesc, buffer, to_read);
+                int nread   = read(seg.fdesc, buffer, to_read);
                 if (nread <= 0)
                     break;
 
@@ -452,8 +511,6 @@ bool Workspace::write_segments_to_file(const std::string &path)
             std::string newlines(total_bytes, '\n');
             write(out_fd, newlines.data(), newlines.size());
         }
-
-        seg = seg->next;
     }
 
     close(out_fd);
@@ -480,7 +537,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Calculate how many blank lines to create
         // line_ was set by set_current_segment to segmline_ of the tail segment
         // Check if workspace is empty (only has a tail segment)
-        bool is_empty = (head_->fdesc == 0);
+        bool is_empty = segments_.front().fdesc == 0;
 
         int num_blank_lines;
 
@@ -721,8 +778,7 @@ void Workspace::insert_segments(Segment *new_seg, int at)
 
         if (insert_prev)
             insert_prev->next = new_seg;
-        else
-            head_ = new_seg; // New segments become the start
+        // If insert_prev is null, new_seg is now the start of the chain
 
         // Update workspace position
         // Find the iterator for new_seg in the segments_ list
@@ -806,107 +862,7 @@ Segment *Workspace::delete_segments(int from, int to)
     return nullptr; // Simplified - don't return the deleted chain for now
 }
 
-//
-// Copy segment chain (based on copysegm from prototype).
-// Returns a deep copy of the segment chain from start to end.
-//
-Segment *Workspace::copy_segment_chain(Segment *start, Segment *end)
-{
-    if (!start)
-        return nullptr;
 
-    Segment *copied_first = nullptr;
-    Segment *copied_last  = nullptr;
-
-    Segment *curr = start;
-    while (curr && curr != end) {
-        Segment *copy = new Segment();
-        copy->nlines  = curr->nlines;
-        copy->fdesc   = curr->fdesc;
-        copy->seek    = curr->seek;
-        copy->sizes   = curr->sizes; // Copy vector
-        copy->next    = nullptr;
-        copy->prev    = copied_last;
-
-        if (copied_last)
-            copied_last->next = copy;
-        else
-            copied_first = copy;
-
-        copied_last = copy;
-
-        if (curr->fdesc == 0)
-            break;
-
-        curr = curr->next;
-    }
-
-    // Note: we do NOT add a tail segment here - it should already exist in the workspace
-
-    return copied_first;
-}
-
-//
-// Create segments for n empty lines (based on blanklines from prototype).
-// Each empty line has length 1 (just the newline).
-//
-Segment *Workspace::create_blank_lines(int n)
-{
-    if (n <= 0)
-        return nullptr;
-
-    Segment *first = nullptr;
-    Segment *last  = nullptr;
-
-    while (n > 0) {
-        int lines_in_seg = (n > 127) ? 127 : n;
-
-        Segment *seg = new Segment();
-        seg->nlines  = lines_in_seg;
-        seg->fdesc   = -1; // Empty lines not from file
-        seg->seek    = 0;
-
-        // Add line length data: each empty line has length 1 (just newline)
-        seg->sizes.resize(lines_in_seg);
-        for (int i = 0; i < lines_in_seg; ++i) {
-            seg->sizes[i] = 1;
-        }
-
-        // Link segments
-        seg->prev = last;
-        if (last)
-            last->next = seg;
-        else
-            first = seg;
-
-        last = seg;
-        n -= lines_in_seg;
-    }
-
-    // Note: we do NOT add a tail segment here - it should already exist in the workspace
-
-    return first;
-}
-
-//
-// Cleanup a segment chain (static helper for tests).
-//
-void Workspace::cleanup_segments(Segment *seg)
-{
-    if (!seg)
-        return;
-
-    // First, unlink from chain
-    if (seg->prev)
-        seg->prev->next = nullptr;
-
-    // Delete all segments in chain
-    while (seg) {
-        Segment *next = seg->next;
-        delete seg;
-        seg = next;
-    }
-}
 
 //
 // Scroll workspace by nl lines (based on wksp_forward from prototype).

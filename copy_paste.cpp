@@ -53,11 +53,17 @@ void Editor::paste(int afterLine, int atCol)
         // Paste as lines
         for (const auto &line : clip_lines) {
             // Create a segment for this line
-            Segment *new_seg = tempfile_.write_line_to_temp(line);
-            if (new_seg) {
-                wksp_->insert_segments(new_seg, afterLine + 1);
-                afterLine++;
-                wksp_->set_nlines(wksp_->nlines() + 1);
+            auto temp_segments = tempfile_.write_line_to_temp(line);
+            if (!temp_segments.empty()) {
+                // Move the segment into the workspace segments list
+                wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
+                // Get pointer to the newly inserted segment
+                Segment *new_seg = &*std::prev(wksp_->get_segments().end());
+                if (new_seg) {
+                    wksp_->insert_segments(new_seg, afterLine + 1);
+                    afterLine++;
+                    wksp_->set_nlines(wksp_->nlines() + 1);
+                }
             }
         }
     }

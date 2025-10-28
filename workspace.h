@@ -89,6 +89,10 @@ public:
     bool has_segments() const { return !segments_.empty(); }
     Tempfile &get_tempfile() const { return tempfile_; }
 
+    // Access to segments list for internal operations
+    std::list<Segment> &get_segments() { return segments_; }
+    const std::list<Segment> &get_segments() const { return segments_; }
+
     // Line count
     int get_line_count(int fallback_count) const { return segments_.empty() ? fallback_count : nlines_; }
 
@@ -146,7 +150,6 @@ private:
     Tempfile &tempfile_;          // reference to temp file manager
     std::list<Segment> segments_; // list-based segment chain
     Segment::iterator cursegm_;   // current segment iterator (points into segments_)
-    Segment *head_{ nullptr };    // head of segment chain (for backward compatibility)
     int writable_{ 0 };           // write permission
     int nlines_{ 0 };             // line count
     int topline_{ 0 };            // top line visible on screen

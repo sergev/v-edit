@@ -70,10 +70,10 @@ public:
     // Build segment chain from text string
     void load_text(const std::string &text);
 
-    // Set current segment to the segment containing the specified line
+    // Change current segment to the segment containing the specified line
     // Updates cursegm_, segmline_, and line_ to position the workspace at line number
     // Throws std::runtime_error for invalid line numbers or corrupted segment chain
-    int set_current_segment(int lno);
+    int change_current_line(int lno);
 
     // Load file content into segment chain structure
     void load_file(const std::string &path, bool create_if_missing = true);

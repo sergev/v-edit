@@ -61,17 +61,17 @@ TEST_F(SegmentTest, ReadLineFromSegment)
     EXPECT_TRUE(editor->wksp_->has_segments());
 
     // Read first line - position to line 0 first
-    editor->wksp_->set_current_segment(0);
+    editor->wksp_->change_current_line(0);
     std::string line1 = editor->wksp_->read_line_from_segment(0);
     EXPECT_EQ("First line", line1);
 
     // Read second line - position to line 1 first
-    editor->wksp_->set_current_segment(1);
+    editor->wksp_->change_current_line(1);
     std::string line2 = editor->wksp_->read_line_from_segment(1);
     EXPECT_EQ("Second line", line2);
 
     // Read third line - position to line 2 first
-    editor->wksp_->set_current_segment(2);
+    editor->wksp_->change_current_line(2);
     std::string line3 = editor->wksp_->read_line_from_segment(2);
     EXPECT_EQ("Third line", line3);
 
@@ -104,17 +104,17 @@ TEST_F(SegmentTest, HandleLargeFile)
     editor->load_file_segments(filename);
 
     // Read first line - position to line 0 first
-    editor->wksp_->set_current_segment(0);
+    editor->wksp_->change_current_line(0);
     std::string firstLine = editor->wksp_->read_line_from_segment(0);
     EXPECT_EQ("Line 0", firstLine);
 
     // Read last line - position to line 999 first
-    editor->wksp_->set_current_segment(999);
+    editor->wksp_->change_current_line(999);
     std::string lastLine = editor->wksp_->read_line_from_segment(999);
     EXPECT_EQ("Line 999", lastLine);
 
     // Read middle line - position to line 500 first
-    editor->wksp_->set_current_segment(500);
+    editor->wksp_->change_current_line(500);
     std::string middleLine = editor->wksp_->read_line_from_segment(500);
     EXPECT_EQ("Line 500", middleLine);
 
@@ -135,12 +135,12 @@ TEST_F(SegmentTest, HandleVeryLongLines)
     editor->load_file_segments(filename);
 
     // Read the long line - position to line 0 first
-    editor->wksp_->set_current_segment(0);
+    editor->wksp_->change_current_line(0);
     std::string line1 = editor->wksp_->read_line_from_segment(0);
     EXPECT_EQ(longLine, line1);
 
     // Read second line - position to line 1 first
-    editor->wksp_->set_current_segment(1);
+    editor->wksp_->change_current_line(1);
     std::string line2 = editor->wksp_->read_line_from_segment(1);
     EXPECT_EQ("Second line", line2);
 
@@ -272,20 +272,20 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
 
     // Verify we can read lines from each segment
     // Test various lines across the file - position to each line first
-    editor->wksp_->set_current_segment(0);
+    editor->wksp_->change_current_line(0);
     EXPECT_EQ(editor->wksp_->read_line_from_segment(0), "Line 0");
 
-    editor->wksp_->set_current_segment(1);
+    editor->wksp_->change_current_line(1);
     EXPECT_EQ(editor->wksp_->read_line_from_segment(1), "Medium line 1");
 
-    editor->wksp_->set_current_segment(3);
+    editor->wksp_->change_current_line(3);
     EXPECT_EQ(editor->wksp_->read_line_from_segment(3),
               "This is a very long line number 3 with extra text");
 
-    editor->wksp_->set_current_segment(100);
+    editor->wksp_->change_current_line(100);
     EXPECT_EQ(editor->wksp_->read_line_from_segment(100), "Line 100");
 
-    editor->wksp_->set_current_segment(199);
+    editor->wksp_->change_current_line(199);
     EXPECT_EQ(editor->wksp_->read_line_from_segment(199),
               "This is a very long line number 199 with extra text");
 

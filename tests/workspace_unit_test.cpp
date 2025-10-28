@@ -211,7 +211,7 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
     EXPECT_EQ(result, 0);
 
     // Position to second segment (line 2)
-    wksp->set_current_segment(2);
+    wksp->change_current_line(2);
 
     // Try to merge with previous segment
     bool merged = wksp->catsegm();
@@ -359,9 +359,9 @@ TEST_F(WorkspaceTest, BuildFromText)
     EXPECT_EQ(wksp->file_state.nlines, 4);
 
     // Position to each line before reading
-    wksp->set_current_segment(0);
+    wksp->change_current_line(0);
     EXPECT_EQ(wksp->read_line_from_segment(0), "Line one");
-    wksp->set_current_segment(3);
+    wksp->change_current_line(3);
     EXPECT_EQ(wksp->read_line_from_segment(3), "Last line");
 }
 
@@ -391,13 +391,13 @@ TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
     wksp->load_text(lines);
 
     // Navigate to different lines
-    int result = wksp->set_current_segment(3);
+    int result = wksp->change_current_line(3);
     EXPECT_EQ(result, 0);
     EXPECT_EQ(wksp->position.line, 3);
     EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
 
     // Test navigation to line beyond end
-    result = wksp->set_current_segment(10);
+    result = wksp->change_current_line(10);
     EXPECT_EQ(result, 1); // Should return 1 (beyond end)
 }
 
@@ -428,7 +428,7 @@ TEST_F(WorkspaceTest, SegmentCatOperations)
 
     // Break to create segments to merge
     wksp->breaksegm(2, true);
-    wksp->set_current_segment(2);
+    wksp->change_current_line(2);
 
     // Test merge conditions - may or may not succeed depending on implementation
     bool merged = wksp->catsegm();
@@ -436,7 +436,7 @@ TEST_F(WorkspaceTest, SegmentCatOperations)
     EXPECT_TRUE(true); // No segmentation fault
 
     // Test merge on first segment (shouldn't work)
-    wksp->set_current_segment(0);
+    wksp->change_current_line(0);
     merged = wksp->catsegm();
     EXPECT_FALSE(merged); // Can't merge first segment
 }
@@ -503,14 +503,14 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
 
     // Break at various points
     wksp->breaksegm(2, true);
-    wksp->set_current_segment(4);
+    wksp->change_current_line(4);
     wksp->breaksegm(4, true);
 
     // Try some merges (may or may not succeed)
-    wksp->set_current_segment(2);
+    wksp->change_current_line(2);
     wksp->catsegm(); // Try to merge - result depends on implementation
 
-    wksp->set_current_segment(4);
+    wksp->change_current_line(4);
     wksp->catsegm(); // Try another merge
 
     // Final state verification

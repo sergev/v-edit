@@ -155,14 +155,14 @@ void Workspace::load_text(const std::string &text)
 // Throws:
 //   std::runtime_error for invalid line numbers or corrupted segment chains
 //
-int Workspace::set_current_segment(int lno)
+int Workspace::change_current_line(int lno)
 {
     // Validate input: negative line numbers are invalid
     if (lno < 0)
-        throw std::runtime_error("set_current_segment: negative line number");
+        throw std::runtime_error("change_current_line: negative line number");
 
     if (cursegm_ == segments_.end())
-        throw std::runtime_error("set_current_segment: empty workspace");
+        throw std::runtime_error("change_current_line: empty workspace");
 
     // Special case: if we're positioned on a tail segment, all lines are beyond end of file
     if (cursegm_->fdesc == 0) {
@@ -183,7 +183,7 @@ int Workspace::set_current_segment(int lno)
         // Check if there's a next segment before moving
         auto next_it = std::next(cursegm_);
         if (next_it == segments_.end()) {
-            throw std::runtime_error("set_current_segment: null segment in chain");
+            throw std::runtime_error("change_current_line: null segment in chain");
         }
         ++cursegm_;
     }
@@ -191,14 +191,14 @@ int Workspace::set_current_segment(int lno)
     // Move backward to find the segment containing lno
     while (lno < position.segmline) {
         if (cursegm_ == segments_.begin())
-            throw std::runtime_error("set_current_segment: null previous segment");
+            throw std::runtime_error("change_current_line: null previous segment");
         --cursegm_;
         position.segmline -= cursegm_->nlines;
     }
 
     // Consistency check: segmline should not be negative
     if (position.segmline < 0) {
-        throw std::runtime_error("set_current_segment: line count lost (segmline < 0)");
+        throw std::runtime_error("change_current_line: line count lost (segmline < 0)");
     }
 
     // Update workspace state
@@ -414,7 +414,7 @@ void Workspace::cleanup_segments(std::list<Segment> &segments)
 std::string Workspace::read_line_from_segment(int line_no)
 {
     // First, position to the correct segment for this line
-    if (set_current_segment(line_no) != 0) {
+    if (change_current_line(line_no) != 0) {
         return ""; // Line beyond end of file
     }
 
@@ -529,11 +529,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         throw std::runtime_error("breaksegm: empty workspace");
 
     // Position workspace to the target line
-    if (set_current_segment(line_no)) {
+    if (change_current_line(line_no)) {
         // Line is beyond end of file - create blank lines to extend it
         // This matches the prototype behavior
         // Calculate how many blank lines to create
-        // position.line was set by set_current_segment to segmline of the tail segment
+        // position.line was set by change_current_line to segmline of the tail segment
         // Check if workspace is empty (only has a tail segment)
         // Note: after checking, we found that even with content, if cursegm_ points to tail,
         // we need to use file_state.nlines to determine where to start
@@ -600,7 +600,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     if (cursegm_->fdesc == -1) {
         if (rel_line >= cursegm_->nlines) {
             throw std::runtime_error(
-                "breaksegm: inconsistent rel_line after set_current_segment()");
+                "breaksegm: inconsistent rel_line after change_current_line()");
         }
 
         // Find where to insert the new segment (after current segment)
@@ -707,8 +707,8 @@ bool Workspace::catsegm()
             // Reset segmline to allow proper repositioning
             position.segmline = 0;
 
-            // Re-position properly using set_current_segment logic
-            set_current_segment(position.line);
+            // Re-position properly using change_current_line logic
+            change_current_line(position.line);
 
             return true;
         }
@@ -767,7 +767,7 @@ void Workspace::delete_segments(int from, int to)
     int result = breaksegm(to + 1, true);
     if (result != 0) {
         if (to + 1 > file_state.nlines) {
-            set_current_segment(file_state.nlines);
+            change_current_line(file_state.nlines);
         } else {
             return;
         }
@@ -890,7 +890,7 @@ void Workspace::goto_line(int target_line, int max_rows)
 
     // Update current position
     position.line = target_line;
-    set_current_segment(position.line);
+    change_current_line(position.line);
 }
 
 //

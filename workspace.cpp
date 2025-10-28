@@ -12,7 +12,8 @@
 Workspace::Workspace(Tempfile &tempfile) : tempfile_(tempfile)
 {
     // Create initial tail segment (empty workspace still has a tail)
-    head_    = new Segment();
+    segments_.emplace_back();
+    head_    = &segments_.back();
     cursegm_ = head_;
 }
 
@@ -23,16 +24,9 @@ Workspace::~Workspace()
 
 void Workspace::cleanup_segments()
 {
-    if (head_) {
-        Segment *seg = head_;
-        while (seg) {
-            Segment *next = seg->next;
-            delete seg;
-            seg = next;
-        }
-        head_    = nullptr;
-        cursegm_ = nullptr;
-    }
+    segments_.clear();
+    head_    = nullptr;
+    cursegm_ = nullptr;
 }
 
 void Workspace::reset()
@@ -228,6 +222,9 @@ void Workspace::build_segments_from_file(int fd)
     Segment *first_seg = nullptr;
     Segment *last_seg  = nullptr;
 
+    // Clear any existing segments list
+    segments_.clear();
+
     char read_buf[8192];
     int buf_count    = 0;
     int buf_next     = 0;
@@ -238,34 +235,35 @@ void Workspace::build_segments_from_file(int fd)
     int lines_in_seg = 0;
     long seg_seek    = 0;
 
-    for (;;) {
-        // Read buffer if needed
-        if (buf_next >= buf_count) {
-            buf_next  = 0;
-            buf_count = read(fd, read_buf, sizeof(read_buf));
-            if (buf_count <= 0) {
-                // EOF
-                if (lines_in_seg > 0) {
-                    // Create final segment
-                    Segment *seg = new Segment();
-                    seg->prev    = last_seg;
-                    seg->next    = nullptr;
-                    seg->nlines  = lines_in_seg;
-                    seg->fdesc   = fd;
-                    seg->seek    = seg_seek;
-                    seg->sizes   = std::move(temp_seg.sizes);
+            for (;;) {
+                // Read buffer if needed
+                if (buf_next >= buf_count) {
+                    buf_next  = 0;
+                    buf_count = read(fd, read_buf, sizeof(read_buf));
+                    if (buf_count <= 0) {
+                        // EOF
+                        if (lines_in_seg > 0) {
+                            // Create final segment in list
+                            segments_.emplace_back();
+                            Segment *seg = &segments_.back();
+                            seg->prev    = last_seg;
+                            seg->next    = nullptr;
+                            seg->nlines  = lines_in_seg;
+                            seg->fdesc   = fd;
+                            seg->seek    = seg_seek;
+                            seg->sizes   = std::move(temp_seg.sizes);
 
-                    if (last_seg)
-                        last_seg->next = seg;
-                    else
-                        first_seg = seg;
+                            if (last_seg)
+                                last_seg->next = seg;
+                            else
+                                first_seg = seg;
 
-                    last_seg = seg;
-                    nlines_ += lines_in_seg;
+                            last_seg = seg;
+                            nlines_ += lines_in_seg;
+                        }
+                        break;
+                    }
                 }
-                break;
-            }
-        }
 
         // Process line - handle lines that span buffer boundaries
         int line_len       = 0;
@@ -313,7 +311,8 @@ void Workspace::build_segments_from_file(int fd)
 
         // Create new segment if we've hit limits
         if (lines_in_seg >= 127 || temp_seg.sizes.size() >= 4000) {
-            Segment *seg = new Segment();
+            segments_.emplace_back();
+            Segment *seg = &segments_.back();
             seg->prev    = last_seg;
             seg->next    = nullptr;
             seg->nlines  = lines_in_seg;
@@ -335,7 +334,8 @@ void Workspace::build_segments_from_file(int fd)
 
     // Create tail segment
     if (first_seg) {
-        Segment *tail = new Segment();
+        segments_.emplace_back();
+        Segment *tail = &segments_.back();
         tail->prev    = last_seg;
         tail->seek    = file_offset;
 
@@ -345,7 +345,8 @@ void Workspace::build_segments_from_file(int fd)
             first_seg = tail;
     } else {
         // Empty file - create a tail segment
-        first_seg = new Segment();
+        segments_.emplace_back();
+        first_seg = &segments_.back();
     }
 
     head_     = first_seg;

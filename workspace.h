@@ -1,6 +1,7 @@
 #ifndef WORKSPACE_H
 #define WORKSPACE_H
 
+#include <list>
 #include <fstream>
 #include <ostream>
 #include <string>
@@ -21,8 +22,8 @@ public:
     ~Workspace();
 
     // Accessors
-    Segment *chain() const { return head_; }
-    Segment *cursegm() const { return cursegm_; }
+    Segment *chain() const { return segments_.empty() ? nullptr : const_cast<Segment*>(&segments_.front()); }
+    Segment *cursegm() const { return cursegm_ == segments_.end() ? nullptr : &*cursegm_; }
     int writable() const { return writable_; }
     int nlines() const { return nlines_; }
     int topline() const { return topline_; }
@@ -41,7 +42,7 @@ public:
     void set_segmline(int segmline) { segmline_ = segmline; }
     void set_cursorcol(int cursorcol) { cursorcol_ = cursorcol; }
     void set_cursorrow(int cursorrow) { cursorrow_ = cursorrow; }
-    void set_chain(Segment *chain);
+
     void set_cursegm(Segment *seg) { cursegm_ = seg; }
 
     // Segment chain operations
@@ -75,11 +76,11 @@ public:
     void reset();
 
     // Query methods
-    bool has_segments() const { return head_ != nullptr; }
+    bool has_segments() const { return !segments_.empty(); }
     Tempfile &get_tempfile() const { return tempfile_; }
 
     // Line count
-    int get_line_count(int fallback_count) const;
+    int get_line_count(int fallback_count) const { return segments_.empty() ? fallback_count : nlines_; }
 
     // File state tracking
     bool modified() const { return modified_; }
@@ -130,8 +131,8 @@ public:
 
 private:
     Tempfile &tempfile_;          // reference to temp file manager
-    Segment *cursegm_{ nullptr }; // current segment in chain
-    Segment *head_{ nullptr };    // file's segment chain (direct access)
+    std::list<Segment> segments_; // list-based segment chain
+    std::list<Segment>::iterator cursegm_; // current segment iterator
     int writable_{ 0 };           // write permission
     int nlines_{ 0 };             // line count
     int topline_{ 0 };            // top line visible on screen
@@ -144,8 +145,8 @@ private:
     bool backup_done_{ false };   // track if backup file has been created
     int original_fd_{ -1 };       // file descriptor for original file
 
-    // Helper to update current segment pointer
-    void update_current_segment(Segment *seg) { cursegm_ = seg; }
+    // Helper to update current segment iterator
+    void update_current_segment(std::list<Segment>::iterator it) { cursegm_ = it; }
 };
 
 #endif // WORKSPACE_H

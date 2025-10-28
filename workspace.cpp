@@ -13,8 +13,7 @@ Workspace::Workspace(Tempfile &tempfile) : tempfile_(tempfile)
 {
     // Create initial tail segment (empty workspace still has a tail)
     segments_.emplace_back();
-    head_    = &segments_.back();
-    cursegm_ = head_;
+    cursegm_ = segments_.begin();
 }
 
 Workspace::~Workspace()
@@ -150,7 +149,7 @@ int Workspace::set_current_segment(int lno)
     if (lno < 0)
         throw std::runtime_error("set_current_segment: negative line number");
 
-    if (!cursegm_)
+    if (cursegm_ == segments_.end())
         throw std::runtime_error("set_current_segment: empty workspace");
 
     // Move forward to find the segment containing lno
@@ -164,17 +163,18 @@ int Workspace::set_current_segment(int lno)
         segmline_ += cursegm_->nlines;
 
         // Check if there's a next segment before moving
-        if (!cursegm_->next) {
+        auto next_it = std::next(cursegm_);
+        if (next_it == segments_.end()) {
             throw std::runtime_error("set_current_segment: null segment in chain");
         }
-        cursegm_ = cursegm_->next;
+        ++cursegm_;
     }
 
     // Move backward to find the segment containing lno
     while (lno < segmline_) {
-        if (!cursegm_->prev)
+        if (cursegm_ == segments_.begin())
             throw std::runtime_error("set_current_segment: null previous segment");
-        cursegm_ = cursegm_->prev;
+        --cursegm_;
         segmline_ -= cursegm_->nlines;
     }
 
@@ -607,34 +607,27 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         offs += seg->sizes[i];
     }
 
-    // Create new segment for the remainder
-    Segment *new_seg = new Segment();
-    new_seg->nlines  = seg->nlines - rel_line;
-    new_seg->fdesc   = seg->fdesc;
-    new_seg->seek    = seg->seek + offs;
+    // Find where to insert the new segment (after current segment)
+    auto insert_pos = std::next(cursegm_);
+
+    // Create new segment in place
+    auto new_it = segments_.insert(insert_pos, Segment());
+    Segment &new_seg = *new_it;
+    new_seg.nlines  = seg->nlines - rel_line;
+    new_seg.fdesc   = seg->fdesc;
+    new_seg.seek    = seg->seek + offs;
 
     // Copy remaining data bytes from split_point to end
     for (size_t i = split_point; i < seg->nlines; ++i) {
-        new_seg->sizes.push_back(seg->sizes[i]);
+        new_seg.sizes.push_back(seg->sizes[i]);
     }
-
-    // Link new segment
-    new_seg->next = seg->next;
-    new_seg->prev = seg;
-    if (seg->next)
-        seg->next->prev = new_seg;
-    seg->next = new_seg;
 
     // Truncate original segment data - keep only first rel_line data
-    std::vector<unsigned short> new_sizes;
-    for (size_t i = 0; i < split_point; ++i) {
-        new_sizes.push_back(seg->sizes[i]);
-    }
-    seg->sizes  = new_sizes;
+    seg->sizes.resize(split_point);
     seg->nlines = rel_line;
 
     // Update workspace position
-    cursegm_  = new_seg;
+    cursegm_  = new_it;
     segmline_ = line_no;
 
     return 0;

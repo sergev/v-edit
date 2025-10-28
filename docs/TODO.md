@@ -16,14 +16,14 @@
 - [ ] Test synchronization with existing functionality
 
 ## Phase 3: Change Accessors
-- [ ] Modify `chain()` to return from list front
-- [ ] Modify `cursegm()` to return based on iterator position
-- [ ] Maintain backward compatibility with pointer API
-- [ ] Run tests to ensure external callers see no difference
+- [x] Modify `chain()` to return from list front
+- [x] Modify `cursegm()` to return based on iterator position
+- [x] Maintain backward compatibility with pointer API
+- [x] Run tests to ensure external callers see no difference
 
 ## Phase 4: Convert Core Operations (One-by-One)
-- [ ] `set_current_segment()` - replace pointer navigation with iterator navigation
-- [ ] `breaksegm()` - use `segments_.insert()` instead of manual linking
+- [x] `set_current_segment()` - replace pointer navigation with iterator navigation
+- [x] `breaksegm()` split segments - use `segments_.insert()` instead of manual linking
 - [ ] `catsegm()` - use iterator find and splice operations
 - [ ] `insert_segments()` - use list insertion methods
 - [ ] `delete_segments()` - use iterator-based deletion

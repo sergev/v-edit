@@ -12,7 +12,7 @@ public:
     using iterator = std::list<Segment>::iterator;
 
     // Each segment contains a non-zero number of text lines.
-    int nlines{ 0 }; // TODO: rename as line_count
+    int line_count{ 0 };
 
     // Descriptor of the file, where these text lines are stored.
     // There are four cases:

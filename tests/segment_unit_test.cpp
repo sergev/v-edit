@@ -219,46 +219,46 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     segment_count = segments.size();
 
     // Verify Segment 1
-    EXPECT_EQ(segments[0]->nlines, 127);
+    EXPECT_EQ(segments[0]->line_count, 127);
     EXPECT_EQ(segments[0]->seek, 0);
     EXPECT_EQ(segments[0]->sizes.size(), 127);
 
     std::cout << "Segment 1:\n";
-    std::cout << "  nlines: " << segments[0]->nlines << "\n";
+    std::cout << "  nlines: " << segments[0]->line_count << "\n";
     std::cout << "  seek: " << segments[0]->seek << "\n";
     std::cout << "  fdesc: " << segments[0]->fdesc << "\n";
     std::cout << "  data.size(): " << segments[0]->sizes.size() << "\n";
 
     // Verify Segment 2
-    EXPECT_EQ(segments[1]->nlines, 73);
+    EXPECT_EQ(segments[1]->line_count, 73);
     EXPECT_EQ(segments[1]->seek, 3134);
     EXPECT_EQ(segments[1]->sizes.size(), 73);
 
     std::cout << "Segment 2:\n";
-    std::cout << "  nlines: " << segments[1]->nlines << "\n";
+    std::cout << "  nlines: " << segments[1]->line_count << "\n";
     std::cout << "  seek: " << segments[1]->seek << "\n";
     std::cout << "  fdesc: " << segments[1]->fdesc << "\n";
     std::cout << "  data.size(): " << segments[1]->sizes.size() << "\n";
 
     // Verify Segment 3 (tail)
-    EXPECT_EQ(segments[2]->nlines, 0);
+    EXPECT_EQ(segments[2]->line_count, 0);
     EXPECT_EQ(segments[2]->fdesc, 0); // Tail segment has fdesc = 0
     EXPECT_EQ(segments[2]->sizes.size(), 0);
 
     std::cout << "Segment 3:\n";
-    std::cout << "  nlines: " << segments[2]->nlines << "\n";
+    std::cout << "  nlines: " << segments[2]->line_count << "\n";
     std::cout << "  seek: " << segments[2]->seek << "\n";
     std::cout << "  fdesc: " << segments[2]->fdesc << "\n";
     std::cout << "  data.size(): " << segments[2]->sizes.size() << "\n";
 
     // Calculate total lines
     for (const auto *seg : segments) {
-        total_segment_lines += seg->nlines;
-        EXPECT_GE(seg->nlines, 0);
-        EXPECT_LE(seg->nlines, 127); // Max lines per segment
+        total_segment_lines += seg->line_count;
+        EXPECT_GE(seg->line_count, 0);
+        EXPECT_LE(seg->line_count, 127); // Max lines per segment
 
         // Verify segment data is not empty (except for tail segment)
-        if (seg->nlines > 0) {
+        if (seg->line_count > 0) {
             EXPECT_FALSE(seg->sizes.empty());
         }
     }

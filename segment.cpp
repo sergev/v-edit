@@ -9,7 +9,7 @@ long Segment::get_total_bytes() const
 {
     long total_bytes = 0;
 
-    for (int i = 0; i < nlines; ++i) {
+    for (int i = 0; i < line_count; ++i) {
         total_bytes += sizes[i];
     }
     return total_bytes;
@@ -21,12 +21,12 @@ long Segment::get_total_bytes() const
 void Segment::debug_print(std::ostream &out) const
 {
     out << "Segment "
-        << "nlines=" << nlines << ", "
+        << "line_count=" << line_count << ", "
         << "fdesc=" << fdesc << ", "
         << "seek=" << seek << ", "
         << "sizes={";
 
-    for (int i = 0; i < nlines; ++i) {
+    for (int i = 0; i < line_count; ++i) {
         if (i > 0)
             out << ",";
         out << sizes[i];

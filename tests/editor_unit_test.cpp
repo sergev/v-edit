@@ -165,7 +165,7 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
     const auto &segments_list = editor->wksp_->get_segments();
     std::vector<const Segment *> segments;
     for (const auto &s : segments_list) {
-        if (s.nlines > 0) {
+        if (s.line_count > 0) {
             segments.push_back(&s);
         }
     }
@@ -173,8 +173,8 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
     // Verify segments
     int total_lines = 0;
     for (auto *s : segments) {
-        total_lines += s->nlines;
-        EXPECT_GT(s->nlines, 0);
+        total_lines += s->line_count;
+        EXPECT_GT(s->line_count, 0);
         EXPECT_GT(s->fdesc, 0); // Should have valid file descriptor
     }
 
@@ -190,7 +190,7 @@ TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
     // Verify the tail segment
     auto tail_it = editor->wksp_->get_segments().begin();
     ASSERT_NE(tail_it, editor->wksp_->get_segments().end());
-    EXPECT_EQ(tail_it->nlines, 0);
+    EXPECT_EQ(tail_it->line_count, 0);
     EXPECT_EQ(tail_it->fdesc, 0);
 
     // Add the first line via put_line (should create it, not fail)
@@ -312,7 +312,7 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
     const auto &segments_list = editor->wksp_->get_segments();
     std::vector<const Segment *> segments;
     for (const auto &s : segments_list) {
-        if (s.nlines > 0) {
+        if (s.line_count > 0) {
             segments.push_back(&s);
         }
     }
@@ -323,13 +323,13 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
     // Verify all segments have valid file descriptors (not tail)
     for (auto *s : segments) {
         EXPECT_GT(s->fdesc, 0);
-        EXPECT_GT(s->nlines, 0);
+        EXPECT_GT(s->line_count, 0);
     }
 
     // Verify total lines across segments
     int total_lines = 0;
     for (auto *s : segments) {
-        total_lines += s->nlines;
+        total_lines += s->line_count;
     }
     EXPECT_EQ(total_lines, 10);
 }

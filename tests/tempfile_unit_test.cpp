@@ -42,7 +42,7 @@ TEST_F(TempfileTest, WriteLineToTempBasic)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 1);
+    EXPECT_EQ(seg.line_count, 1);
     EXPECT_GE(seg.fdesc, 0); // Should have opened temp file
     // Segment struct no longer has prev/next pointers in std::list implementation
     EXPECT_EQ(seg.sizes.size(), 1);
@@ -58,7 +58,7 @@ TEST_F(TempfileTest, WriteLineToTempWithNewline)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 1);
+    EXPECT_EQ(seg.line_count, 1);
     EXPECT_EQ(seg.sizes.size(), 1);
     EXPECT_EQ(seg.sizes[0], 20); // "Already has newline\n" = 20 bytes (newline already present)
 }
@@ -71,7 +71,7 @@ TEST_F(TempfileTest, WriteLineToTempEmptyString)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 1);
+    EXPECT_EQ(seg.line_count, 1);
     EXPECT_EQ(seg.sizes.size(), 1);
     EXPECT_EQ(seg.sizes[0], 1); // Just '\n' = 1 byte
 }
@@ -142,7 +142,7 @@ TEST_F(TempfileTest, WriteLineToTempLongLine)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 1);
+    EXPECT_EQ(seg.line_count, 1);
     EXPECT_EQ(seg.sizes[0], 1001); // 1000 'A's + '\n'
 
     // Verify content
@@ -169,8 +169,8 @@ TEST_F(TempfileTest, WriteLineToTempVsWriteLines)
     const Segment &seg_lines = segments_lines.front();
     const Segment &seg_line  = segments_line.front();
 
-    EXPECT_EQ(seg_lines.nlines, 1);
-    EXPECT_EQ(seg_line.nlines, 1);
+    EXPECT_EQ(seg_lines.line_count, 1);
+    EXPECT_EQ(seg_line.line_count, 1);
     EXPECT_EQ(seg_lines.sizes, seg_line.sizes);
 }
 
@@ -215,7 +215,7 @@ TEST_F(TempfileTest, WriteLinesToTempBasic)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 3);
+    EXPECT_EQ(seg.line_count, 3);
     EXPECT_GE(seg.fdesc, 0); // Should have opened temp file
     // Segments are now in std::list - no prev/next pointers
     EXPECT_EQ(seg.sizes.size(), 3);
@@ -235,7 +235,7 @@ TEST_F(TempfileTest, WriteLinesToTempWithNewlines)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 2);
+    EXPECT_EQ(seg.line_count, 2);
     EXPECT_EQ(seg.sizes.size(), 2);
     EXPECT_EQ(seg.sizes[0], 18); // "Line with newline\n" = 18 bytes (newline already present)
     EXPECT_EQ(seg.sizes[1], 13); // "Another line\n" = 13 bytes
@@ -251,7 +251,7 @@ TEST_F(TempfileTest, WriteLinesToTempEmptyStringInVector)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 2);
+    EXPECT_EQ(seg.line_count, 2);
     EXPECT_EQ(seg.sizes.size(), 2);
     EXPECT_EQ(seg.sizes[0], 1);  // Just '\n' = 1 byte
     EXPECT_EQ(seg.sizes[1], 10); // "Non-empty\n" = 10 bytes
@@ -285,8 +285,8 @@ TEST_F(TempfileTest, WriteLinesToTempMultiple)
     EXPECT_EQ(s1.seek, 0);
     EXPECT_EQ(s2.seek, 6 + 7); // After "First\n" (6) + "Second\n" (7) = 13
 
-    EXPECT_EQ(s1.nlines, 2);
-    EXPECT_EQ(s2.nlines, 3);
+    EXPECT_EQ(s1.line_count, 2);
+    EXPECT_EQ(s2.line_count, 3);
     EXPECT_EQ(s1.sizes.size(), 2);
     EXPECT_EQ(s2.sizes.size(), 3);
     EXPECT_EQ(s1.sizes[0], 6); // "First\n"
@@ -346,7 +346,7 @@ TEST_F(TempfileTest, WriteLinesToTempMixedNewlines)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 4);
+    EXPECT_EQ(seg.line_count, 4);
     EXPECT_EQ(seg.sizes.size(), 4);
     EXPECT_EQ(seg.sizes[0], 12); // "Normal line\n"
     EXPECT_EQ(seg.sizes[1], 18); // "Line with newline\n"
@@ -367,7 +367,7 @@ TEST_F(TempfileTest, WriteLinesToTempManyLines)
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
 
-    EXPECT_EQ(seg.nlines, 100);
+    EXPECT_EQ(seg.line_count, 100);
     EXPECT_EQ(seg.sizes.size(), 100);
 
     // Each line should be "Line X\n" where X is the number

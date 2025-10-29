@@ -34,7 +34,7 @@ TEST_F(WorkspaceTest, CreateBlankLines)
     std::list<Segment> seg_list = Workspace::create_blank_lines(5);
 
     EXPECT_EQ(seg_list.size(), 1);
-    EXPECT_EQ(seg_list.front().nlines, 5);
+    EXPECT_EQ(seg_list.front().line_count, 5);
     EXPECT_EQ(seg_list.front().fdesc, -1);
 }
 
@@ -48,7 +48,7 @@ TEST_F(WorkspaceTest, CreateBlankLinesLarge)
     int total_lines = 0;
     for (const auto &seg : seg_list) {
         if (seg.fdesc != 0) { // Skip tail segment
-            total_lines += seg.nlines;
+            total_lines += seg.line_count;
         } else {
             break;
         }
@@ -67,7 +67,7 @@ TEST_F(WorkspaceTest, CopySegmentList)
     std::list<Segment> copy = Workspace::copy_segment_list(start, end);
 
     EXPECT_FALSE(copy.empty());
-    EXPECT_EQ(copy.front().nlines, original.front().nlines);
+    EXPECT_EQ(copy.front().line_count, original.front().line_count);
 }
 
 //

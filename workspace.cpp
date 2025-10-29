@@ -132,14 +132,14 @@ int Workspace::change_current_line(int lno)
     }
 
     // Move forward to find the segment containing lno
-    while (lno >= position.segmline + cursegm_->nlines) {
+    while (lno >= position.segmline + cursegm_->line_count) {
         if (cursegm_->fdesc == 0) {
             // Hit tail segment - line is beyond end of file
             // Return 1 to signal that line is beyond end of file
             position.line = position.segmline;
             return 1;
         }
-        position.segmline += cursegm_->nlines;
+        position.segmline += cursegm_->line_count;
 
         // Check if there's a next segment before moving
         auto next_it = std::next(cursegm_);
@@ -154,7 +154,7 @@ int Workspace::change_current_line(int lno)
         if (cursegm_ == segments_.begin())
             throw std::runtime_error("change_current_line: null previous segment");
         --cursegm_;
-        position.segmline -= cursegm_->nlines;
+        position.segmline -= cursegm_->line_count;
     }
 
     // Consistency check: segmline should not be negative
@@ -222,7 +222,7 @@ void Workspace::load_file(int fd)
                     // Create final segment in list
                     segments_.emplace_back();
                     Segment &seg = segments_.back();
-                    seg.nlines   = lines_in_seg;
+                    seg.line_count   = lines_in_seg;
                     seg.fdesc    = fd;
                     seg.seek     = seg_seek;
                     seg.sizes    = std::move(temp_seg.sizes);
@@ -281,7 +281,7 @@ void Workspace::load_file(int fd)
         if (lines_in_seg >= 127 || temp_seg.sizes.size() >= 4000) {
             segments_.emplace_back();
             Segment &seg = segments_.back();
-            seg.nlines   = lines_in_seg;
+            seg.line_count   = lines_in_seg;
             seg.fdesc    = fd;
             seg.seek     = seg_seek;
             seg.sizes    = std::move(temp_seg.sizes);
@@ -312,7 +312,7 @@ std::list<Segment> Workspace::copy_segment_list(Segment::iterator start, Segment
 
     for (auto it = start; it != end; ++it) {
         Segment copy;
-        copy.nlines = it->nlines;
+        copy.line_count = it->line_count;
         copy.fdesc  = it->fdesc;
         copy.seek   = it->seek;
         copy.sizes  = it->sizes; // Copy vector
@@ -338,7 +338,7 @@ std::list<Segment> Workspace::create_blank_lines(int n)
         int lines_in_seg = (n > 127) ? 127 : n;
 
         Segment seg;
-        seg.nlines = lines_in_seg;
+        seg.line_count = lines_in_seg;
         seg.fdesc  = -1; // Empty lines not from file
         seg.seek   = 0;
 
@@ -540,8 +540,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         position.line     = start_line;
 
         // Walk forward through the inserted segments to find the one containing line_no
-        while (cursegm_ != insert_pos && line_no >= position.segmline + cursegm_->nlines) {
-            position.segmline += cursegm_->nlines;
+        while (cursegm_ != insert_pos && line_no >= position.segmline + cursegm_->line_count) {
+            position.segmline += cursegm_->line_count;
             ++cursegm_;
         }
 
@@ -559,7 +559,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
 
     // Special case: blank line segment (fdesc == -1) - split by sizes array
     if (cursegm_->fdesc == -1) {
-        if (rel_line >= cursegm_->nlines) {
+        if (rel_line >= cursegm_->line_count) {
             throw std::runtime_error(
                 "breaksegm: inconsistent rel_line after change_current_line()");
         }
@@ -570,7 +570,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Create new segment in place
         auto new_it      = segments_.insert(insert_pos, Segment());
         Segment &new_seg = *new_it;
-        new_seg.nlines   = cursegm_->nlines - rel_line;
+        new_seg.line_count   = cursegm_->line_count - rel_line;
         new_seg.fdesc    = -1; // Still blank lines
         new_seg.seek     = cursegm_->seek;
 
@@ -581,7 +581,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
 
         // Truncate original segment sizes
         cursegm_->sizes.resize(rel_line);
-        cursegm_->nlines = rel_line;
+        cursegm_->line_count = rel_line;
 
         // Update workspace position
         cursegm_          = new_it;
@@ -596,8 +596,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     // Walk through the first rel_line lines to calculate offset
     long offs = 0;
     for (int i = 0; i < rel_line; ++i) {
-        if (i >= cursegm_->nlines) {
-            split_point = cursegm_->nlines;
+        if (i >= cursegm_->line_count) {
+            split_point = cursegm_->line_count;
             break;
         }
         offs += cursegm_->sizes[i];
@@ -609,18 +609,18 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     // Create new segment in place
     auto new_it      = segments_.insert(insert_pos, Segment());
     Segment &new_seg = *new_it;
-    new_seg.nlines   = cursegm_->nlines - rel_line;
+    new_seg.line_count   = cursegm_->line_count - rel_line;
     new_seg.fdesc    = cursegm_->fdesc;
     new_seg.seek     = cursegm_->seek + offs;
 
     // Copy remaining data bytes from split_point to end
-    for (size_t i = split_point; i < cursegm_->nlines; ++i) {
+    for (size_t i = split_point; i < cursegm_->line_count; ++i) {
         new_seg.sizes.push_back(cursegm_->sizes[i]);
     }
 
     // Truncate original segment data - keep only first rel_line data
     cursegm_->sizes.resize(split_point);
-    cursegm_->nlines = rel_line;
+    cursegm_->line_count = rel_line;
 
     // Update workspace position
     cursegm_          = new_it;
@@ -647,7 +647,7 @@ bool Workspace::catsegm()
 
     // Check if segments can be merged
     // They must be from the same file (not tail segments) and together have < 127 lines
-    if (prev.fdesc > 0 && prev.fdesc == curr.fdesc && (prev.nlines + curr.nlines) < 127) {
+    if (prev.fdesc > 0 && prev.fdesc == curr.fdesc && (prev.line_count + curr.line_count) < 127) {
         // Calculate if they're adjacent
         long prev_bytes = prev.get_total_bytes();
         if (curr.seek == prev.seek + prev_bytes) {
@@ -655,7 +655,7 @@ bool Workspace::catsegm()
             // Combine data into previous segment
             for (unsigned short byte : curr.sizes)
                 prev.sizes.push_back(byte);
-            prev.nlines += curr.nlines;
+            prev.line_count += curr.line_count;
 
             // Erase current segment from list
             segments_.erase(curr_it);
@@ -688,7 +688,7 @@ void Workspace::insert_segments(std::list<Segment> &segments_to_insert, int at)
     // Calculate total inserted lines
     int inserted_lines = 0;
     for (const auto &seg : segments_to_insert) {
-        inserted_lines += seg.nlines;
+        inserted_lines += seg.line_count;
     }
 
     // Split at insertion point
@@ -749,7 +749,7 @@ void Workspace::delete_segments(int from, int to)
     int deleted_lines = 0;
     auto temp_it      = start_delete_it;
     while (temp_it != after_delete_it) {
-        deleted_lines += temp_it->nlines;
+        deleted_lines += temp_it->line_count;
         ++temp_it;
     }
 
@@ -885,7 +885,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     // Check if we need to extend the file
     bool need_extend = (file_state.nlines <= line_no);
 
-    // If the file is currently empty (nlines == 0) and we're adding line 0,
+    // If the file is currently empty (line_count == 0) and we're adding line 0,
     // we can just insert the segment without calling breaksegm
     if (file_state.nlines == 0 && line_no == 0) {
         // Simple case: empty file, adding first line
@@ -911,7 +911,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     // Break segment at line_no position to split into segments before and at line_no
     int break_result = breaksegm(line_no, true);
 
-    // If breaksegm didn't extend (break_result == 0), update nlines now if needed
+    // If breaksegm didn't extend (break_result == 0), update line_count now if needed
     if (break_result == 0 && need_extend) {
         file_state.nlines = line_no + 1;
     }
@@ -927,7 +927,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
 
         // Check if the segment only contains one line (or if we're at end of file)
         int segmline       = position.segmline;
-        bool only_one_line = (old_seg_it->nlines == 1);
+        bool only_one_line = (old_seg_it->line_count == 1);
 
         if (!only_one_line) {
             // Break at line_no + 1 to isolate the line
@@ -956,7 +956,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         // Check if line_no is at the start of the segment
         bool at_segment_start = (line_no == segmline);
 
-        if (!at_segment_start || blank_seg_it->nlines > 1) {
+        if (!at_segment_start || blank_seg_it->line_count > 1) {
             // Need to isolate line_no into its own segment
             // First, split before line_no if it's not at the start
             if (!at_segment_start) {
@@ -967,7 +967,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
             }
 
             // Then split after line_no if there are more lines in the segment
-            if (blank_seg_it->nlines > 1) {
+            if (blank_seg_it->line_count > 1) {
                 breaksegm(line_no + 1, false);
                 // Now cursegm_ points to segment starting at line_no + 1
                 // Go back to the segment containing line_no
@@ -995,7 +995,7 @@ void Workspace::debug_print(std::ostream &out) const
 {
     out << "Workspace["
         << "writable=" << file_state.writable << ", "
-        << "nlines=" << file_state.nlines << ", "
+        << "line_count=" << file_state.nlines << ", "
         << "topline=" << view.topline << ", "
         << "basecol=" << view.basecol << ", "
         << "line=" << position.line << ", "

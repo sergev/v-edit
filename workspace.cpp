@@ -449,7 +449,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
             continue; // Skip tail segment
 
         // Calculate total bytes for this segment
-        long total_bytes = seg.get_total_bytes();
+        long total_bytes = seg.total_byte_count();
 
         if (seg.file_descriptor > 0) {
             // Read from source file and write to output
@@ -650,7 +650,7 @@ bool Workspace::catsegm()
     if (prev.file_descriptor > 0 && prev.file_descriptor == curr.file_descriptor &&
         (prev.line_count + curr.line_count) < 127) {
         // Calculate if they're adjacent
-        long prev_bytes = prev.get_total_bytes();
+        long prev_bytes = prev.total_byte_count();
         if (curr.file_offset == prev.file_offset + prev_bytes) {
             // Segments are adjacent - merge them
             // Combine data into previous segment

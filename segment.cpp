@@ -5,7 +5,7 @@
 //
 // Calculate total bytes represented by all line lengths in this segment.
 //
-long Segment::get_total_bytes() const
+long Segment::total_byte_count() const
 {
     long total_bytes = 0;
 

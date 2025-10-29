@@ -40,7 +40,7 @@ public:
     bool is_empty() const { return file_descriptor == 0; }
 
     // Calculate total bytes represented by all line lengths in this segment.
-    long get_total_bytes() const; // TODO: rename as total_byte_count()
+    long total_byte_count() const;
 
     // Debug routine: print all fields in consistent format as single line.
     void debug_print(std::ostream &out) const;

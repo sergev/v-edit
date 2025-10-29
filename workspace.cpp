@@ -681,6 +681,14 @@ void Workspace::delete_contents(int from, int to)
     if (total == 0)
         return;
 
+    // If the deletion range starts beyond the end of file, do nothing
+    if (from >= total)
+        return;
+
+    // Clamp 'to' to the last valid line index
+    if (to >= total)
+        to = total - 1;
+
     // Use breaksegm for positioning (it uses list operations internally now)
     // Break AFTER the last line to delete (to+1) so we can delete up to and including 'to'
     int result = breaksegm(to + 1, true);

@@ -259,6 +259,26 @@ TEST_F(KeyHandlingIntegrationTest, CharacterInsertionWithScroll)
     EXPECT_EQ(editor->cursor_col_, 6);
 }
 
+TEST_F(KeyHandlingIntegrationTest, CharacterInsertionFooBarQuz)
+{
+    editor->handle_key_edit('f');
+    editor->handle_key_edit('o');
+    editor->handle_key_edit('o');
+    editor->handle_key_edit('\n');
+    editor->handle_key_edit('b');
+    editor->handle_key_edit('a');
+    editor->handle_key_edit('r');
+    editor->handle_key_edit('\n');
+    editor->handle_key_edit('q');
+    editor->handle_key_edit('u');
+    editor->handle_key_edit('z');
+    editor->handle_key_edit('\n');
+
+    EXPECT_EQ(editor->wksp_->read_line(0), "foo");
+    EXPECT_EQ(editor->wksp_->read_line(1), "bar");
+    EXPECT_EQ(editor->wksp_->read_line(2), "quz");
+}
+
 // ============================================================================
 // Character Overwrite Integration Tests
 // ============================================================================

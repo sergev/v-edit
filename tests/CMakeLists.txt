@@ -39,6 +39,7 @@ set(TEST_SOURCES
     editor_unit_test.cpp
     basic_editing_test.cpp
     horizontal_scroll_editing_test.cpp
+    key_handling_integration_test.cpp
     TmuxDriver.cpp
 )
 

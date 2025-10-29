@@ -407,9 +407,25 @@ bool Workspace::write_file(const std::string &path)
 
     char buffer[8192];
 
-    for (const auto &seg : contents_) {
+    // Find the last non-blank segment (to skip trailing blank lines)
+    auto last_nonblank = contents_.end();
+    for (auto it = contents_.begin(); it != contents_.end(); ++it) {
+        if (!it->is_empty() && it->file_descriptor != -1) {
+            last_nonblank = it;
+        }
+    }
+
+    for (auto it = contents_.begin(); it != contents_.end(); ++it) {
+        const auto &seg = *it;
+
         if (seg.is_empty())
             continue; // Skip tail segment
+
+        // Skip trailing blank lines (blank segments after the last content segment)
+        if (seg.file_descriptor == -1 && last_nonblank != contents_.end() &&
+            std::distance(last_nonblank, it) > 0) {
+            continue;
+        }
 
         // Calculate total bytes for this segment
         long total_bytes = seg.total_byte_count();

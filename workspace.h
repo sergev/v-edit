@@ -70,7 +70,8 @@ public:
     int change_current_line(int lno);
 
     // Load file content into segment list structure
-    void load_file(const std::string &path, bool create_if_missing = true); // TODO: set original_fd_
+    void load_file(const std::string &path,
+                   bool create_if_missing = true); // TODO: set original_fd_
 
     // Build segment list from file descriptor
     void load_file(int fd); // TODO: clone to original_fd_

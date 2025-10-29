@@ -35,7 +35,7 @@ TEST_F(WorkspaceTest, CreateBlankLines)
 
     EXPECT_EQ(seg_list.size(), 1);
     EXPECT_EQ(seg_list.front().line_count, 5);
-    EXPECT_EQ(seg_list.front().fdesc, -1);
+    EXPECT_EQ(seg_list.front().file_descriptor, -1);
 }
 
 TEST_F(WorkspaceTest, CreateBlankLinesLarge)
@@ -47,7 +47,7 @@ TEST_F(WorkspaceTest, CreateBlankLinesLarge)
     // Should split large line counts into multiple segments
     int total_lines = 0;
     for (const auto &seg : seg_list) {
-        if (seg.fdesc != 0) { // Skip tail segment
+        if (seg.file_descriptor != 0) { // Skip tail segment
             total_lines += seg.line_count;
         } else {
             break;

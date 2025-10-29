@@ -175,7 +175,7 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
     for (auto *s : segments) {
         total_lines += s->line_count;
         EXPECT_GT(s->line_count, 0);
-        EXPECT_GT(s->fdesc, 0); // Should have valid file descriptor
+        EXPECT_GT(s->file_descriptor, 0); // Should have valid file descriptor
     }
 
     EXPECT_EQ(total_lines, num_lines);
@@ -191,7 +191,7 @@ TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
     auto tail_it = editor->wksp_->get_segments().begin();
     ASSERT_NE(tail_it, editor->wksp_->get_segments().end());
     EXPECT_EQ(tail_it->line_count, 0);
-    EXPECT_EQ(tail_it->fdesc, 0);
+    EXPECT_EQ(tail_it->file_descriptor, 0);
 
     // Add the first line via put_line (should create it, not fail)
     editor->current_line_          = "First line";
@@ -322,7 +322,7 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
 
     // Verify all segments have valid file descriptors (not tail)
     for (auto *s : segments) {
-        EXPECT_GT(s->fdesc, 0);
+        EXPECT_GT(s->file_descriptor, 0);
         EXPECT_GT(s->line_count, 0);
     }
 

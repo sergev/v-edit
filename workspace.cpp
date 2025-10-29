@@ -126,14 +126,14 @@ int Workspace::change_current_line(int lno)
         throw std::runtime_error("change_current_line: empty workspace");
 
     // Special case: if we're positioned on a tail segment, all lines are beyond end of file
-    if (cursegm_->fdesc == 0) {
+    if (cursegm_->file_descriptor == 0) {
         position.line = lno;
         return 1; // Line is beyond end of file
     }
 
     // Move forward to find the segment containing lno
     while (lno >= position.segmline + cursegm_->line_count) {
-        if (cursegm_->fdesc == 0) {
+        if (cursegm_->file_descriptor == 0) {
             // Hit tail segment - line is beyond end of file
             // Return 1 to signal that line is beyond end of file
             position.line = position.segmline;
@@ -183,7 +183,7 @@ void Workspace::load_file(const std::string &path, bool create_if_missing)
     original_fd_ = fd;
 
     // Build segment chain from file
-    // Note: we keep the fd open because segments reference it via fdesc
+    // Note: we keep the fd open because segments reference it via file_descriptor
     load_file(fd);
 }
 
@@ -221,11 +221,11 @@ void Workspace::load_file(int fd)
                 if (lines_in_seg > 0) {
                     // Create final segment in list
                     segments_.emplace_back();
-                    Segment &seg = segments_.back();
-                    seg.line_count   = lines_in_seg;
-                    seg.fdesc    = fd;
-                    seg.seek     = seg_seek;
-                    seg.sizes    = std::move(temp_seg.sizes);
+                    Segment &seg        = segments_.back();
+                    seg.line_count      = lines_in_seg;
+                    seg.file_descriptor = fd;
+                    seg.seek            = seg_seek;
+                    seg.sizes           = std::move(temp_seg.sizes);
 
                     file_state.nlines += lines_in_seg;
                 }
@@ -280,11 +280,11 @@ void Workspace::load_file(int fd)
         // Create new segment if we've hit limits
         if (lines_in_seg >= 127 || temp_seg.sizes.size() >= 4000) {
             segments_.emplace_back();
-            Segment &seg = segments_.back();
-            seg.line_count   = lines_in_seg;
-            seg.fdesc    = fd;
-            seg.seek     = seg_seek;
-            seg.sizes    = std::move(temp_seg.sizes);
+            Segment &seg        = segments_.back();
+            seg.line_count      = lines_in_seg;
+            seg.file_descriptor = fd;
+            seg.seek            = seg_seek;
+            seg.sizes           = std::move(temp_seg.sizes);
 
             file_state.nlines += lines_in_seg;
 
@@ -293,7 +293,7 @@ void Workspace::load_file(int fd)
     }
 
     // Create tail segment if needed
-    if (segments_.empty() || segments_.back().fdesc != 0) {
+    if (segments_.empty() || segments_.back().file_descriptor != 0) {
         segments_.emplace_back();
     }
 
@@ -312,14 +312,14 @@ std::list<Segment> Workspace::copy_segment_list(Segment::iterator start, Segment
 
     for (auto it = start; it != end; ++it) {
         Segment copy;
-        copy.line_count = it->line_count;
-        copy.fdesc  = it->fdesc;
-        copy.seek   = it->seek;
-        copy.sizes  = it->sizes; // Copy vector
+        copy.line_count      = it->line_count;
+        copy.file_descriptor = it->file_descriptor;
+        copy.seek            = it->seek;
+        copy.sizes           = it->sizes; // Copy vector
 
         copied_segments.push_back(copy);
 
-        if (it->fdesc == 0)
+        if (it->file_descriptor == 0)
             break;
     }
 
@@ -338,9 +338,9 @@ std::list<Segment> Workspace::create_blank_lines(int n)
         int lines_in_seg = (n > 127) ? 127 : n;
 
         Segment seg;
-        seg.line_count = lines_in_seg;
-        seg.fdesc  = -1; // Empty lines not from file
-        seg.seek   = 0;
+        seg.line_count      = lines_in_seg;
+        seg.file_descriptor = -1; // Empty lines not from file
+        seg.seek            = 0;
 
         // Add line length data: each empty line has length 1 (just newline)
         seg.sizes.resize(lines_in_seg);
@@ -412,14 +412,14 @@ std::string Workspace::read_line_from_segment(int line_no)
     }
 
     // Handle empty lines (just newline) - return empty string without newline
-    if (line_len == 1 || cursegm_->fdesc < 0) {
+    if (line_len == 1 || cursegm_->file_descriptor < 0) {
         return "";
     }
 
     // Read line from file using iterator's segment data
     std::string result(line_len - 1, '\0'); // exclude newline
-    if (lseek(cursegm_->fdesc, seek_pos, SEEK_SET) >= 0) {
-        read(cursegm_->fdesc, static_cast<void *>(&result[0]), result.size());
+    if (lseek(cursegm_->file_descriptor, seek_pos, SEEK_SET) >= 0) {
+        read(cursegm_->file_descriptor, static_cast<void *>(&result[0]), result.size());
     }
     return result;
 }
@@ -451,16 +451,16 @@ bool Workspace::write_segments_to_file(const std::string &path)
         // Calculate total bytes for this segment
         long total_bytes = seg.get_total_bytes();
 
-        if (seg.fdesc > 0) {
+        if (seg.file_descriptor > 0) {
             // Read from source file and write to output
-            if (lseek(seg.fdesc, seg.seek, SEEK_SET) < 0) {
+            if (lseek(seg.file_descriptor, seg.seek, SEEK_SET) < 0) {
                 // Failed to seek - file may have been unlinked
                 // Skip this segment and continue
                 continue;
             }
             while (total_bytes > 0) {
                 int to_read = (total_bytes < (long)sizeof(buffer)) ? total_bytes : sizeof(buffer);
-                int nread   = read(seg.fdesc, buffer, to_read);
+                int nread   = read(seg.file_descriptor, buffer, to_read);
                 if (nread <= 0)
                     break;
 
@@ -557,8 +557,8 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         return 0; // Already at the right position
     }
 
-    // Special case: blank line segment (fdesc == -1) - split by sizes array
-    if (cursegm_->fdesc == -1) {
+    // Special case: blank line segment (file_descriptor == -1) - split by sizes array
+    if (cursegm_->file_descriptor == -1) {
         if (rel_line >= cursegm_->line_count) {
             throw std::runtime_error(
                 "breaksegm: inconsistent rel_line after change_current_line()");
@@ -568,11 +568,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         auto insert_pos = std::next(cursegm_);
 
         // Create new segment in place
-        auto new_it      = segments_.insert(insert_pos, Segment());
-        Segment &new_seg = *new_it;
-        new_seg.line_count   = cursegm_->line_count - rel_line;
-        new_seg.fdesc    = -1; // Still blank lines
-        new_seg.seek     = cursegm_->seek;
+        auto new_it             = segments_.insert(insert_pos, Segment());
+        Segment &new_seg        = *new_it;
+        new_seg.line_count      = cursegm_->line_count - rel_line;
+        new_seg.file_descriptor = -1; // Still blank lines
+        new_seg.seek            = cursegm_->seek;
 
         // Copy remaining sizes
         for (size_t i = rel_line; i < cursegm_->sizes.size(); ++i) {
@@ -607,11 +607,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     auto insert_pos = std::next(cursegm_);
 
     // Create new segment in place
-    auto new_it      = segments_.insert(insert_pos, Segment());
-    Segment &new_seg = *new_it;
-    new_seg.line_count   = cursegm_->line_count - rel_line;
-    new_seg.fdesc    = cursegm_->fdesc;
-    new_seg.seek     = cursegm_->seek + offs;
+    auto new_it             = segments_.insert(insert_pos, Segment());
+    Segment &new_seg        = *new_it;
+    new_seg.line_count      = cursegm_->line_count - rel_line;
+    new_seg.file_descriptor = cursegm_->file_descriptor;
+    new_seg.seek            = cursegm_->seek + offs;
 
     // Copy remaining data bytes from split_point to end
     for (size_t i = split_point; i < cursegm_->line_count; ++i) {
@@ -647,7 +647,8 @@ bool Workspace::catsegm()
 
     // Check if segments can be merged
     // They must be from the same file (not tail segments) and together have < 127 lines
-    if (prev.fdesc > 0 && prev.fdesc == curr.fdesc && (prev.line_count + curr.line_count) < 127) {
+    if (prev.file_descriptor > 0 && prev.file_descriptor == curr.file_descriptor &&
+        (prev.line_count + curr.line_count) < 127) {
         // Calculate if they're adjacent
         long prev_bytes = prev.get_total_bytes();
         if (curr.seek == prev.seek + prev_bytes) {
@@ -890,9 +891,9 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     if (file_state.nlines == 0 && line_no == 0) {
         // Simple case: empty file, adding first line
         // Find tail and insert before it
-        auto tail_it   = segments_.end();
+        auto tail_it = segments_.end();
         for (auto it = segments_.begin(); it != segments_.end(); ++it) {
-            if (it->fdesc == 0) {
+            if (it->file_descriptor == 0) {
                 tail_it = it;
                 break;
             }

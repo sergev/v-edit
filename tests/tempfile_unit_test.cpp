@@ -43,7 +43,7 @@ TEST_F(TempfileTest, WriteLineToTempBasic)
     const Segment &seg = segments.front();
 
     EXPECT_EQ(seg.line_count, 1);
-    EXPECT_GE(seg.fdesc, 0); // Should have opened temp file
+    EXPECT_GE(seg.file_descriptor, 0); // Should have opened temp file
     // Segment struct no longer has prev/next pointers in std::list implementation
     EXPECT_EQ(seg.sizes.size(), 1);
     EXPECT_EQ(seg.sizes[0], 12); // "Hello World\n" = 12 bytes
@@ -111,7 +111,7 @@ TEST_F(TempfileTest, WriteLineToTempOpensFile)
 
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
-    EXPECT_EQ(seg.fdesc, tempfile->fd());
+    EXPECT_EQ(seg.file_descriptor, tempfile->fd());
 }
 
 // Test reading back the written data
@@ -125,8 +125,8 @@ TEST_F(TempfileTest, WriteLineToTempVerifyContent)
 
     // Seek to the segment position and read the data
     char buffer[256];
-    lseek(seg.fdesc, seg.seek, SEEK_SET);
-    int bytes_read = read(seg.fdesc, buffer, seg.sizes[0]);
+    lseek(seg.file_descriptor, seg.seek, SEEK_SET);
+    int bytes_read = read(seg.file_descriptor, buffer, seg.sizes[0]);
 
     EXPECT_EQ(bytes_read, seg.sizes[0]);
     std::string read_content(buffer, bytes_read);
@@ -147,8 +147,8 @@ TEST_F(TempfileTest, WriteLineToTempLongLine)
 
     // Verify content
     char buffer[1002];
-    lseek(seg.fdesc, seg.seek, SEEK_SET);
-    int bytes_read = read(seg.fdesc, buffer, seg.sizes[0]);
+    lseek(seg.file_descriptor, seg.seek, SEEK_SET);
+    int bytes_read = read(seg.file_descriptor, buffer, seg.sizes[0]);
 
     EXPECT_EQ(bytes_read, 1001);
     std::string read_content(buffer, bytes_read);
@@ -216,7 +216,7 @@ TEST_F(TempfileTest, WriteLinesToTempBasic)
     const Segment &seg = segments.front();
 
     EXPECT_EQ(seg.line_count, 3);
-    EXPECT_GE(seg.fdesc, 0); // Should have opened temp file
+    EXPECT_GE(seg.file_descriptor, 0); // Should have opened temp file
     // Segments are now in std::list - no prev/next pointers
     EXPECT_EQ(seg.sizes.size(), 3);
     EXPECT_EQ(seg.sizes[0], 11); // "First line\n" = 11 bytes
@@ -308,7 +308,7 @@ TEST_F(TempfileTest, WriteLinesToTempOpensFile)
 
     ASSERT_EQ(segments.size(), 1);
     const Segment &seg = segments.front();
-    EXPECT_EQ(seg.fdesc, tempfile->fd());
+    EXPECT_EQ(seg.file_descriptor, tempfile->fd());
 }
 
 // Test reading back the written data from write_lines_to_temp
@@ -322,14 +322,14 @@ TEST_F(TempfileTest, WriteLinesToTempVerifyContent)
 
     // Seek to the segment position and read the data
     char buffer[256];
-    lseek(seg.fdesc, seg.seek, SEEK_SET);
+    lseek(seg.file_descriptor, seg.seek, SEEK_SET);
 
     int total_bytes = 0;
     for (int size : seg.sizes) {
         total_bytes += size;
     }
 
-    int bytes_read = read(seg.fdesc, buffer, total_bytes);
+    int bytes_read = read(seg.file_descriptor, buffer, total_bytes);
 
     EXPECT_EQ(bytes_read, total_bytes);
     std::string read_content(buffer, bytes_read);

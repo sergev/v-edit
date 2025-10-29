@@ -16,17 +16,17 @@ public:
 
     // Descriptor of the file, where these text lines are stored.
     // There are four cases:
-    //  * fdesc == original_fd of the enclosing workspace
+    //  * file_descriptor == original_fd of the enclosing workspace
     //      - when this segment holds unmodified lines of the original file.
-    //  * fdesc == tempfile_fd
+    //  * file_descriptor == tempfile_fd
     //      - when this segment holds modified lines stored in temporary file.
-    //  * fdesc == -1
+    //  * file_descriptor == -1
     //      - when this segment holds empty lines (only newlines).
-    //  * fdesc == 0
+    //  * file_descriptor == 0
     //      - placeholder without contents (tail).
-    int fdesc{ 0 }; // TODO: rename as file_descriptor
+    int file_descriptor{ 0 };
 
-    // Offset in fdesc for data of this segment.
+    // Offset in file_descriptor for data of this segment.
     long seek{ 0 }; // TODO: rename as file_offset
 
     // Line lengths, including "\n".
@@ -36,8 +36,11 @@ public:
     Segment() = default;
 
     // Segment has contents when it comes from some file or contains only newlines.
-    // A linked list of segments terminates with a placeholder with fdesc=0.
-    bool has_contents() const { return fdesc != 0; } // TODO: rename as is_empty(), invert meaning
+    // A linked list of segments terminates with a placeholder with file_descriptor=0.
+    bool has_contents() const
+    {
+        return file_descriptor != 0;
+    } // TODO: rename as is_empty(), invert meaning
 
     // Calculate total bytes represented by all line lengths in this segment.
     long get_total_bytes() const; // TODO: rename as total_byte_count()

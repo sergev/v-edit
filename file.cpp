@@ -48,7 +48,7 @@ void Editor::put_line()
 
     wksp_->put_line(current_line_no_, current_line_);
     current_line_modified_ = false;
-    current_line_no_ = -1;
+    current_line_no_       = -1;
 }
 
 //

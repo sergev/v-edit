@@ -86,7 +86,7 @@ TEST_F(SegmentTest, HandleEmptyFile)
 
     // Should handle empty file without crashing
     std::string line = editor->wksp_->read_line_from_segment(0);
-    EXPECT_EQ("", line);  // Line 0 is beyond end of empty file, returns empty string
+    EXPECT_EQ("", line); // Line 0 is beyond end of empty file, returns empty string
 
     cleanupTestFile(filename);
 }
@@ -226,7 +226,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     std::cout << "Segment 1:\n";
     std::cout << "  nlines: " << segments[0]->line_count << "\n";
     std::cout << "  seek: " << segments[0]->seek << "\n";
-    std::cout << "  fdesc: " << segments[0]->fdesc << "\n";
+    std::cout << "  fdesc: " << segments[0]->file_descriptor << "\n";
     std::cout << "  data.size(): " << segments[0]->sizes.size() << "\n";
 
     // Verify Segment 2
@@ -237,18 +237,18 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     std::cout << "Segment 2:\n";
     std::cout << "  nlines: " << segments[1]->line_count << "\n";
     std::cout << "  seek: " << segments[1]->seek << "\n";
-    std::cout << "  fdesc: " << segments[1]->fdesc << "\n";
+    std::cout << "  fdesc: " << segments[1]->file_descriptor << "\n";
     std::cout << "  data.size(): " << segments[1]->sizes.size() << "\n";
 
     // Verify Segment 3 (tail)
     EXPECT_EQ(segments[2]->line_count, 0);
-    EXPECT_EQ(segments[2]->fdesc, 0); // Tail segment has fdesc = 0
+    EXPECT_EQ(segments[2]->file_descriptor, 0); // Tail segment has file_descriptor = 0
     EXPECT_EQ(segments[2]->sizes.size(), 0);
 
     std::cout << "Segment 3:\n";
     std::cout << "  nlines: " << segments[2]->line_count << "\n";
     std::cout << "  seek: " << segments[2]->seek << "\n";
-    std::cout << "  fdesc: " << segments[2]->fdesc << "\n";
+    std::cout << "  fdesc: " << segments[2]->file_descriptor << "\n";
     std::cout << "  data.size(): " << segments[2]->sizes.size() << "\n";
 
     // Calculate total lines

@@ -79,7 +79,7 @@ std::list<Segment> Tempfile::write_line_to_temp(const std::string &line_content)
     seg.line_count      = 1;
     seg.file_descriptor = tempfile_fd_;
     seg.file_offset     = seek_pos;
-    seg.sizes.push_back(nbytes);
+    seg.line_lengths.push_back(nbytes);
 
     return { seg };
 }
@@ -121,7 +121,7 @@ std::list<Segment> Tempfile::write_lines_to_temp(const std::vector<std::string> 
             return {};
         }
 
-        seg.sizes.push_back(nbytes);
+        seg.line_lengths.push_back(nbytes);
         tempseek_ += nbytes;
     }
 

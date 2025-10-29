@@ -30,7 +30,7 @@ public:
     long file_offset{ 0 };
 
     // Line lengths, including "\n".
-    std::vector<unsigned short> sizes; // TODO: rename as line_lengths
+    std::vector<unsigned short> line_lengths;
 
     // Constructor.
     Segment() = default;

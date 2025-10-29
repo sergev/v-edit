@@ -225,7 +225,7 @@ void Workspace::load_file(int fd)
                     seg.line_count      = lines_in_seg;
                     seg.file_descriptor = fd;
                     seg.file_offset     = seg_seek;
-                    seg.sizes           = std::move(temp_seg.sizes);
+                    seg.line_lengths           = std::move(temp_seg.line_lengths);
 
                     file_state.nlines += lines_in_seg;
                 }
@@ -272,19 +272,19 @@ void Workspace::load_file(int fd)
             seg_seek = file_offset;
         }
 
-        temp_seg.sizes.push_back(line_len);
+        temp_seg.line_lengths.push_back(line_len);
 
         ++lines_in_seg;
         file_offset += line_len;
 
         // Create new segment if we've hit limits
-        if (lines_in_seg >= 127 || temp_seg.sizes.size() >= 4000) {
+        if (lines_in_seg >= 127 || temp_seg.line_lengths.size() >= 4000) {
             segments_.emplace_back();
             Segment &seg        = segments_.back();
             seg.line_count      = lines_in_seg;
             seg.file_descriptor = fd;
             seg.file_offset     = seg_seek;
-            seg.sizes           = std::move(temp_seg.sizes);
+            seg.line_lengths           = std::move(temp_seg.line_lengths);
 
             file_state.nlines += lines_in_seg;
 
@@ -315,7 +315,7 @@ std::list<Segment> Workspace::copy_segment_list(Segment::iterator start, Segment
         copy.line_count      = it->line_count;
         copy.file_descriptor = it->file_descriptor;
         copy.file_offset     = it->file_offset;
-        copy.sizes           = it->sizes; // Copy vector
+        copy.line_lengths           = it->line_lengths; // Copy vector
 
         copied_segments.push_back(copy);
 
@@ -343,9 +343,9 @@ std::list<Segment> Workspace::create_blank_lines(int n)
         seg.file_offset     = 0;
 
         // Add line length data: each empty line has length 1 (just newline)
-        seg.sizes.resize(lines_in_seg);
+        seg.line_lengths.resize(lines_in_seg);
         for (int i = 0; i < lines_in_seg; ++i) {
-            seg.sizes[i] = 1;
+            seg.line_lengths[i] = 1;
         }
 
         segments.push_back(seg);
@@ -393,7 +393,7 @@ std::string Workspace::read_line_from_segment(int line_no)
     int rel_line = line_no - position.segmline;
 
     // Bounds checking: ensure rel_line is within segment bounds
-    if (rel_line < 0 || rel_line >= static_cast<int>(cursegm_->sizes.size())) {
+    if (rel_line < 0 || rel_line >= static_cast<int>(cursegm_->line_lengths.size())) {
         return ""; // Line index out of bounds for this segment
     }
 
@@ -402,11 +402,11 @@ std::string Workspace::read_line_from_segment(int line_no)
     // We need to skip 'rel_line' lines to get to the line we want
     long seek_pos = cursegm_->file_offset;
     for (int i = 0; i < rel_line; ++i) {
-        seek_pos += cursegm_->sizes[i];
+        seek_pos += cursegm_->line_lengths[i];
     }
 
     // Get line length for the requested line
-    int line_len = cursegm_->sizes[rel_line];
+    int line_len = cursegm_->line_lengths[rel_line];
     if (line_len <= 0) {
         return "";
     }
@@ -557,7 +557,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         return 0; // Already at the right position
     }
 
-    // Special case: blank line segment (file_descriptor == -1) - split by sizes array
+    // Special case: blank line segment (file_descriptor == -1) - split by line_lengths array
     if (cursegm_->file_descriptor == -1) {
         if (rel_line >= cursegm_->line_count) {
             throw std::runtime_error(
@@ -575,12 +575,12 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         new_seg.file_offset     = cursegm_->file_offset;
 
         // Copy remaining sizes
-        for (size_t i = rel_line; i < cursegm_->sizes.size(); ++i) {
-            new_seg.sizes.push_back(cursegm_->sizes[i]);
+        for (size_t i = rel_line; i < cursegm_->line_lengths.size(); ++i) {
+            new_seg.line_lengths.push_back(cursegm_->line_lengths[i]);
         }
 
         // Truncate original segment sizes
-        cursegm_->sizes.resize(rel_line);
+        cursegm_->line_lengths.resize(rel_line);
         cursegm_->line_count = rel_line;
 
         // Update workspace position
@@ -600,7 +600,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
             split_point = cursegm_->line_count;
             break;
         }
-        offs += cursegm_->sizes[i];
+        offs += cursegm_->line_lengths[i];
     }
 
     // Find where to insert the new segment (after current segment)
@@ -615,11 +615,11 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
 
     // Copy remaining data bytes from split_point to end
     for (size_t i = split_point; i < cursegm_->line_count; ++i) {
-        new_seg.sizes.push_back(cursegm_->sizes[i]);
+        new_seg.line_lengths.push_back(cursegm_->line_lengths[i]);
     }
 
     // Truncate original segment data - keep only first rel_line data
-    cursegm_->sizes.resize(split_point);
+    cursegm_->line_lengths.resize(split_point);
     cursegm_->line_count = rel_line;
 
     // Update workspace position
@@ -654,8 +654,8 @@ bool Workspace::catsegm()
         if (curr.file_offset == prev.file_offset + prev_bytes) {
             // Segments are adjacent - merge them
             // Combine data into previous segment
-            for (unsigned short byte : curr.sizes)
-                prev.sizes.push_back(byte);
+            for (unsigned short byte : curr.line_lengths)
+                prev.line_lengths.push_back(byte);
             prev.line_count += curr.line_count;
 
             // Erase current segment from list

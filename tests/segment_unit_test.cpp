@@ -221,35 +221,35 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     // Verify Segment 1
     EXPECT_EQ(segments[0]->line_count, 127);
     EXPECT_EQ(segments[0]->file_offset, 0);
-    EXPECT_EQ(segments[0]->sizes.size(), 127);
+    EXPECT_EQ(segments[0]->line_lengths.size(), 127);
 
     std::cout << "Segment 1:\n";
     std::cout << "  nlines: " << segments[0]->line_count << "\n";
     std::cout << "  seek: " << segments[0]->file_offset << "\n";
     std::cout << "  fdesc: " << segments[0]->file_descriptor << "\n";
-    std::cout << "  data.size(): " << segments[0]->sizes.size() << "\n";
+    std::cout << "  data.size(): " << segments[0]->line_lengths.size() << "\n";
 
     // Verify Segment 2
     EXPECT_EQ(segments[1]->line_count, 73);
     EXPECT_EQ(segments[1]->file_offset, 3134);
-    EXPECT_EQ(segments[1]->sizes.size(), 73);
+    EXPECT_EQ(segments[1]->line_lengths.size(), 73);
 
     std::cout << "Segment 2:\n";
     std::cout << "  nlines: " << segments[1]->line_count << "\n";
     std::cout << "  seek: " << segments[1]->file_offset << "\n";
     std::cout << "  fdesc: " << segments[1]->file_descriptor << "\n";
-    std::cout << "  data.size(): " << segments[1]->sizes.size() << "\n";
+    std::cout << "  data.size(): " << segments[1]->line_lengths.size() << "\n";
 
     // Verify Segment 3 (tail)
     EXPECT_EQ(segments[2]->line_count, 0);
     EXPECT_EQ(segments[2]->file_descriptor, 0); // Tail segment has file_descriptor = 0
-    EXPECT_EQ(segments[2]->sizes.size(), 0);
+    EXPECT_EQ(segments[2]->line_lengths.size(), 0);
 
     std::cout << "Segment 3:\n";
     std::cout << "  nlines: " << segments[2]->line_count << "\n";
     std::cout << "  seek: " << segments[2]->file_offset << "\n";
     std::cout << "  fdesc: " << segments[2]->file_descriptor << "\n";
-    std::cout << "  data.size(): " << segments[2]->sizes.size() << "\n";
+    std::cout << "  data.size(): " << segments[2]->line_lengths.size() << "\n";
 
     // Calculate total lines
     for (const auto *seg : segments) {
@@ -259,7 +259,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
 
         // Verify segment data is not empty (except for tail segment)
         if (seg->line_count > 0) {
-            EXPECT_FALSE(seg->sizes.empty());
+            EXPECT_FALSE(seg->line_lengths.empty());
         }
     }
 

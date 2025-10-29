@@ -201,16 +201,17 @@ TEST_F(BasicEditingTest, BackspaceMiddleOfLine) {
 
 ### Tasks for Phase 3
 
-- [ ] Update all BACKSPACE tests to call `edit_backspace()`
-- [ ] Update all DELETE tests to call `edit_delete()`
-- [ ] Update all ENTER tests to call `edit_enter()`
-- [ ] Update all TAB tests to call `edit_tab()`
-- [ ] Update all character insertion tests to call `edit_insert_char()`
-- [ ] Update all character overwrite tests to call `edit_insert_char()`
-- [ ] Do same for tests/horizontal_scroll_editing_test.cpp
-- [ ] Ensure LoadLine() is called before each edit operation
-- [ ] Verify all 50 tests still pass
-- [ ] Add any missing edge case tests
+- [x] Update all BACKSPACE tests to call `edit_backspace()`
+- [x] Update all DELETE tests to call `edit_delete()`
+- [x] Update all ENTER tests to call `edit_enter()`
+- [x] Update all TAB tests to call `edit_tab()`
+- [x] Update all character insertion tests to call `edit_insert_char()`
+- [x] Update all character overwrite tests to call `edit_insert_char()`
+- [x] Updated tests/basic_editing_test.cpp (22 tests)
+- [x] Updated tests/horizontal_scroll_editing_test.cpp (28 tests)
+- [x] LoadLine() properly called before each edit operation
+- [x] Verify all 50 tests still pass - ALL TESTS PASS ✅
+- [x] No missing edge cases - comprehensive coverage maintained
 
 ---
 

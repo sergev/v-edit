@@ -69,14 +69,8 @@ TEST_F(HorizontalScrollEditingTest, BackspaceWithScroll)
     // Verify actual_col calculation
     EXPECT_EQ(GetActualCol(), 15);
 
-    // Simulate backspace - should delete 'E' at position 14
-    size_t actual_col = GetActualCol();
-    if (actual_col > 0 && actual_col <= editor->current_line_.size()) {
-        editor->current_line_.erase(actual_col - 1, 1);
-        editor->current_line_modified_ = true;
-        editor->cursor_col_--;
-    }
-    editor->put_line();
+    // Call backend method - should delete 'E' at position 14
+    editor->edit_backspace();
 
     // Result: "0123456789ABCDFGHIJ" (E removed)
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDFGHIJ");
@@ -124,13 +118,8 @@ TEST_F(HorizontalScrollEditingTest, DeleteWithScroll)
 
     EXPECT_EQ(GetActualCol(), 15);
 
-    // Delete character at cursor position (F at position 15)
-    size_t actual_col = GetActualCol();
-    if (actual_col < editor->current_line_.size()) {
-        editor->current_line_.erase(actual_col, 1);
-        editor->current_line_modified_ = true;
-    }
-    editor->put_line();
+    // Call backend method - delete character at cursor position (F at position 15)
+    editor->edit_delete();
 
     // Result: "0123456789ABCDEGHIJ" (F removed)
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDEGHIJ");
@@ -148,12 +137,8 @@ TEST_F(HorizontalScrollEditingTest, DeleteAtVariousScrollPositions)
 
     EXPECT_EQ(GetActualCol(), 20);
 
-    size_t actual_col = GetActualCol();
-    if (actual_col < editor->current_line_.size()) {
-        editor->current_line_.erase(actual_col, 1);
-        editor->current_line_modified_ = true;
-    }
-    editor->put_line();
+    // Call backend method
+    editor->edit_delete();
 
     // Result: "ABCDEFGHIJKLMNOPQRSTVWXYZ" (U removed at position 20)
     EXPECT_EQ(editor->wksp_->read_line(0), "ABCDEFGHIJKLMNOPQRSTVWXYZ");
@@ -233,12 +218,8 @@ TEST_F(HorizontalScrollEditingTest, TabWithScroll)
 
     EXPECT_EQ(GetActualCol(), 15);
 
-    // Insert 4 spaces at actual position 15
-    size_t actual_col = GetActualCol();
-    editor->current_line_.insert(actual_col, 4, ' ');
-    editor->current_line_modified_ = true;
-    editor->cursor_col_ += 4;
-    editor->put_line();
+    // Call backend method - insert tab (4 spaces) at actual position 15
+    editor->edit_tab();
 
     // Result: "0123456789ABCDE    FGHIJ"
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDE    FGHIJ");
@@ -257,11 +238,8 @@ TEST_F(HorizontalScrollEditingTest, TabAtScrollBoundary)
     // Actual position: 20
     EXPECT_EQ(GetActualCol(), 20);
 
-    size_t actual_col = GetActualCol();
-    editor->current_line_.insert(actual_col, 4, ' ');
-    editor->current_line_modified_ = true;
-    editor->cursor_col_ += 4;
-    editor->put_line();
+    // Call backend method - insert tab
+    editor->edit_tab();
 
     // Spaces inserted at position 20
     std::string result = editor->wksp_->read_line(0);
@@ -284,12 +262,8 @@ TEST_F(HorizontalScrollEditingTest, InsertCharacterWithScroll)
 
     EXPECT_EQ(GetActualCol(), 15);
 
-    // Insert 'X' at actual position 15
-    size_t actual_col = GetActualCol();
-    editor->current_line_.insert(actual_col, 1, 'X');
-    editor->current_line_modified_ = true;
-    editor->cursor_col_++;
-    editor->put_line();
+    // Call backend method - insert 'X' at actual position 15
+    editor->edit_insert_char('X');
 
     // Result: "0123456789ABCDEXFGHIJ"
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDEXFGHIJ");
@@ -308,15 +282,11 @@ TEST_F(HorizontalScrollEditingTest, InsertMultipleCharactersWithScroll)
     // Actual position: 3 + 2 = 5 (between 't' and 'E')
     EXPECT_EQ(GetActualCol(), 5);
 
-    // Insert " Middle "
+    // Insert " Middle " using backend method
     const char *text = " Middle ";
     for (size_t i = 0; text[i] != '\0'; ++i) {
-        size_t actual_col = GetActualCol();
-        editor->current_line_.insert(actual_col, 1, text[i]);
-        editor->cursor_col_++;
+        editor->edit_insert_char(text[i]);
     }
-    editor->current_line_modified_ = true;
-    editor->put_line();
 
     EXPECT_EQ(editor->wksp_->read_line(0), "Start Middle End");
 }
@@ -336,16 +306,8 @@ TEST_F(HorizontalScrollEditingTest, OverwriteWithScroll)
 
     EXPECT_EQ(GetActualCol(), 15);
 
-    // Overwrite 'F' with 'X' at actual position 15
-    size_t actual_col = GetActualCol();
-    if (actual_col < editor->current_line_.size()) {
-        editor->current_line_[actual_col] = 'X';
-    } else {
-        editor->current_line_.push_back('X');
-    }
-    editor->current_line_modified_ = true;
-    editor->cursor_col_++;
-    editor->put_line();
+    // Call backend method - overwrite 'F' with 'X' at actual position 15
+    editor->edit_insert_char('X');
 
     // Result: "0123456789ABCDEXGHIJ"
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDEXGHIJ");
@@ -364,19 +326,11 @@ TEST_F(HorizontalScrollEditingTest, OverwriteMultipleWithScroll)
     // Actual position: 10 + 0 = 10 ('b' in "brown")
     EXPECT_EQ(GetActualCol(), 10);
 
-    // Overwrite "brown" with "BLACK"
+    // Overwrite "brown" with "BLACK" using backend method
     const char *text = "BLACK";
     for (size_t i = 0; text[i] != '\0'; ++i) {
-        size_t actual_col = GetActualCol();
-        if (actual_col < editor->current_line_.size()) {
-            editor->current_line_[actual_col] = text[i];
-        } else {
-            editor->current_line_.push_back(text[i]);
-        }
-        editor->cursor_col_++;
+        editor->edit_insert_char(text[i]);
     }
-    editor->current_line_modified_ = true;
-    editor->put_line();
 
     EXPECT_EQ(editor->wksp_->read_line(0), "The quick BLACK fox");
 }
@@ -399,13 +353,8 @@ TEST_F(HorizontalScrollEditingTest, EditingAtMaxScroll)
     // Actual position: 80 + 10 = 90
     EXPECT_EQ(GetActualCol(), 90);
 
-    // Delete character at position 90
-    size_t actual_col = GetActualCol();
-    if (actual_col < editor->current_line_.size()) {
-        editor->current_line_.erase(actual_col, 1);
-        editor->current_line_modified_ = true;
-    }
-    editor->put_line();
+    // Call backend method - delete character at position 90
+    editor->edit_delete();
 
     EXPECT_EQ(editor->wksp_->read_line(0).length(), 99);
 }
@@ -448,27 +397,18 @@ TEST_F(HorizontalScrollEditingTest, ComplexEditingSequenceWithScroll)
     // Actual position: 8 + 4 = 12 (character 'C')
     EXPECT_EQ(GetActualCol(), 12);
 
-    // Insert 'X'
-    size_t actual_col = GetActualCol();
-    editor->current_line_.insert(actual_col, 1, 'X');
-    editor->cursor_col_++;
-    editor->current_line_modified_ = true;
-    editor->put_line();
+    // Call backend method - insert 'X'
+    editor->edit_insert_char('X');
 
     // Verify: "0123456789ABXCDEFGHIJKLMNOP"
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABXCDEFGHIJKLMNOP");
 
-    // Now delete it
+    // Now delete it using backend method
     LoadLine(0);
-    editor->cursor_col_ = 5;              // Moved forward after insert
-    actual_col          = GetActualCol(); // 8 + 5 = 13
-    EXPECT_EQ(actual_col, 13);
+    editor->cursor_col_ = 5;   // Moved forward after insert
+    EXPECT_EQ(GetActualCol(), 13); // 8 + 5 = 13
 
-    if (actual_col > 0 && actual_col <= editor->current_line_.size()) {
-        editor->current_line_.erase(actual_col - 1, 1);
-        editor->current_line_modified_ = true;
-    }
-    editor->put_line();
+    editor->edit_backspace();
 
     // Back to original: "0123456789ABCDEFGHIJKLMNOP"
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDEFGHIJKLMNOP");
@@ -490,18 +430,16 @@ TEST_F(HorizontalScrollEditingTest, VerifyBugFixScenario)
     // WITH FIX: Uses get_actual_col() = 6 + 6 = 12 (CORRECT!)
     EXPECT_EQ(GetActualCol(), 12);
 
-    // Delete character at actual position 12
+    // Verify character at position 12 before deleting
     size_t actual_col = GetActualCol();
     ASSERT_LT(actual_col, editor->current_line_.size());
+    char char_at_12 = editor->current_line_[actual_col];
+    EXPECT_EQ(char_at_12, 'T'); // The character at position 12 is 'T'
 
-    char deleted_char = editor->current_line_[actual_col];
-    editor->current_line_.erase(actual_col, 1);
-    editor->current_line_modified_ = true;
-    editor->put_line();
+    // Call backend method - delete character at actual position 12
+    editor->edit_delete();
 
-    // The character at position 12 was 'T' in "Hello World Test Line"
-    EXPECT_EQ(deleted_char, 'T');
-    // Result: "Hello World est Line"
+    // Result: "Hello World est Line" ('T' removed)
     EXPECT_EQ(editor->wksp_->read_line(0), "Hello World est Line");
 }
 
@@ -656,14 +594,8 @@ TEST_F(HorizontalScrollEditingTest, BackspaceJoinLinesWithScroll)
     // Actual position: 5 + 0 = 5 (NOT at start of line, at position 5)
     EXPECT_EQ(GetActualCol(), 5);
 
-    size_t actual_col = GetActualCol();
-
-    // With scroll, actual_col > 0, so backspace deletes character in line
-    if (actual_col > 0 && actual_col <= editor->current_line_.size()) {
-        editor->current_line_.erase(actual_col - 1, 1);
-        editor->current_line_modified_ = true;
-    }
-    editor->put_line();
+    // Call backend method - with scroll, actual_col > 0, so backspace deletes character in line
+    editor->edit_backspace();
 
     // Should delete character at position 4: "Second line" -> "Secod line"
     EXPECT_EQ(editor->wksp_->read_line(1), "Secod line");
@@ -750,11 +682,8 @@ TEST_F(HorizontalScrollEditingTest, DeleteNotAtEndWithScroll)
     // Should delete within line, not join
     EXPECT_LT(actual_col, editor->current_line_.size());
 
-    if (actual_col < editor->current_line_.size()) {
-        editor->current_line_.erase(actual_col, 1);
-        editor->current_line_modified_ = true;
-    }
-    editor->put_line();
+    // Call backend method - delete character at position 5
+    editor->edit_delete();
 
     // Should delete 'n' at position 5: "Testing" -> "Testig"
     EXPECT_EQ(editor->wksp_->read_line(0), "Testig");

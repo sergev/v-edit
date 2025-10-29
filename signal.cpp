@@ -42,9 +42,9 @@ void Editor::handle_fatal_signal(int sig)
     }
 
     // Print error message
-    std::cerr << "\nFirst the bad news: editor just died from signal " << sig << "\n";
-    std::cerr << "Now the good news - your editing session may be preserved.\n";
-    std::cerr << "Check ~/.ve/session for recovery.\n";
+    std::cerr << "\nWell, that didn't go as planned - the editor crashed (signal " << sig << ")!\n";
+    std::cerr << "Don’t panic: your work may still be recoverable.\n";
+    std::cerr << "Look in ~/.ve/session to restore your session.\n";
 
     // Exit
     std::exit(1);

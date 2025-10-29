@@ -23,7 +23,7 @@ void Segment::debug_print(std::ostream &out) const
     out << "Segment "
         << "line_count=" << line_count << ", "
         << "file_descriptor=" << file_descriptor << ", "
-        << "seek=" << seek << ", "
+        << "file_offset=" << file_offset << ", "
         << "sizes={";
 
     for (int i = 0; i < line_count; ++i) {

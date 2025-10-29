@@ -220,23 +220,23 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
 
     // Verify Segment 1
     EXPECT_EQ(segments[0]->line_count, 127);
-    EXPECT_EQ(segments[0]->seek, 0);
+    EXPECT_EQ(segments[0]->file_offset, 0);
     EXPECT_EQ(segments[0]->sizes.size(), 127);
 
     std::cout << "Segment 1:\n";
     std::cout << "  nlines: " << segments[0]->line_count << "\n";
-    std::cout << "  seek: " << segments[0]->seek << "\n";
+    std::cout << "  seek: " << segments[0]->file_offset << "\n";
     std::cout << "  fdesc: " << segments[0]->file_descriptor << "\n";
     std::cout << "  data.size(): " << segments[0]->sizes.size() << "\n";
 
     // Verify Segment 2
     EXPECT_EQ(segments[1]->line_count, 73);
-    EXPECT_EQ(segments[1]->seek, 3134);
+    EXPECT_EQ(segments[1]->file_offset, 3134);
     EXPECT_EQ(segments[1]->sizes.size(), 73);
 
     std::cout << "Segment 2:\n";
     std::cout << "  nlines: " << segments[1]->line_count << "\n";
-    std::cout << "  seek: " << segments[1]->seek << "\n";
+    std::cout << "  seek: " << segments[1]->file_offset << "\n";
     std::cout << "  fdesc: " << segments[1]->file_descriptor << "\n";
     std::cout << "  data.size(): " << segments[1]->sizes.size() << "\n";
 
@@ -247,7 +247,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
 
     std::cout << "Segment 3:\n";
     std::cout << "  nlines: " << segments[2]->line_count << "\n";
-    std::cout << "  seek: " << segments[2]->seek << "\n";
+    std::cout << "  seek: " << segments[2]->file_offset << "\n";
     std::cout << "  fdesc: " << segments[2]->file_descriptor << "\n";
     std::cout << "  data.size(): " << segments[2]->sizes.size() << "\n";
 

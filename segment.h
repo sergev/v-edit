@@ -27,7 +27,7 @@ public:
     int file_descriptor{ 0 };
 
     // Offset in file_descriptor for data of this segment.
-    long seek{ 0 }; // TODO: rename as file_offset
+    long file_offset{ 0 };
 
     // Line lengths, including "\n".
     std::vector<unsigned short> sizes; // TODO: rename as line_lengths

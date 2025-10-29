@@ -224,7 +224,7 @@ void Workspace::load_file(int fd)
                     Segment &seg        = segments_.back();
                     seg.line_count      = lines_in_seg;
                     seg.file_descriptor = fd;
-                    seg.seek            = seg_seek;
+                    seg.file_offset     = seg_seek;
                     seg.sizes           = std::move(temp_seg.sizes);
 
                     file_state.nlines += lines_in_seg;
@@ -283,7 +283,7 @@ void Workspace::load_file(int fd)
             Segment &seg        = segments_.back();
             seg.line_count      = lines_in_seg;
             seg.file_descriptor = fd;
-            seg.seek            = seg_seek;
+            seg.file_offset     = seg_seek;
             seg.sizes           = std::move(temp_seg.sizes);
 
             file_state.nlines += lines_in_seg;
@@ -314,7 +314,7 @@ std::list<Segment> Workspace::copy_segment_list(Segment::iterator start, Segment
         Segment copy;
         copy.line_count      = it->line_count;
         copy.file_descriptor = it->file_descriptor;
-        copy.seek            = it->seek;
+        copy.file_offset     = it->file_offset;
         copy.sizes           = it->sizes; // Copy vector
 
         copied_segments.push_back(copy);
@@ -340,7 +340,7 @@ std::list<Segment> Workspace::create_blank_lines(int n)
         Segment seg;
         seg.line_count      = lines_in_seg;
         seg.file_descriptor = -1; // Empty lines not from file
-        seg.seek            = 0;
+        seg.file_offset     = 0;
 
         // Add line length data: each empty line has length 1 (just newline)
         seg.sizes.resize(lines_in_seg);
@@ -398,9 +398,9 @@ std::string Workspace::read_line_from_segment(int line_no)
     }
 
     // Calculate file offset by accumulating line lengths
-    // Note: cursegm_->seek points to the START of the first line in the segment
+    // Note: cursegm_->file_offset points to the START of the first line in the segment
     // We need to skip 'rel_line' lines to get to the line we want
-    long seek_pos = cursegm_->seek;
+    long seek_pos = cursegm_->file_offset;
     for (int i = 0; i < rel_line; ++i) {
         seek_pos += cursegm_->sizes[i];
     }
@@ -453,7 +453,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
 
         if (seg.file_descriptor > 0) {
             // Read from source file and write to output
-            if (lseek(seg.file_descriptor, seg.seek, SEEK_SET) < 0) {
+            if (lseek(seg.file_descriptor, seg.file_offset, SEEK_SET) < 0) {
                 // Failed to seek - file may have been unlinked
                 // Skip this segment and continue
                 continue;
@@ -572,7 +572,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         Segment &new_seg        = *new_it;
         new_seg.line_count      = cursegm_->line_count - rel_line;
         new_seg.file_descriptor = -1; // Still blank lines
-        new_seg.seek            = cursegm_->seek;
+        new_seg.file_offset     = cursegm_->file_offset;
 
         // Copy remaining sizes
         for (size_t i = rel_line; i < cursegm_->sizes.size(); ++i) {
@@ -611,7 +611,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     Segment &new_seg        = *new_it;
     new_seg.line_count      = cursegm_->line_count - rel_line;
     new_seg.file_descriptor = cursegm_->file_descriptor;
-    new_seg.seek            = cursegm_->seek + offs;
+    new_seg.file_offset     = cursegm_->file_offset + offs;
 
     // Copy remaining data bytes from split_point to end
     for (size_t i = split_point; i < cursegm_->line_count; ++i) {
@@ -651,7 +651,7 @@ bool Workspace::catsegm()
         (prev.line_count + curr.line_count) < 127) {
         // Calculate if they're adjacent
         long prev_bytes = prev.get_total_bytes();
-        if (curr.seek == prev.seek + prev_bytes) {
+        if (curr.file_offset == prev.file_offset + prev_bytes) {
             // Segments are adjacent - merge them
             // Combine data into previous segment
             for (unsigned short byte : curr.sizes)

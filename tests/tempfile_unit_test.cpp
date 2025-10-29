@@ -46,8 +46,8 @@ TEST_F(TempfileTest, WriteLineToTempBasic)
     EXPECT_GE(seg.file_descriptor, 0); // Should have opened temp file
     // Segment struct no longer has prev/next pointers in std::list implementation
     EXPECT_EQ(seg.sizes.size(), 1);
-    EXPECT_EQ(seg.sizes[0], 12); // "Hello World\n" = 12 bytes
-    EXPECT_EQ(seg.seek, 0);      // First write should be at position 0
+    EXPECT_EQ(seg.sizes[0], 12);   // "Hello World\n" = 12 bytes
+    EXPECT_EQ(seg.file_offset, 0); // First write should be at position 0
 }
 
 // Test write_line_to_temp with string already ending with newline
@@ -91,9 +91,9 @@ TEST_F(TempfileTest, WriteLineToTempMultiple)
     const Segment &s2 = seg2.front();
     const Segment &s3 = seg3.front();
 
-    EXPECT_EQ(s1.seek, 0);
-    EXPECT_EQ(s2.seek, 11);      // After "First line\n" (11 bytes)
-    EXPECT_EQ(s3.seek, 11 + 12); // After "Second line\n" (12 bytes)
+    EXPECT_EQ(s1.file_offset, 0);
+    EXPECT_EQ(s2.file_offset, 11);      // After "First line\n" (11 bytes)
+    EXPECT_EQ(s3.file_offset, 11 + 12); // After "Second line\n" (12 bytes)
 
     EXPECT_EQ(s1.sizes[0], 11); // "First line\n" = 10 + 1 = 11 bytes
     EXPECT_EQ(s2.sizes[0], 12); // "Second line\n" = 11 + 1 = 12 bytes
@@ -125,7 +125,7 @@ TEST_F(TempfileTest, WriteLineToTempVerifyContent)
 
     // Seek to the segment position and read the data
     char buffer[256];
-    lseek(seg.file_descriptor, seg.seek, SEEK_SET);
+    lseek(seg.file_descriptor, seg.file_offset, SEEK_SET);
     int bytes_read = read(seg.file_descriptor, buffer, seg.sizes[0]);
 
     EXPECT_EQ(bytes_read, seg.sizes[0]);
@@ -147,7 +147,7 @@ TEST_F(TempfileTest, WriteLineToTempLongLine)
 
     // Verify content
     char buffer[1002];
-    lseek(seg.file_descriptor, seg.seek, SEEK_SET);
+    lseek(seg.file_descriptor, seg.file_offset, SEEK_SET);
     int bytes_read = read(seg.file_descriptor, buffer, seg.sizes[0]);
 
     EXPECT_EQ(bytes_read, 1001);
@@ -196,9 +196,9 @@ TEST_F(TempfileTest, WriteLineToTempPositionTracking)
     const Segment &s2 = seg2.front();
     const Segment &s3 = seg3.front();
 
-    EXPECT_EQ(s1.seek, 0);
-    EXPECT_EQ(s2.seek, s1.sizes[0]);
-    EXPECT_EQ(s3.seek, s1.sizes[0] + s2.sizes[0]);
+    EXPECT_EQ(s1.file_offset, 0);
+    EXPECT_EQ(s2.file_offset, s1.sizes[0]);
+    EXPECT_EQ(s3.file_offset, s1.sizes[0] + s2.sizes[0]);
 
     EXPECT_EQ(s1.sizes[0], 6); // "12345\n"
     EXPECT_EQ(s2.sizes[0], 7); // "abcdef\n"
@@ -219,10 +219,10 @@ TEST_F(TempfileTest, WriteLinesToTempBasic)
     EXPECT_GE(seg.file_descriptor, 0); // Should have opened temp file
     // Segments are now in std::list - no prev/next pointers
     EXPECT_EQ(seg.sizes.size(), 3);
-    EXPECT_EQ(seg.sizes[0], 11); // "First line\n" = 11 bytes
-    EXPECT_EQ(seg.sizes[1], 12); // "Second line\n" = 12 bytes
-    EXPECT_EQ(seg.sizes[2], 11); // "Third line\n" = 11 bytes
-    EXPECT_EQ(seg.seek, 0);      // First write should be at position 0
+    EXPECT_EQ(seg.sizes[0], 11);   // "First line\n" = 11 bytes
+    EXPECT_EQ(seg.sizes[1], 12);   // "Second line\n" = 12 bytes
+    EXPECT_EQ(seg.sizes[2], 11);   // "Third line\n" = 11 bytes
+    EXPECT_EQ(seg.file_offset, 0); // First write should be at position 0
 }
 
 // Test write_lines_to_temp with strings already ending with newlines
@@ -282,8 +282,8 @@ TEST_F(TempfileTest, WriteLinesToTempMultiple)
     const Segment &s1 = seg1.front();
     const Segment &s2 = seg2.front();
 
-    EXPECT_EQ(s1.seek, 0);
-    EXPECT_EQ(s2.seek, 6 + 7); // After "First\n" (6) + "Second\n" (7) = 13
+    EXPECT_EQ(s1.file_offset, 0);
+    EXPECT_EQ(s2.file_offset, 6 + 7); // After "First\n" (6) + "Second\n" (7) = 13
 
     EXPECT_EQ(s1.line_count, 2);
     EXPECT_EQ(s2.line_count, 3);
@@ -322,7 +322,7 @@ TEST_F(TempfileTest, WriteLinesToTempVerifyContent)
 
     // Seek to the segment position and read the data
     char buffer[256];
-    lseek(seg.file_descriptor, seg.seek, SEEK_SET);
+    lseek(seg.file_descriptor, seg.file_offset, SEEK_SET);
 
     int total_bytes = 0;
     for (int size : seg.sizes) {
@@ -404,9 +404,10 @@ TEST_F(TempfileTest, WriteLinesToTempPositionTracking)
     const Segment &s2 = seg2.front();
     const Segment &s3 = seg3.front();
 
-    EXPECT_EQ(s1.seek, 0);
-    EXPECT_EQ(s2.seek, s1.seek + s1.sizes[0] + s1.sizes[1]); // After both lines in block1
-    EXPECT_EQ(s3.seek, s2.seek + s2.sizes[0]);               // After the single line
+    EXPECT_EQ(s1.file_offset, 0);
+    EXPECT_EQ(s2.file_offset,
+              s1.file_offset + s1.sizes[0] + s1.sizes[1]);   // After both lines in block1
+    EXPECT_EQ(s3.file_offset, s2.file_offset + s2.sizes[0]); // After the single line
 
     // Verify sizes
     EXPECT_EQ(s1.sizes[0], 13); // "Block1 Line1\n"

@@ -78,7 +78,7 @@ std::list<Segment> Tempfile::write_line_to_temp(const std::string &line_content)
     Segment seg;
     seg.line_count      = 1;
     seg.file_descriptor = tempfile_fd_;
-    seg.seek            = seek_pos;
+    seg.file_offset     = seek_pos;
     seg.sizes.push_back(nbytes);
 
     return { seg };
@@ -101,7 +101,7 @@ std::list<Segment> Tempfile::write_lines_to_temp(const std::vector<std::string> 
     Segment seg;
     seg.line_count      = lines.size();
     seg.file_descriptor = tempfile_fd_;
-    seg.seek            = tempseek_;
+    seg.file_offset     = tempseek_;
 
     // Seek to the correct position before writing
     if (lseek(tempfile_fd_, tempseek_, SEEK_SET) < 0) {

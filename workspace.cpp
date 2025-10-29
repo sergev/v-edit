@@ -675,7 +675,7 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     // Insert new segments BEFORE cursegm_
     auto insert_pos = cursegm_;
 
-    // Remember the size of contents before splicing so we can find the first inserted segment
+    // Remember the position before splicing so we can find the first inserted segment
     auto before_size = std::distance(contents_.begin(), insert_pos);
 
     contents_.splice(insert_pos, contents_to_insert);

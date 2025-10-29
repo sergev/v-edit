@@ -554,6 +554,53 @@ TEST_F(EditorTest, SetCurrentSegmentRandomAccess)
     }
 }
 
+TEST_F(EditorTest, PutLineMultipleSequentialLines)
+{
+    // Reproduce the tmux crash scenario without tmux
+    // This simulates typing "L01", Enter, "L02", Enter, "L03", etc.
+
+    // Start with empty workspace
+    EXPECT_EQ(editor->wksp_->total_line_count(), 0);
+
+    // Add lines sequentially as if user is typing and pressing Enter
+    for (int i = 0; i < 15; ++i) {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "L%02d", i + 1);
+
+        std::cout << "DEBUG: Adding line " << i << " with content '" << buf << "'\n";
+
+        editor->current_line_          = buf;
+        editor->current_line_no_       = i;
+        editor->current_line_modified_ = true;
+        editor->put_line();
+
+        std::cout << "DEBUG: After put_line(" << i
+                  << "), total_line_count = " << editor->wksp_->total_line_count() << "\n";
+
+        // Verify line was added
+        EXPECT_EQ(editor->wksp_->total_line_count(), i + 1);
+
+        // Verify we can read it back
+        std::string read_back = editor->wksp_->read_line(i);
+        EXPECT_EQ(read_back, buf) << "Line " << i << " mismatch after put_line";
+
+        if (i < 5) {
+            std::cout << "Line " << i << ": '" << read_back << "'\n";
+        }
+    }
+
+    // Verify all 15 lines exist
+    EXPECT_EQ(editor->wksp_->total_line_count(), 15);
+
+    // Verify we can read them all back
+    for (int i = 0; i < 15; ++i) {
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "L%02d", i + 1);
+        std::string read_back = editor->wksp_->read_line(i);
+        EXPECT_EQ(read_back, buf) << "Line " << i << " mismatch at end";
+    }
+}
+
 TEST_F(EditorTest, DebugPutLineGaps)
 {
     std::cout << "\n=== Test: Put line at 0 ===\n";

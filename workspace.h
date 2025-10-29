@@ -37,7 +37,6 @@ struct FileState {
     bool modified{ false };    // track if file has been modified
     bool backup_done{ false }; // track if backup file has been created
     int writable{ 0 };         // write permission
-    int nlines{ 0 };           // TODO: remove, use total_line_count() instead
 };
 
 //
@@ -72,7 +71,7 @@ public:
     bool write_file(const std::string &path);
 
     // Compute total line count of all segments.
-    unsigned total_line_count() const;
+    int total_line_count() const;
 
     // Read line content from segment list at specified index
     std::string read_line(int line_no);

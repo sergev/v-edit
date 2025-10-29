@@ -70,10 +70,11 @@ void Editor::draw()
 //
 void Editor::wksp_redraw()
 {
+    auto total = wksp_->total_line_count();
     for (int r = 0; r < nlines_ - 1; ++r) {
         mvhline(r, 0, ' ', ncols_);
         std::string lineText;
-        if (r + wksp_->view.topline < wksp_->file_state.nlines) {
+        if (r + wksp_->view.topline < total) {
             lineText = wksp_->read_line(r + wksp_->view.topline);
             // horizontal offset and continuation markers
             bool truncated = false;

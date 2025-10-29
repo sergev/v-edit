@@ -38,7 +38,7 @@ TEST_F(EditorTest, PutLineCreatesSegments)
 {
     // Initially workspace has 5 blank lines
     CreateBlankLines(5);
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 5);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 5);
 
     // Replace the first blank line with actual content via put_line
     editor->current_line_          = "First line";
@@ -48,7 +48,7 @@ TEST_F(EditorTest, PutLineCreatesSegments)
     editor->put_line();
 
     // Verify workspace still has segments
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 5);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 5);
 
     // Verify we can read the updated line back
     std::string read_line = editor->wksp_->read_line(0);
@@ -78,7 +78,7 @@ TEST_F(EditorTest, PutLineMultipleLines)
     editor->put_line();
 
     // Verify workspace has the lines (we started with 5 blank lines)
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 5);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 5);
 
     // Verify we can read the updated lines
     EXPECT_EQ(editor->wksp_->read_line(0), "Line 1");
@@ -107,7 +107,7 @@ TEST_F(EditorTest, PutLineUpdatesExistingSegments)
     editor->put_line();
 
     // Verify initial state (we started with 5 blank lines)
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 5);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 5);
     EXPECT_EQ(editor->wksp_->read_line(0), "Original line 1");
     EXPECT_EQ(editor->wksp_->read_line(1), "Original line 2");
     EXPECT_EQ(editor->wksp_->read_line(2), "Original line 3");
@@ -119,7 +119,7 @@ TEST_F(EditorTest, PutLineUpdatesExistingSegments)
     editor->put_line();
 
     // Verify the update (still 5 lines total)
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 5);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 5);
     EXPECT_EQ(editor->wksp_->read_line(0), "Original line 1");
     EXPECT_EQ(editor->wksp_->read_line(1), "Updated line 2");
     EXPECT_EQ(editor->wksp_->read_line(2), "Original line 3");
@@ -148,7 +148,7 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
         editor->put_line();
     }
 
-    EXPECT_EQ(editor->wksp_->file_state.nlines, num_lines);
+    EXPECT_EQ(editor->wksp_->total_line_count(), num_lines);
 
     // Verify all lines are readable
     for (int i = 0; i < num_lines; ++i) {
@@ -180,7 +180,7 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
 TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
 {
     // Initially workspace is empty (has tail segment)
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 0);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 0);
 
     // Verify the tail segment
     auto tail_it = editor->wksp_->get_contents().begin();
@@ -196,7 +196,7 @@ TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
     editor->put_line();
 
     // Verify workspace now has the line
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 1);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
 
     // Verify we can read the line back
     std::string read_line = editor->wksp_->read_line(0);
@@ -212,7 +212,7 @@ TEST_F(EditorTest, PutLineExtendsFileBeyondEnd)
     editor->put_line();
 
     // Verify first line exists
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 1);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
     EXPECT_EQ(editor->wksp_->read_line(0), "Line 1");
 
     // Add third line (skipping line 1) - should create blank line in between
@@ -222,7 +222,7 @@ TEST_F(EditorTest, PutLineExtendsFileBeyondEnd)
     editor->put_line();
 
     // Verify file was extended
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 3);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
     EXPECT_EQ(editor->wksp_->read_line(0), "Line 1");
     EXPECT_EQ(editor->wksp_->read_line(1), ""); // Created blank line
     EXPECT_EQ(editor->wksp_->read_line(2), "Line 3");
@@ -239,7 +239,7 @@ TEST_F(EditorTest, PutLineCreatesMultipleLinesSequentially)
     }
 
     // Verify all lines exist
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 5);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 5);
 
     for (int i = 0; i < 5; ++i) {
         std::string expected = "Line " + std::to_string(i);
@@ -264,7 +264,7 @@ TEST_F(EditorTest, PutLineUpdatesExistingLine)
     editor->current_line_modified_ = true;
     editor->put_line();
 
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 1);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
     EXPECT_EQ(editor->wksp_->read_line(0), "Updated");
 }
 
@@ -282,7 +282,7 @@ TEST_F(EditorTest, PutLineWithGapsCreatesBlankLines)
     editor->current_line_modified_ = true;
     editor->put_line();
 
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 11);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 11);
     EXPECT_EQ(editor->wksp_->read_line(0), "Start");
     EXPECT_EQ(editor->wksp_->read_line(10), "End");
 
@@ -394,7 +394,7 @@ TEST_F(EditorTest, SetCurrentSegmentBeyondEndByOne)
 TEST_F(EditorTest, SetCurrentSegmentEmptyWorkspaceReturnsOne)
 {
     // Empty workspace (has tail but no content)
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 0);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 0);
 
     // Any position should return 1 (beyond end)
     EXPECT_EQ(editor->wksp_->change_current_line(0), 1);
@@ -581,7 +581,7 @@ TEST_F(EditorTest, DebugPutLineGaps)
     editor->wksp_->debug_print(std::cout);
 
     // Verify all three lines exist
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 3);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
     line0             = editor->wksp_->read_line(0);
     std::string line1 = editor->wksp_->read_line(1);
     std::string line2 = editor->wksp_->read_line(2);

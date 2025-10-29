@@ -5,9 +5,10 @@
 //
 void Editor::goto_line(int lineNumber)
 {
+    auto total = wksp_->total_line_count();
+
     if (lineNumber < 0)
         lineNumber = 0;
-    int total = wksp_->file_state.nlines;
     if (lineNumber >= total)
         lineNumber = total - 1;
     if (lineNumber < 0)
@@ -75,7 +76,7 @@ void Editor::move_up()
 //
 void Editor::move_down()
 {
-    int total = wksp_->file_state.nlines;
+    auto total = wksp_->total_line_count();
     if (cursor_line_ < nlines_ - 2) {
         int absLine = wksp_->view.topline + cursor_line_ + 1;
         if (absLine < total) {
@@ -112,7 +113,7 @@ bool Editor::search_forward(const std::string &needle)
 {
     int startLine = wksp_->view.topline + cursor_line_;
     int startCol  = wksp_->view.basecol + cursor_col_;
-    int total     = wksp_->file_state.nlines;
+    auto total    = wksp_->total_line_count();
 
     // Search from current position forward
     for (int i = startLine; i < total; ++i) {
@@ -174,7 +175,7 @@ bool Editor::search_backward(const std::string &needle)
 {
     int startLine = wksp_->view.topline + cursor_line_;
     int startCol  = wksp_->view.basecol + cursor_col_;
-    int total     = wksp_->file_state.nlines;
+    auto total    = wksp_->total_line_count();
 
     // Search from current position backward
     for (int i = startLine; i >= 0; --i) {
@@ -270,7 +271,6 @@ void Editor::insertlines(int from, int number)
     // Insert blank lines using workspace segments
     auto blank = wksp_->create_blank_lines(number);
     wksp_->insert_contents(blank, from);
-    wksp_->file_state.nlines = wksp_->file_state.nlines + number;
 
     ensure_cursor_visible();
 }
@@ -290,14 +290,6 @@ void Editor::deletelines(int from, int number)
 
     // Delete the lines using workspace segments
     wksp_->delete_contents(from, from + number - 1);
-    wksp_->file_state.nlines = std::max(0, wksp_->file_state.nlines - number);
-
-    // Ensure at least one line exists
-    if (wksp_->file_state.nlines == 0) {
-        auto blank = wksp_->create_blank_lines(1);
-        wksp_->insert_contents(blank, 0);
-        wksp_->file_state.nlines = 1;
-    }
 
     ensure_cursor_visible();
 }
@@ -336,8 +328,7 @@ void Editor::splitline(int line, int col)
     auto temp_segments = tempfile_.write_line_to_temp(tail);
     if (!temp_segments.empty()) {
         // Move the segment into the workspace segments list
-        wksp_->get_contents().splice(wksp_->get_contents().end(), temp_segments);
-        wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
+        wksp_->insert_contents(temp_segments, line + 1);
     } else {
         // Fallback: insert blank line
         insertlines(line + 1, 1);
@@ -354,7 +345,8 @@ void Editor::combineline(int line, int col)
     if (line < 0 || col < 0)
         return;
 
-    if (line + 1 >= wksp_->file_state.nlines)
+    auto total = wksp_->total_line_count();
+    if (line + 1 >= total)
         return; // No next line to combine
 
     ensure_line_saved();
@@ -381,7 +373,6 @@ void Editor::combineline(int line, int col)
 
     // Delete the next line
     wksp_->delete_contents(line + 1, line + 1);
-    wksp_->file_state.nlines = std::max(1, wksp_->file_state.nlines - 1);
 
     ensure_cursor_visible();
 }

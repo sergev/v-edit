@@ -46,7 +46,7 @@ TEST_F(SegmentTest, LoadFileToSegments)
     editor->load_file_segments(filename);
 
     // Verify segments were created (test now uses wksp_.chain directly)
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 3);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
 
     cleanupTestFile(filename);
 }
@@ -58,7 +58,7 @@ TEST_F(SegmentTest, ReadLineFromSegment)
     editor->load_file_segments(filename);
 
     // Verify segments were created
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 3);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
 
     // Read first line - position to line 0 first
     editor->wksp_->change_current_line(0);
@@ -198,7 +198,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     editor->load_file_segments(filename);
 
     // Verify segments were created
-    EXPECT_EQ(editor->wksp_->file_state.nlines, 200);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 200);
 
     // Check segment chain structure
     auto segment_it         = editor->wksp_->get_contents().begin();

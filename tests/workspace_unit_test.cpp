@@ -80,7 +80,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
 
     wksp->load_file(OpenFile(filename));
 
-    EXPECT_EQ(wksp->file_state.nlines, 5);
+    EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Break at line 2
     int result = wksp->breaksegm(2, true);
@@ -105,7 +105,7 @@ TEST_F(WorkspaceTest, DISABLED_BuildAndReadLines)
     wksp->load_text(lines);
 
     // Verify segments were created
-    EXPECT_EQ(wksp->file_state.nlines, 3);
+    EXPECT_EQ(wksp->total_line_count(), 3);
     EXPECT_EQ(wksp->total_line_count(), 3);
 
     // Verify we can read the lines back
@@ -124,7 +124,7 @@ TEST_F(WorkspaceTest, InsertBlankLines)
     f.close();
 
     wksp->load_file(OpenFile(filename));
-    EXPECT_EQ(wksp->file_state.nlines, 3);
+    EXPECT_EQ(wksp->total_line_count(), 3);
 
     // Create blank lines to insert
     std::list<Segment> to_insert = Workspace::create_blank_lines(2);
@@ -133,7 +133,7 @@ TEST_F(WorkspaceTest, InsertBlankLines)
     wksp->insert_contents(to_insert, 1);
 
     // Verify line count increased
-    EXPECT_EQ(wksp->file_state.nlines, 5);
+    EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -149,13 +149,13 @@ TEST_F(WorkspaceTest, DeleteLines)
     f.close();
 
     wksp->load_file(OpenFile(filename));
-    EXPECT_EQ(wksp->file_state.nlines, 4);
+    EXPECT_EQ(wksp->total_line_count(), 4);
 
     // Delete lines 1-2
     wksp->delete_contents(1, 2);
 
     // Verify line count decreased
-    EXPECT_EQ(wksp->file_state.nlines, 2);
+    EXPECT_EQ(wksp->total_line_count(), 2);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -166,8 +166,10 @@ TEST_F(WorkspaceTest, DeleteLines)
 //
 TEST_F(WorkspaceTest, ScrollVertical)
 {
-    wksp->file_state.nlines = 100;
-    wksp->view.topline      = 0;
+    // Insert empty lines.
+    auto blank_lines = Workspace::create_blank_lines(100);
+    wksp->insert_contents(blank_lines, 0);
+    wksp->view.topline = 0;
 
     // Scroll down by 10 lines
     wksp->scroll_vertical(10, 20, 100);
@@ -177,8 +179,10 @@ TEST_F(WorkspaceTest, ScrollVertical)
 
 TEST_F(WorkspaceTest, GotoLine)
 {
-    wksp->file_state.nlines = 100;
-    wksp->view.topline      = 0;
+    // Insert empty lines.
+    auto blank_lines = Workspace::create_blank_lines(100);
+    wksp->insert_contents(blank_lines, 0);
+    wksp->view.topline = 0;
 
     // Go to line 50 with 20 visible rows
     wksp->goto_line(50, 20);
@@ -213,7 +217,7 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
     bool merged = wksp->catsegm();
 
     // Merge result depends on segment structure, but no crash should occur
-    EXPECT_GE(wksp->file_state.nlines, 0);
+    EXPECT_GE(wksp->total_line_count(), 0);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -236,7 +240,7 @@ TEST_F(WorkspaceTest, SaveAndLoadCycle)
 
     // Load back and verify
     wksp->load_file(OpenFile(out_filename));
-    EXPECT_EQ(wksp->file_state.nlines, 3);
+    EXPECT_EQ(wksp->total_line_count(), 3);
     EXPECT_EQ(wksp->read_line(0), "Test line 1");
 
     // Cleanup
@@ -245,10 +249,12 @@ TEST_F(WorkspaceTest, SaveAndLoadCycle)
 
 TEST_F(WorkspaceTest, ScrollAndGotoOperations)
 {
-    // Test basic scrolling functionality
-    wksp->file_state.nlines = 100;
-    wksp->view.topline      = 50;
+    // Insert empty lines.
+    auto blank_lines = Workspace::create_blank_lines(100);
+    wksp->insert_contents(blank_lines, 0);
+    wksp->view.topline = 50;
 
+    // Test basic scrolling functionality
     wksp->scroll_vertical(10, 25, 100);
     EXPECT_EQ(wksp->view.topline, 60);
 
@@ -261,8 +267,10 @@ TEST_F(WorkspaceTest, ScrollAndGotoOperations)
 
 TEST_F(WorkspaceTest, ToplineUpdateAfterEdit)
 {
-    wksp->file_state.nlines = 100;
-    wksp->view.topline      = 50;
+    // Insert empty lines.
+    auto blank_lines = Workspace::create_blank_lines(100);
+    wksp->insert_contents(blank_lines, 0);
+    wksp->view.topline = 50;
 
     // Simulate inserting lines
     wksp->update_topline_after_edit(40, 45, 5);
@@ -282,8 +290,10 @@ TEST_F(WorkspaceTest, AccessorMutatorTests)
     wksp->file_state.writable = 1;
     EXPECT_EQ(wksp->file_state.writable, 1);
 
-    wksp->file_state.nlines = 42;
-    EXPECT_EQ(wksp->file_state.nlines, 42);
+    // Insert empty lines.
+    auto blank_lines = Workspace::create_blank_lines(42);
+    wksp->insert_contents(blank_lines, 0);
+    EXPECT_EQ(wksp->total_line_count(), 42);
 
     wksp->view.topline = 10;
     EXPECT_EQ(wksp->view.topline, 10);
@@ -329,7 +339,7 @@ TEST_F(WorkspaceTest, ChainAccessorsEmpty)
     // Test chain access on workspace with only tail segment
     // Note: Workspace always has a tail segment after construction
     EXPECT_NE(wksp->cursegm(), wksp->get_contents().end());
-    EXPECT_EQ(wksp->file_state.nlines, 0); // No actual content lines
+    EXPECT_EQ(wksp->total_line_count(), 0); // No actual content lines
 }
 
 TEST_F(WorkspaceTest, BuildFromText)
@@ -338,7 +348,7 @@ TEST_F(WorkspaceTest, BuildFromText)
     std::string text = "Line one\nLine two\nLine three\nLast line";
     wksp->load_text(text);
 
-    EXPECT_EQ(wksp->file_state.nlines, 4);
+    EXPECT_EQ(wksp->total_line_count(), 4);
 
     // Position to each line before reading
     wksp->change_current_line(0);
@@ -353,13 +363,13 @@ TEST_F(WorkspaceTest, ResetWorkspace)
     wksp->load_text(std::vector<std::string>{ "test", "content" });
 
     // Verify state is set (load_text calls reset first, then sets nlines to 2)
-    EXPECT_EQ(wksp->file_state.nlines, 2); // load_text sets this based on vector size
+    EXPECT_EQ(wksp->total_line_count(), 2); // load_text sets this based on vector size
     wksp->file_state.modified = true;      // Manually set modified
 
     // Reset workspace
     wksp->reset();
 
-    EXPECT_EQ(wksp->file_state.nlines, 0);
+    EXPECT_EQ(wksp->total_line_count(), 0);
     EXPECT_FALSE(wksp->file_state.modified);
     EXPECT_EQ(wksp->file_state.writable, 0);
 }
@@ -398,7 +408,7 @@ TEST_F(WorkspaceTest, BreakSegmentVariations)
     // Break beyond end (should create blank lines)
     result = wksp->breaksegm(8, true);
     EXPECT_EQ(result, 1); // Should extend file
-    EXPECT_EQ(wksp->file_state.nlines, 9);
+    EXPECT_EQ(wksp->total_line_count(), 9);
 }
 
 TEST_F(WorkspaceTest, SegmentCatOperations)
@@ -425,15 +435,15 @@ TEST_F(WorkspaceTest, SegmentDeleteOperations)
 {
     std::vector<std::string> lines = { "A", "B", "C", "D", "E" };
     wksp->load_text(lines);
-    EXPECT_EQ(wksp->file_state.nlines, 5);
+    EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Delete lines 1-2
     wksp->delete_contents(1, 2);
-    EXPECT_EQ(wksp->file_state.nlines, 3);
+    EXPECT_EQ(wksp->total_line_count(), 3);
 
     // Delete line 1
     wksp->delete_contents(1, 1);
-    EXPECT_EQ(wksp->file_state.nlines, 2);
+    EXPECT_EQ(wksp->total_line_count(), 2);
 
     // Delete invalid range (should be safe)
     wksp->delete_contents(10, 15); // Should handle gracefully
@@ -441,7 +451,9 @@ TEST_F(WorkspaceTest, SegmentDeleteOperations)
 
 TEST_F(WorkspaceTest, ViewManagementComprehensive)
 {
-    wksp->file_state.nlines = 100;
+    // Insert empty lines.
+    auto blank_lines = Workspace::create_blank_lines(100);
+    wksp->insert_contents(blank_lines, 0);
 
     // Test vertical scrolling boundaries
     wksp->view.topline = 0;
@@ -474,12 +486,12 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
     // Load initial content
     std::vector<std::string> lines = { "Original 1", "Original 2", "Original 3" };
     wksp->load_text(lines);
-    EXPECT_EQ(wksp->file_state.nlines, 3);
+    EXPECT_EQ(wksp->total_line_count(), 3);
 
     // Insert blank lines
-    std::list<Segment> blanks = Workspace::create_blank_lines(3);
-    wksp->insert_contents(blanks, 1);
-    EXPECT_EQ(wksp->file_state.nlines, 6);
+    auto blanks = Workspace::create_blank_lines(3);
+    wksp->insert_contents(blanks, 0);
+    EXPECT_EQ(wksp->total_line_count(), 6);
 
     // Break at various points
     wksp->breaksegm(2, true);
@@ -494,7 +506,7 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
     wksp->catsegm(); // Try another merge
 
     // Final state verification
-    EXPECT_GE(wksp->file_state.nlines, 3); // Should have at least original lines
+    EXPECT_GE(wksp->total_line_count(), 3); // Should have at least original lines
 
     // Test saving (shouldn't crash)
     bool saved = wksp->write_file("complex_test_out.txt");

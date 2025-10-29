@@ -37,7 +37,6 @@ void Workspace::reset()
 {
     cleanup_contents();
     file_state.writable    = 0;
-    file_state.nlines      = 0;
     view.topline           = 0;
     view.basecol           = 0;
     position.line          = 0;
@@ -58,9 +57,9 @@ void Workspace::reset()
 // TODO: This function can be optimized by caching the computed value,
 // TODO: and invalidating the cached value when contents change.
 //
-unsigned Workspace::total_line_count() const
+int Workspace::total_line_count() const
 {
-    unsigned total_lines = 0;
+    int total_lines = 0;
 
     for (auto seg : contents_) {
         total_lines += seg.line_count;
@@ -76,9 +75,8 @@ void Workspace::load_text(const std::vector<std::string> &lines)
 {
     reset();
     file_state.writable = 1;
-    file_state.nlines   = lines.size();
 
-    if (file_state.nlines > 0) {
+    if (lines.size() > 0) {
         // Write lines to temp file and get a segment
         auto contents_from_temp = tempfile_.write_lines_to_temp(lines);
         if (contents_from_temp.empty())
@@ -194,8 +192,6 @@ int Workspace::change_current_line(int lno)
 //
 void Workspace::load_file(int fd)
 {
-    file_state.nlines = 0;
-
     // Clean up old chain
     cleanup_contents();
 
@@ -230,9 +226,7 @@ void Workspace::load_file(int fd)
                     seg.line_count      = lines_in_seg;
                     seg.file_descriptor = fd;
                     seg.file_offset     = seg_seek;
-                    seg.line_lengths           = std::move(temp_seg.line_lengths);
-
-                    file_state.nlines += lines_in_seg;
+                    seg.line_lengths    = std::move(temp_seg.line_lengths);
                 }
                 break;
             }
@@ -289,9 +283,7 @@ void Workspace::load_file(int fd)
             seg.line_count      = lines_in_seg;
             seg.file_descriptor = fd;
             seg.file_offset     = seg_seek;
-            seg.line_lengths           = std::move(temp_seg.line_lengths);
-
-            file_state.nlines += lines_in_seg;
+            seg.line_lengths    = std::move(temp_seg.line_lengths);
 
             lines_in_seg = 0;
         }
@@ -467,7 +459,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Calculate how many blank lines to create
         // position.line was set by change_current_line to segmline of the tail segment
         // Check if workspace is empty (only has a tail segment)
-        bool is_empty = (file_state.nlines == 0);
+        bool is_empty = contents_.front().is_empty();
 
         int num_blank_lines;
 
@@ -498,9 +490,6 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
 
         // Insert blank segments
         contents_.splice(insert_pos, blank_segments);
-
-        // Update line count first
-        file_state.nlines = line_no + 1;
 
         // After splicing, first_blank_seg is now part of contents_ and points to the first inserted
         // segment Position to it
@@ -655,12 +644,6 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     if (contents_to_insert.empty())
         return;
 
-    // Calculate total inserted lines
-    int inserted_lines = 0;
-    for (const auto &seg : contents_to_insert) {
-        inserted_lines += seg.line_count;
-    }
-
     // Split at insertion point
     breaksegm(at, true);
 
@@ -670,12 +653,8 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     contents_.splice(insert_pos, contents_to_insert);
 
     // Update workspace position to first inserted segment
-    cursegm_          = std::prev(insert_pos);
-    position.segmline = at;
-
-    // Update line count
-    file_state.nlines += inserted_lines;
-
+    cursegm_            = std::prev(insert_pos);
+    position.segmline   = at;
     file_state.writable = 1; // Mark as edited
 }
 
@@ -687,18 +666,19 @@ void Workspace::delete_contents(int from, int to)
 {
     // Convert to use list operations - simplified version
     // Original implementation used pointer operations, but we need to use list erase
-    if (contents_.empty() || from > to)
+    if (contents_.empty() || contents_.front().is_empty() || from > to)
         return;
 
-    if (file_state.nlines == 0)
+    auto total = total_line_count();
+    if (total == 0)
         return;
 
     // Use breaksegm for positioning (it uses list operations internally now)
     // Break AFTER the last line to delete (to+1) so we can delete up to and including 'to'
     int result = breaksegm(to + 1, true);
     if (result != 0) {
-        if (to + 1 > file_state.nlines) {
-            change_current_line(file_state.nlines);
+        if (to + 1 > total) {
+            change_current_line(total);
         } else {
             return;
         }
@@ -715,14 +695,6 @@ void Workspace::delete_contents(int from, int to)
     auto start_delete_it = cursegm_;
     auto after_delete_it = end_delete_it;
 
-    // Calculate deleted lines
-    int deleted_lines = 0;
-    auto temp_it      = start_delete_it;
-    while (temp_it != after_delete_it) {
-        deleted_lines += temp_it->line_count;
-        ++temp_it;
-    }
-
     // Erase the range from the list
     contents_.erase(start_delete_it, after_delete_it);
 
@@ -735,9 +707,6 @@ void Workspace::delete_contents(int from, int to)
         cursegm_          = contents_.begin();
         position.segmline = 0;
     }
-
-    // Update line count
-    file_state.nlines -= deleted_lines;
 
     file_state.writable = 1; // Mark as edited
 }
@@ -811,7 +780,7 @@ void Workspace::goto_line(int target_line, int max_rows)
     int half_screen = max_rows / 2;
 
     // Position to show target_line around middle of screen
-    scroll_vertical(target_line - view.topline - half_screen, max_rows, file_state.nlines);
+    scroll_vertical(target_line - view.topline - half_screen, max_rows, total_line_count());
 
     // Ensure target_line is in visible range
     if (target_line < view.topline)
@@ -852,12 +821,10 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         return;
     }
 
-    // Check if we need to extend the file
-    bool need_extend = (file_state.nlines <= line_no);
-
     // If the file is currently empty (line_count == 0) and we're adding line 0,
     // we can just insert the segment without calling breaksegm
-    if (file_state.nlines == 0 && line_no == 0) {
+    auto total = total_line_count();
+    if (total == 0 && line_no == 0) {
         // Simple case: empty file, adding first line
         // Find tail and insert before it
         auto tail_it = contents_.end();
@@ -870,7 +837,6 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         contents_.splice(tail_it, temp_segments);
         auto new_seg_it = std::prev(tail_it);
 
-        file_state.nlines   = 1;
         cursegm_            = new_seg_it;
         position.line       = 0;
         position.segmline   = 0;
@@ -880,11 +846,6 @@ void Workspace::put_line(int line_no, const std::string &line_content)
 
     // Break segment at line_no position to split into segments before and at line_no
     int break_result = breaksegm(line_no, true);
-
-    // If breaksegm didn't extend (break_result == 0), update line_count now if needed
-    if (break_result == 0 && need_extend) {
-        file_state.nlines = line_no + 1;
-    }
 
     // Get the new segment to use
     auto new_seg_it = temp_segments.begin();
@@ -911,7 +872,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         position.segmline = segmline;
 
         // Try to merge adjacent segments (but not if we just created blank lines)
-        if (only_one_line || line_no < file_state.nlines - 1) {
+        if (only_one_line || line_no < total) {
             catsegm();
         }
 
@@ -965,7 +926,6 @@ void Workspace::debug_print(std::ostream &out) const
 {
     out << "Workspace["
         << "writable=" << file_state.writable << ", "
-        << "line_count=" << file_state.nlines << ", "
         << "topline=" << view.topline << ", "
         << "basecol=" << view.basecol << ", "
         << "line=" << position.line << ", "

@@ -574,7 +574,7 @@ void Editor::handle_key_edit(int ch)
             current_line_modified_ = true;
             put_line();
             ensure_cursor_visible();
-        } else if (curLine + 1 < wksp_->file_state.nlines) {
+        } else if (curLine + 1 < wksp_->total_line_count()) {
             // Join with next line
             get_line(curLine + 1);
             current_line_ += current_line_;
@@ -590,12 +590,12 @@ void Editor::handle_key_edit(int ch)
     // ^Y - Delete current line
     if (ch == 25) { // Ctrl-Y
         int curLine = wksp_->view.topline + cursor_line_;
-        if (curLine >= 0 && curLine < wksp_->file_state.nlines) {
+        if (curLine >= 0 && curLine < wksp_->total_line_count()) {
             picklines(curLine, 1); // Copy to clipboard_ before deleting
             wksp_->delete_contents(curLine, curLine);
-            wksp_->file_state.nlines = wksp_->file_state.nlines - 1;
-            if (cursor_line_ >= wksp_->file_state.nlines - 1) {
-                cursor_line_ = wksp_->file_state.nlines - 2;
+            auto total = wksp_->total_line_count();
+            if (cursor_line_ >= total - 1) {
+                cursor_line_ = total - 2;
                 if (cursor_line_ < 0)
                     cursor_line_ = 0;
             }
@@ -624,7 +624,6 @@ void Editor::handle_key_edit(int ch)
         int curLine = wksp_->view.topline + cursor_line_;
         auto blank  = wksp_->create_blank_lines(1);
         wksp_->insert_contents(blank, curLine + 1);
-        wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
         ensure_cursor_visible();
         return;
     }
@@ -748,7 +747,7 @@ void Editor::handle_key_edit(int ch)
         return;
     }
     if (ch == KEY_NPAGE) {
-        int total = wksp_->file_state.nlines;
+        auto total = wksp_->total_line_count();
         int step  = nlines_ - 2;
         if (step < 1)
             step = 1;
@@ -817,7 +816,7 @@ void Editor::handle_key_edit(int ch)
         if (cursor_col_ < (int)current_line_.size()) {
             current_line_.erase((size_t)cursor_col_, 1);
             current_line_modified_ = true;
-        } else if (curLine + 1 < wksp_->file_state.nlines) {
+        } else if (curLine + 1 < wksp_->total_line_count()) {
             // Join with next line
             get_line(curLine + 1);
             current_line_ += current_line_;
@@ -863,7 +862,6 @@ void Editor::handle_key_edit(int ch)
             cursor_line_ = nlines_ - 2;
         }
         cursor_col_              = 0;
-        wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
         ensure_cursor_visible();
         return;
     }

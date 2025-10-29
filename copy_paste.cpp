@@ -13,7 +13,8 @@ void Editor::picklines(int startLine, int count)
 
     // Read lines from workspace segments
     std::vector<std::string> lines;
-    for (int i = 0; i < count && (startLine + i) < wksp_->file_state.nlines; ++i) {
+    auto total = wksp_->total_line_count();
+    for (int i = 0; i < count && (startLine + i) < total; ++i) {
         std::string line = wksp_->read_line(startLine + i);
         lines.push_back(line);
     }
@@ -37,8 +38,8 @@ void Editor::paste(int afterLine, int atCol)
 
     if (clipboard_.is_rectangular()) {
         // Paste as rectangular block - insert at column position
-        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < wksp_->file_state.nlines;
-             ++i) {
+        auto total = wksp_->total_line_count();
+        for (size_t i = 0; i < clip_lines.size() && (afterLine + (int)i) < total; ++i) {
             get_line(afterLine + i);
             if (atCol < (int)current_line_.size()) {
                 current_line_.insert(atCol, clip_lines[i]);
@@ -52,19 +53,10 @@ void Editor::paste(int afterLine, int atCol)
         }
     } else {
         // Paste as lines
-        for (const auto &line : clip_lines) {
-            // Create a segment for this line
-            auto temp_segments = tempfile_.write_line_to_temp(line);
-            if (!temp_segments.empty()) {
-                // Splice the segments into workspace at the correct position
-                //TODO: this is wrong, has to be replaced
-                auto insert_pos = wksp_->get_contents().begin();
-                std::advance(insert_pos, afterLine + 1); // Position after the target line
-                wksp_->get_contents().splice(insert_pos, temp_segments);
-                afterLine++;
-                wksp_->file_state.nlines += 1;
-            }
-        }
+        auto clip_segments = tempfile_.write_lines_to_temp(clip_lines);
+
+        // Insert the segments into workspace at the correct position
+        wksp_->insert_contents(clip_segments, afterLine);
     }
 
     ensure_cursor_visible();
@@ -83,7 +75,8 @@ void Editor::pickspaces(int line, int col, int number, int nl)
 
     // Read lines from workspace and extract rectangular block
     std::vector<std::string> lines;
-    for (int i = 0; i < nl && (line + i) < wksp_->file_state.nlines; ++i) {
+    auto total = wksp_->total_line_count();
+    for (int i = 0; i < nl && (line + i) < total; ++i) {
         std::string full_line = wksp_->read_line(line + i);
         std::string block;
 
@@ -109,8 +102,9 @@ void Editor::closespaces(int line, int col, int number, int nl)
 
     // Now delete the rectangular area using get_line/put_line pattern
     ensure_line_saved();
+    auto total = wksp_->total_line_count();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < wksp_->file_state.nlines) {
+        if (line + i < total) {
             get_line(line + i);
             if (col < (int)current_line_.size()) {
                 int end_pos = std::min(col + number, (int)current_line_.size());
@@ -130,8 +124,9 @@ void Editor::openspaces(int line, int col, int number, int nl)
 {
     // Insert spaces in rectangular area using get_line/put_line pattern
     ensure_line_saved();
+    auto total = wksp_->total_line_count();
     for (int i = 0; i < nl; ++i) {
-        if (line + i < wksp_->file_state.nlines) {
+        if (line + i < total) {
             get_line(line + i);
             if (col <= (int)current_line_.size()) {
                 current_line_.insert(col, number, ' ');

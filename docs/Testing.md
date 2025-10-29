@@ -27,10 +27,9 @@ Files of interest:
 
 From the project root:
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel
-cd build
-ctest -V
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+make -C build
+ctest -V --test-dir build/tests
 ```
 Notes:
 - Tests are skipped automatically if `tmux` is not available in `PATH`.
@@ -100,7 +99,7 @@ TEST_F(TmuxDriver, NavigatesAndRenders)
 }
 ```
 3) Add the file to the `v_edit_tests` target in `tests/CMakeLists.txt` (if not using globbing).
-4) Rebuild and run `ctest -V`.
+4) Rebuild and run `ctest -V --test-dir build/tests`.
 
 ## Tips and Pitfalls
 

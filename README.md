@@ -1,20 +1,21 @@
 # ve — Minimal ncurses-based text editor
 
-A lightweight terminal-based text editor supporting multiple files, rectangular block operations, macros, and session management.
+A lightweight terminal-based text editor supporting multiple files, rectangular block operations, macros, dual workspaces, and session management.
 
 ## Build & Install
 
 ```bash
-make
-make install          # Optional
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+make -C build
+make -C build install  # Optional
 ```
 
 ## Usage
 
 ```bash
-ve                    # Restore last session
-ve -                  # Replay keystrokes from journal
+ve                    # Restore last session or create new empty file
 ve [file]             # Open file
+ve -                  # Replay keystrokes from journal
 ve --help             # Show help
 ve --version          # Show version
 ```
@@ -23,8 +24,9 @@ ve --version          # Show version
 
 ### Editing Modes
 - **Insert mode** (default): Characters insert at cursor
-- **Overwrite mode**: Characters replace existing text (`^X i` to toggle)
-- **Command mode**: `F1` or `^A` for commands
+- **Overwrite mode**: Characters replace existing text (`^X i` to toggle, disabled by default)
+- **Command mode**: `F1` or `^A` to enter commands
+- **Area selection mode**: Define rectangular regions by cursor movement in command mode
 
 ### Basic Editing
 - **Navigation**: Arrow keys, Home/End, Page Up/Down
@@ -33,17 +35,19 @@ ve --version          # Show version
 - **Line operations**: Copy (`^C`/F5), Paste (`^V`/F6), Delete (`^Y`), Insert blank (`^O`)
 
 ### Advanced Operations
-- **Search**: Forward (`/text` or `^F`), backward (`?text` or `^B`)
-- **Navigation**: Goto line (`g<number>` or `:<number>`), next/prev match (`n`/`N`)
-- **Rectangular blocks**: Select with cursor, copy (`^C`), delete (`^Y`), insert spaces (`^O`)
-- **Macros**: Position markers (`>x`, `$x`) and text buffers
+- **Search**: Forward (`/text` or `^F`), backward (`?text` or `^B`), next/prev match (`n`/`N`)
+- **Navigation**: Goto line (`g<number>` or `:<number>` or just `<number>`)
+- **Rectangular blocks**: Select area with cursor in command mode, copy (`^C`), delete (`^Y`), insert spaces (`^O`)
+- **Macros**: Position markers (`>x`, `$x`) and named text buffers (`^C>name`, `^V$name`)
 - **External filters**: `F4` to run shell commands on selected lines
-- **Alternative workspace**: `^N` for two independent editing contexts
+- **Dual workspaces**: `^N` to switch to alternative workspace (help), `F3` to switch between workspaces
+- **Area selection**: Move cursor in command mode to define rectangular regions for operations
 
 ### File Management
-- **Multiple files**: `F3` to switch, `o<filename>` to open
-- **Session persistence**: Auto-save state and keystroke journals
-- **Save operations**: `F2`, `^A s`, `:w`, `^X ^C` (quit)
+- **Multiple files**: `F3` to switch workspaces, `o<filename>` to open file in current workspace
+- **Session persistence**: Auto-save state (`~/.ve/session`) and keystroke journals (`/tmp/rej{tty}{user}`)
+- **Journal replay**: Use `ve -` to replay previous session keystrokes
+- **Save operations**: `F2`, `^A s`, `:w`, `^X ^C` (save and quit)
 
 ## Naming Conventions
 

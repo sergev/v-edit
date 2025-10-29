@@ -5,36 +5,38 @@ This file captures context and conventions for assisting on this repository. Loa
 ## Project at a glance
 - **Name**: ve — minimal ncurses-based text editor (C++17)
 - **Binary**: `ve` (two letters, simple)
-- **Build system**: CMake (>= 3.15)
-- **Core sources**: `core.cpp`, `display.cpp`, `input.cpp`, `edit.cpp`, `file.cpp`, `files.cpp`, `clipboard.cpp`, `session.cpp`, `filter.cpp`, `segments.cpp`, `signal.cpp`, `main.cpp`
+- **Build system**: CMake (>= 3.15) with version 0.1.0
+- **Core sources**: `core.cpp`, `display.cpp`, `input.cpp`, `edit.cpp`, `file.cpp`, `files.cpp`, `clipboard.cpp`, `copy_paste.cpp`, `session.cpp`, `filter.cpp`, `segments.cpp`, `signal.cpp`, `macro.cpp`, `main.cpp`
 - **Main header**: `editor.h` — contains the `Editor` class definition
-- **Libraries**: ncurses
+- **Libraries**: ncurses, CMakeFetchContent (GoogleTest)
 - **Platform**: macOS primary (AppleClang); portable C++17
 
 ## Architecture Overview
 
-### Dual-Workspace Model with Segment Chains
-The editor uses a hybrid approach with two independent workspaces:
+### Dual-Workspace Model with Shared Segment Chains
+The editor uses a dual-workspace approach with two independent editing contexts:
 
-1. **Primary Workspace** (`wksp_`): Main editing workspace
-2. **Alternative Workspace** (`alt_wksp_`): Accessible via `^N` for reference material or help
+1. **Primary Workspace** (`wksp_`): Main editing workspace for file content
+2. **Alternative Workspace** (`alt_wksp_`): Accessible via `^N` and `F3` for reference, help, or secondary editing
 
-Both workspaces share the same tempfile and use the dual data model approach.
+Both workspaces share the same tempfile for efficient memory usage and use the dual data model approach.
 
 ### Dual-Mode Data Model
 The editor uses two data storage mechanisms within each workspace:
 
 1. **Segment Chain Model** (for large file handling):
-   - Linked list of segments with byte data
-   - Efficient for large file handling and streaming
-   - Used for file I/O and persistence
-   - Handles partial loading and byte-level operations
+   - Linked list of `Segment` objects containing metadata (no raw byte data in memory)
+   - **File descriptor**: Points to original file, temp file, or represents empty lines (-1)
+   - **Line lengths array**: Stores byte length of each line including newline
+   - **File offset**: Position in file where segment data begins
+   - Efficient for large file handling with on-demand loading
+   - Used for file I/O and persistence operations
 
 2. **In-Memory Current Line** (`std::string current_line_`):
    - Primary editing interface in workspace
    - Fast, accessible for immediate edits
-   - Rebuilt into segment chains when needed for save/load
-   - Buffer populated via `get_line()`/`put_line()`
+   - Data read from segment (via file I/O) when line loaded with `get_line()`
+   - Data written back to temp file when saved with `put_line()`
 
 ### Current Line Buffer Pattern
 - **During editing**: Use `get_line(line_no)` to load line into `current_line_` buffer
@@ -119,11 +121,17 @@ The editor uses two data storage mechanisms within each workspace:
 
 ### Command Mode Operations
 - **Line operations**: ^C (copy), ^Y (delete), ^O (insert) with optional counts
-- **Area selection**: Movement keys define rectangular bounds
-- **Search/navigation**: / ? n N g<number>
-- **File ops**: o s w q qa :wq etc.
-- **Macros**: >x (buffer), >>x (position), $x (recall)
+- **Area selection**: Movement keys define rectangular bounds for operations
+- **Search/navigation**: / ? n N g<number> <number> :wq :q qa
+- **File ops**: o s w qa :wq etc. ^C>name ^V$name for macro buffers
+- **Macros**: >x (position), ^C>x (buffer), $x (recall position), ^V$x (paste buffer)
 - **Filters**: |command (external shell commands)
+
+### Area Selection Mode
+- **Activation**: Move cursor after entering command mode
+- **Visual feedback**: "*** Area defined by cursor ***" message
+- **Operations**: ^C (copy block), ^Y (delete block), ^O (insert spaces)
+- **Termination**: Press operation key or ESC/F1 to cancel
 
 ### UI Elements
 - **Status bar**: Cyan background, black text (shows line/col, mode, filename)
@@ -157,12 +165,10 @@ bool current_line_modified_;      // Buffer needs writing back
 ### Segment Chain (large file model)
 ```cpp
 struct Segment {
-    Segment *prev, *next;        // Doubly linked
-    int nlines;                  // Lines in this segment
-    long seek;                   // File offset
-    std::vector<unsigned char> data; // Raw bytes
-    int fdesc;                   // File descriptor (-1 for blank lines)
-    long offset;                 // Memory offset in segment
+    unsigned line_count;                   // Number of lines in segment
+    int file_descriptor;                   // File containing data, or -1 for empty lines
+    long file_offset;                      // Offset in file where data begins
+    std::vector<unsigned short> line_lengths; // Byte length of each line (including \n)
 };
 ```
 
@@ -182,7 +188,6 @@ class Clipboard {
 class Workspace {
     Segment *head_;         // Segment chain head
     Segment *cursegm_;      // Current segment pointer
-    int nlines_;            // Total line count
     int topline_;           // Viewport top line
     int basecol_;           // Horizontal scroll offset
     bool modified_;         // Change tracking
@@ -204,6 +209,10 @@ class Macro {
     Parameters bounds_;                  // rectangular extents
 };
 ```
+
+#### Macro Operations:
+- **Position markers**: `>x` (set), `$x` (goto) - remember cursor positions
+- **Named buffers**: `^C>x` (set buffer), `^V$x` (paste buffer) - store/copy rectangular blocks
 
 ## Build System
 

@@ -172,6 +172,18 @@ Format: `<command><count>`
 - **Description**: Define text area between current position and marker
 - **Usage**: Move cursor, then `$name`
 
+### Macro Buffer Operations
+
+#### Store Named Buffer
+- **Command**: `^C>name` or `^C>>name`
+- **Description**: Store clipboard contents in a named macro buffer
+- **Example**: Define area, then press `^C>b` to store in buffer 'b'
+
+#### Paste Named Buffer
+- **Command**: `^V$name`
+- **Description**: Paste contents of named macro buffer
+- **Example**: `^V$b` (paste buffer 'b' contents)
+
 ### Special Return Commands
 
 Commands entered with Enter:

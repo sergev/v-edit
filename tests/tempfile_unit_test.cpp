@@ -46,8 +46,8 @@ TEST_F(TempfileTest, WriteLineToTempBasic)
     EXPECT_GE(seg.file_descriptor, 0); // Should have opened temp file
     // Segment struct no longer has prev/next pointers in std::list implementation
     EXPECT_EQ(seg.line_lengths.size(), 1);
-    EXPECT_EQ(seg.line_lengths[0], 12);   // "Hello World\n" = 12 bytes
-    EXPECT_EQ(seg.file_offset, 0); // First write should be at position 0
+    EXPECT_EQ(seg.line_lengths[0], 12); // "Hello World\n" = 12 bytes
+    EXPECT_EQ(seg.file_offset, 0);      // First write should be at position 0
 }
 
 // Test write_line_to_temp with string already ending with newline
@@ -60,7 +60,8 @@ TEST_F(TempfileTest, WriteLineToTempWithNewline)
 
     EXPECT_EQ(seg.line_count, 1);
     EXPECT_EQ(seg.line_lengths.size(), 1);
-    EXPECT_EQ(seg.line_lengths[0], 20); // "Already has newline\n" = 20 bytes (newline already present)
+    EXPECT_EQ(seg.line_lengths[0],
+              20); // "Already has newline\n" = 20 bytes (newline already present)
 }
 
 // Test write_line_to_temp with empty string
@@ -219,10 +220,10 @@ TEST_F(TempfileTest, WriteLinesToTempBasic)
     EXPECT_GE(seg.file_descriptor, 0); // Should have opened temp file
     // Segments are now in std::list - no prev/next pointers
     EXPECT_EQ(seg.line_lengths.size(), 3);
-    EXPECT_EQ(seg.line_lengths[0], 11);   // "First line\n" = 11 bytes
-    EXPECT_EQ(seg.line_lengths[1], 12);   // "Second line\n" = 12 bytes
-    EXPECT_EQ(seg.line_lengths[2], 11);   // "Third line\n" = 11 bytes
-    EXPECT_EQ(seg.file_offset, 0); // First write should be at position 0
+    EXPECT_EQ(seg.line_lengths[0], 11); // "First line\n" = 11 bytes
+    EXPECT_EQ(seg.line_lengths[1], 12); // "Second line\n" = 12 bytes
+    EXPECT_EQ(seg.line_lengths[2], 11); // "Third line\n" = 11 bytes
+    EXPECT_EQ(seg.file_offset, 0);      // First write should be at position 0
 }
 
 // Test write_lines_to_temp with strings already ending with newlines
@@ -237,7 +238,8 @@ TEST_F(TempfileTest, WriteLinesToTempWithNewlines)
 
     EXPECT_EQ(seg.line_count, 2);
     EXPECT_EQ(seg.line_lengths.size(), 2);
-    EXPECT_EQ(seg.line_lengths[0], 18); // "Line with newline\n" = 18 bytes (newline already present)
+    EXPECT_EQ(seg.line_lengths[0],
+              18); // "Line with newline\n" = 18 bytes (newline already present)
     EXPECT_EQ(seg.line_lengths[1], 13); // "Another line\n" = 13 bytes
 }
 
@@ -405,8 +407,9 @@ TEST_F(TempfileTest, WriteLinesToTempPositionTracking)
     const Segment &s3 = seg3.front();
 
     EXPECT_EQ(s1.file_offset, 0);
-    EXPECT_EQ(s2.file_offset,
-              s1.file_offset + s1.line_lengths[0] + s1.line_lengths[1]);   // After both lines in block1
+    EXPECT_EQ(
+        s2.file_offset,
+        s1.file_offset + s1.line_lengths[0] + s1.line_lengths[1]);  // After both lines in block1
     EXPECT_EQ(s3.file_offset, s2.file_offset + s2.line_lengths[0]); // After the single line
 
     // Verify line_lengths

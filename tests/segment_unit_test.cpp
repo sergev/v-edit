@@ -279,15 +279,13 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     EXPECT_EQ(editor->wksp_->read_line(1), "Medium line 1");
 
     editor->wksp_->change_current_line(3);
-    EXPECT_EQ(editor->wksp_->read_line(3),
-              "This is a very long line number 3 with extra text");
+    EXPECT_EQ(editor->wksp_->read_line(3), "This is a very long line number 3 with extra text");
 
     editor->wksp_->change_current_line(100);
     EXPECT_EQ(editor->wksp_->read_line(100), "Line 100");
 
     editor->wksp_->change_current_line(199);
-    EXPECT_EQ(editor->wksp_->read_line(199),
-              "This is a very long line number 199 with extra text");
+    EXPECT_EQ(editor->wksp_->read_line(199), "This is a very long line number 199 with extra text");
 
     cleanupTestFile(filename);
 }

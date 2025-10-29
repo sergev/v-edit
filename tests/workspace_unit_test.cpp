@@ -1,7 +1,7 @@
+#include <fcntl.h>
 #include <gtest/gtest.h>
 
 #include <fstream>
-#include <fcntl.h>
 
 #include "tempfile.h"
 #include "workspace.h"
@@ -364,7 +364,7 @@ TEST_F(WorkspaceTest, ResetWorkspace)
 
     // Verify state is set (load_text calls reset first, then sets nlines to 2)
     EXPECT_EQ(wksp->total_line_count(), 2); // load_text sets this based on vector size
-    wksp->file_state.modified = true;      // Manually set modified
+    wksp->file_state.modified = true;       // Manually set modified
 
     // Reset workspace
     wksp->reset();

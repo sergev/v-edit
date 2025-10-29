@@ -658,10 +658,17 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     // after breaksegm, cursegm_ points to the segment at position 'at'
     // Insert new segments BEFORE cursegm_
     auto insert_pos = cursegm_;
+
+    // Remember the size of contents before splicing so we can find the first inserted segment
+    auto before_size = std::distance(contents_.begin(), insert_pos);
+
     contents_.splice(insert_pos, contents_to_insert);
 
-    // Update workspace position to first inserted segment
-    cursegm_            = std::prev(insert_pos);
+    // Update workspace position to FIRST inserted segment (not last)
+    // After splicing, the first inserted segment is at the position where insert_pos was
+    cursegm_ = contents_.begin();
+    std::advance(cursegm_, before_size);
+
     position.segmline   = at;
     file_state.writable = 1; // Mark as edited
 }

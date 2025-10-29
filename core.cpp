@@ -142,7 +142,12 @@ int Editor::run(int argc, char **argv)
                 // Record keystroke to journal in normal mode
                 journal_write_key(ch);
             }
-            handle_key(ch);
+            // Route key to appropriate handler based on mode.
+            if (cmd_mode_) {
+                handle_key_cmd(ch);
+            } else {
+                handle_key_edit(ch);
+            }
             draw();
         }
         if (quit_flag_)

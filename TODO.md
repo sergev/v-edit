@@ -1,101 +1,362 @@
-# Fix Column Indexing Bugs in Editor::handle_key_edit()
+# Refactor handle_key_edit() for Better Testability
 
-## Problem Summary
-The basic editing operations in `handle_key_edit()` use `cursor_col_` directly to index into `current_line_`, but `cursor_col_` is a screen-relative position (0 to ncols_-1). When horizontal scrolling is active (`wksp_->view.basecol > 0`), this causes edits to occur at the wrong position in the line.
+## Problem Statement
 
-## Root Cause
-- `cursor_col_` = screen-relative cursor position
-- `wksp_->view.basecol` = horizontal scroll offset
-- Actual column in line = `basecol + cursor_col_`
+Current tests manipulate the `current_line_` buffer directly to simulate editing operations, but don't test the actual `handle_key_edit()` method. This means:
+- Key handling logic is not tested
+- Real code paths are not validated
+- Bugs in the integration between key handling and editing could be missed
 
-## Implementation Plan
+## Solution: Extract Backend Editing Methods
 
-### Phase 1: Add Helper Method
-- [x] Add `get_actual_col()` method to editor.h (returns size_t)
-- [x] Implement method in edit.cpp to return `wksp_->view.basecol + cursor_col_`
+Separate UI/key routing from core editing logic by extracting testable backend methods.
 
-### Phase 2: Fix Each Editing Operation in input.cpp
+---
 
-#### BACKSPACE Operation (around line 803)
-- [x] Calculate `actual_col` at start of operation
-- [x] Replace `cursor_col_ > 0` check with `actual_col > 0`
-- [x] Replace `cursor_col_ <= (int)current_line_.size()` with `actual_col <= current_line_.size()`
-- [x] Replace `cursor_col_ - 1` in erase with `actual_col - 1`
-- [x] Keep line joining logic (already correct)
+## Phase 1: Extract Backend Editing Methods
 
-#### DELETE Operation (around line 824)
-- [x] Calculate `actual_col` at start of operation
-- [x] Replace `cursor_col_ < (int)current_line_.size()` with `actual_col < current_line_.size()`
-- [x] Replace `cursor_col_` in erase with `actual_col`
-- [x] Keep line joining logic (already correct)
+### Goal
+Create private editing methods that contain the core logic, making them independently testable.
 
-#### ENTER/Newline Operation (around line 838)
-- [x] Calculate `actual_col` at start of operation
-- [x] Replace `cursor_col_ < (int)current_line_.size()` with `actual_col < current_line_.size()`
-- [x] Replace `cursor_col_` in substr/erase with `actual_col`
+### New Methods to Add to editor.h
 
-#### TAB Operation (around line 862)
-- [x] Calculate `actual_col` at start of operation
-- [x] Replace `cursor_col_` in insert with `actual_col`
+```cpp
+#ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_H_
+private:
+#endif
+    // Backend editing operations (testable)
+    void edit_backspace();           // Handle backspace operation
+    void edit_delete();              // Handle delete operation
+    void edit_enter();               // Handle enter/newline operation
+    void edit_tab();                 // Handle tab insertion
+    void edit_insert_char(char ch);  // Handle character insertion/overwrite
+```
 
-#### Character Insertion/Overwrite (around line 869)
-- [x] Calculate `actual_col` at start of operation
-- [x] Replace `cursor_col_` in insert with `actual_col`
-- [x] Replace `cursor_col_ < (int)current_line_.size()` with `actual_col < current_line_.size()`
-- [x] Replace `current_line_[cursor_col_]` with `current_line_[actual_col]`
+### Implementation Details
 
-### Phase 3: Testing
-- [x] Build verification - Project compiles successfully
-- [x] Test editing without horizontal scroll (basecol = 0) - **22/22 tests PASSED** ✅
-  - [x] BACKSPACE operation (3 tests)
-  - [x] DELETE operation (3 tests)
-  - [x] ENTER/newline operation (3 tests)
-  - [x] TAB operation (3 tests)
-  - [x] Character insertion (3 tests)
-  - [x] Character overwrite (3 tests)
-  - [x] Edge cases and complex scenarios (4 tests)
-- [x] Test editing with horizontal scroll (basecol > 0) - **28/28 tests PASSED** ✅
-  - [x] BACKSPACE with scroll (2 tests)
-  - [x] DELETE with scroll (2 tests)
-  - [x] ENTER/newline with scroll (2 tests)
-  - [x] TAB with scroll (2 tests)
-  - [x] Character insertion with scroll (2 tests)
-  - [x] Character overwrite with scroll (2 tests)
-  - [x] Edge cases and complex scenarios (4 tests)
-  - [x] Bug fix verification test (1 test)
-  - [x] Cursor beyond line end scenarios (5 tests)
-  - [x] Line joining operations with scroll (7 tests)
+#### 1. `edit_backspace()` (extract from lines 803-824 in input.cpp)
+- Calculate `actual_col` using `get_actual_col()`
+- If `actual_col > 0` and within line bounds:
+  - Erase character at `actual_col - 1`
+  - Decrement `cursor_col_`
+  - Mark line as modified
+- Else if at start of line (`actual_col == 0`) and not first line:
+  - Join with previous line
+  - Update cursor position
+  - Delete current line from workspace
+- Call `put_line()` and `ensure_cursor_visible()`
 
-## Status: All Testing Complete ✅
+#### 2. `edit_delete()` (extract from lines 826-841)
+- Calculate `actual_col` using `get_actual_col()`
+- If `actual_col < current_line_.size()`:
+  - Erase character at `actual_col`
+  - Mark line as modified
+- Else if at end of line and next line exists:
+  - Join with next line
+  - Delete next line from workspace
+- Call `put_line()` and `ensure_cursor_visible()`
 
-All code changes have been implemented and **thoroughly tested**:
-- ✅ Implementation complete - all 5 editing operations fixed
-- ✅ Project builds successfully
-- ✅ Comprehensive unit tests created (**50 tests total**)
-  - 22 tests for basecol = 0 (no horizontal scroll)
-  - 28 tests for basecol > 0 (with horizontal scroll)
-- ✅ **All 50 tests passing (100% pass rate)**
+#### 3. `edit_enter()` (extract from lines 843-862)
+- Calculate `actual_col` using `get_actual_col()`
+- If `actual_col < current_line_.size()`:
+  - Extract tail from `actual_col` to end
+  - Truncate current line at `actual_col`
+- Mark line as modified
+- Call `put_line()`
+- Insert new line with tail content
+- Update cursor position (move to next line, column 0)
+- Call `ensure_cursor_visible()`
 
-**Test Coverage:**
-- ✅ BACKSPACE operation with and without scroll
-- ✅ DELETE operation with and without scroll
-- ✅ ENTER/newline operation with and without scroll
-- ✅ TAB operation with and without scroll
-- ✅ Character insertion with and without scroll
-- ✅ Character overwrite with and without scroll
-- ✅ Edge cases (empty lines, long lines, multiple operations)
-- ✅ Bug fix verification (specific scenario that was broken)
-- ✅ Cursor beyond line end scenarios (with and without scroll)
-- ✅ Line joining operations (backspace and delete at line boundaries with scroll)
+#### 4. `edit_tab()` (extract from lines 864-870)
+- Calculate `actual_col` using `get_actual_col()`
+- Insert 4 spaces at `actual_col`
+- Increment `cursor_col_` by 4
+- Mark line as modified
+- Call `put_line()` and `ensure_cursor_visible()`
 
-**Files Created:**
-- `tests/basic_editing_test.cpp` (22 tests)
-- `tests/horizontal_scroll_editing_test.cpp` (28 tests)
+#### 5. `edit_insert_char(char ch)` (extract from lines 872-895)
+- Calculate `actual_col` using `get_actual_col()`
+- Handle quote mode if `quote_next_` is true
+- If `insert_mode_`:
+  - Insert character at `actual_col`
+- Else (overwrite mode):
+  - If within line bounds: replace character
+  - Else: append character
+- Increment `cursor_col_`
+- Mark line as modified
+- Call `put_line()` and `ensure_cursor_visible()`
+- Clear `quote_next_` flag if it was set
 
-**Recommendation:**
-Runtime testing with actual editor to verify fixes work correctly in real-world usage scenarios.
+### Tasks for Phase 1
+
+- [ ] Add method declarations to editor.h (in testable section)
+- [ ] Implement `edit_backspace()` in input.cpp or edit.cpp
+- [ ] Implement `edit_delete()` in input.cpp or edit.cpp
+- [ ] Implement `edit_enter()` in input.cpp or edit.cpp
+- [ ] Implement `edit_tab()` in input.cpp or edit.cpp
+- [ ] Implement `edit_insert_char(char ch)` in input.cpp or edit.cpp
+- [ ] Ensure all methods properly handle edge cases
+- [ ] Add common helper for `get_line(curLine)` setup if needed
+
+---
+
+## Phase 2: Refactor handle_key_edit()
+
+### Goal
+Replace inline editing code with calls to the extracted methods.
+
+### Changes to input.cpp
+
+#### Before (current code):
+```cpp
+if (ch == KEY_BACKSPACE || ch == 127) {
+    size_t actual_col = get_actual_col();
+    if (actual_col > 0) {
+        if (actual_col <= current_line_.size()) {
+            current_line_.erase(actual_col - 1, 1);
+            current_line_modified_ = true;
+            cursor_col_--;
+        }
+    } else if (curLine > 0) {
+        // ... line joining logic ...
+    }
+    put_line();
+    ensure_cursor_visible();
+    return;
+}
+```
+
+#### After (refactored):
+```cpp
+if (ch == KEY_BACKSPACE || ch == 127) {
+    edit_backspace();
+    return;
+}
+```
+
+### Similar Changes for Other Operations
+
+- `KEY_DC` → `edit_delete()`
+- `'\n' || KEY_ENTER` → `edit_enter()`
+- `'\t'` → `edit_tab()`
+- `ch >= 32 && ch < 127` → `edit_insert_char((char)ch)`
+
+### Tasks for Phase 2
+
+- [ ] Replace BACKSPACE handling with `edit_backspace()` call
+- [ ] Replace DELETE handling with `edit_delete()` call
+- [ ] Replace ENTER handling with `edit_enter()` call
+- [ ] Replace TAB handling with `edit_tab()` call
+- [ ] Replace character insertion with `edit_insert_char()` call
+- [ ] Remove now-redundant `int curLine` and `get_line(curLine)` calls
+- [ ] Ensure `current_line_` is loaded before editing operations (may need helper)
+- [ ] Verify all edge cases still work correctly
+- [ ] Build and test existing functionality
+
+---
+
+## Phase 3: Update Unit Tests
+
+### Goal
+Modify existing tests to call the actual backend editing methods instead of manipulating buffers directly.
+
+### Changes to tests/basic_editing_test.cpp
+
+#### Before (current test):
+```cpp
+TEST_F(BasicEditingTest, BackspaceMiddleOfLine) {
+    CreateLine(0, "Hello World");
+    LoadLine(0);
+    editor->cursor_col_ = 6;
+    
+    // Manually manipulate buffer
+    size_t actual_col = GetActualCol();
+    if (actual_col > 0 && actual_col <= editor->current_line_.size()) {
+        editor->current_line_.erase(actual_col - 1, 1);
+        editor->current_line_modified_ = true;
+        editor->cursor_col_--;
+    }
+    editor->put_line();
+    
+    EXPECT_EQ(editor->wksp_->read_line(0), "HelloWorld");
+}
+```
+
+#### After (refactored test):
+```cpp
+TEST_F(BasicEditingTest, BackspaceMiddleOfLine) {
+    CreateLine(0, "Hello World");
+    LoadLine(0);
+    editor->cursor_col_ = 6;
+    editor->wksp_->view.basecol = 0;
+    
+    // Call actual method
+    editor->edit_backspace();
+    
+    EXPECT_EQ(editor->wksp_->read_line(0), "HelloWorld");
+    EXPECT_EQ(editor->cursor_col_, 5);
+}
+```
+
+### Tasks for Phase 3
+
+- [ ] Update all BACKSPACE tests to call `edit_backspace()`
+- [ ] Update all DELETE tests to call `edit_delete()`
+- [ ] Update all ENTER tests to call `edit_enter()`
+- [ ] Update all TAB tests to call `edit_tab()`
+- [ ] Update all character insertion tests to call `edit_insert_char()`
+- [ ] Update all character overwrite tests to call `edit_insert_char()`
+- [ ] Do same for tests/horizontal_scroll_editing_test.cpp
+- [ ] Ensure LoadLine() is called before each edit operation
+- [ ] Verify all 50 tests still pass
+- [ ] Add any missing edge case tests
+
+---
+
+## Phase 4: Add Integration Tests (Optional)
+
+### Goal
+Test the complete flow from key press to editing action via `handle_key_edit()`.
+
+### New Test File: tests/key_handling_integration_test.cpp
+
+Create tests that:
+1. Set up editor state (file content, cursor position, scroll position)
+2. Call `handle_key_edit()` with specific key codes
+3. Verify the resulting state (line content, cursor position, etc.)
+
+#### Example Integration Tests
+
+```cpp
+TEST_F(KeyHandlingIntegrationTest, BackspaceKey) {
+    CreateLine(0, "Hello World");
+    editor->cursor_line_ = 0;
+    editor->cursor_col_ = 6;
+    editor->wksp_->view.basecol = 0;
+    editor->wksp_->view.topline = 0;
+    
+    // Simulate backspace key press
+    editor->handle_key_edit(KEY_BACKSPACE);
+    
+    EXPECT_EQ(editor->wksp_->read_line(0), "HelloWorld");
+    EXPECT_EQ(editor->cursor_col_, 5);
+}
+
+TEST_F(KeyHandlingIntegrationTest, CharacterInsertionKey) {
+    CreateLine(0, "Helo");
+    editor->cursor_line_ = 0;
+    editor->cursor_col_ = 2;
+    editor->insert_mode_ = true;
+    
+    // Simulate 'l' key press
+    editor->handle_key_edit('l');
+    
+    EXPECT_EQ(editor->wksp_->read_line(0), "Hello");
+    EXPECT_EQ(editor->cursor_col_, 3);
+}
+```
+
+### Tasks for Phase 4
+
+- [ ] Create tests/key_handling_integration_test.cpp
+- [ ] Add test fixture similar to BasicEditingTest
+- [ ] Add integration tests for BACKSPACE key
+- [ ] Add integration tests for DELETE key
+- [ ] Add integration tests for ENTER key
+- [ ] Add integration tests for TAB key
+- [ ] Add integration tests for character keys
+- [ ] Add integration tests for navigation keys (arrow keys, etc.)
+- [ ] Add tests for mode switching (insert vs overwrite)
+- [ ] Add tests for special key combinations (Ctrl keys, F keys)
+- [ ] Add to CMakeLists.txt
+- [ ] Verify all integration tests pass
+
+---
+
+## Phase 5: Verification and Documentation
+
+### Goal
+Ensure the refactoring is complete, correct, and well-documented.
+
+### Tasks for Phase 5
+
+- [ ] Build project: `make clean && make`
+- [ ] Run all unit tests: `./build/tests/v_edit_tests`
+- [ ] Verify all 50+ existing tests pass
+- [ ] Run integration tests if added
+- [ ] Manual testing of editor with real files
+- [ ] Check for any regressions in functionality
+- [ ] Update code comments in new methods
+- [ ] Update COLUMN_INDEXING_FIX_SUMMARY.md if needed
+- [ ] Create REFACTORING_SUMMARY.md documenting the changes
+- [ ] Git commit with clear message
+
+---
+
+## Implementation Order
+
+1. **Phase 1** - Extract backend methods (foundation)
+2. **Phase 2** - Refactor handle_key_edit() (integration)
+3. **Phase 3** - Update existing unit tests (validation)
+4. **Phase 4** - Add integration tests (optional, comprehensive testing)
+5. **Phase 5** - Verification and documentation (completion)
+
+---
+
+## Key Decisions
+
+### Where to Implement New Methods?
+
+**Option A**: Keep in input.cpp (with handle_key_edit)
+- ✅ Pro: All editing logic in one file
+- ✅ Pro: Easy to see relationship with key handling
+- ❌ Con: input.cpp gets larger
+
+**Option B**: Move to edit.cpp (with other editing operations)
+- ✅ Pro: Groups editing operations together
+- ✅ Pro: input.cpp stays focused on input handling
+- ❌ Con: Splits related code across files
+
+**Recommendation**: Use edit.cpp - it already has editing operations like `splitline()` and `combineline()`, so the new methods fit naturally there.
+
+### Method Signatures
+
+All methods operate on the current editor state:
+- Use existing member variables (`current_line_`, `cursor_col_`, etc.)
+- No parameters needed (state is implicit)
+- Return `void` (side effects on state)
+
+This matches the existing pattern used by other Editor methods.
+
+### Testing Strategy
+
+1. **Unit tests** test the extracted methods directly
+2. **Integration tests** test the complete key handling flow
+3. Both types provide comprehensive coverage
+
+---
+
+## Expected Outcomes
+
+✅ **Better separation of concerns** - UI routing vs editing logic  
+✅ **More testable code** - Can test editing operations independently  
+✅ **Clearer code** - Each operation has its own well-named method  
+✅ **Better test coverage** - Tests exercise actual production code  
+✅ **Easier maintenance** - Changes to editing logic are localized  
+✅ **No functional changes** - Behavior remains identical  
+
+---
 
 ## Notes
-- `cursor_col_` remains unchanged (screen position)
-- Only the indexing into `current_line_` uses `actual_col`
-- After edits, `ensure_cursor_visible()` handles scroll adjustment
+
+- The refactoring should be **behavior-preserving** - no functional changes
+- All existing tests should continue to pass after Phase 1 and 2
+- Only test updates in Phase 3 will cause tests to change
+- Git commits should be made after each phase for easy rollback if needed
+- Consider adding debug logging in new methods during development
+
+---
+
+## Status: Ready for Implementation
+
+This plan is ready to execute. Proceed with Phase 1 when ready.

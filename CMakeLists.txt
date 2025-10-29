@@ -20,7 +20,8 @@ set(CE_SOURCES
     core.cpp
     display.cpp
     file.cpp
-    input.cpp
+    cmd_mode.cpp
+    edit_mode.cpp
     edit.cpp
     clipboard.cpp
     copy_paste.cpp

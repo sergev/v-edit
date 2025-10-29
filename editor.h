@@ -98,7 +98,6 @@ private:
     void open_initial(int argc, char **argv);
     void save_file();
     void save_as(const std::string &filename);
-    void handle_key(int ch);
     void handle_key_cmd(int ch);
     void handle_key_edit(int ch);
     void move_left();

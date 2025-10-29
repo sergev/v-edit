@@ -58,26 +58,29 @@ public:
     // Segment list operations
     //
 
+    // Build list of segments from file descriptor
+    // File descriptor is inherited, and closed in destructor
+    void load_file(int fd);
+
     // Build list of segments from in-memory lines vector
     void load_text(const std::vector<std::string> &lines);
 
     // Build list of segments from text string
     void load_text(const std::string &text);
 
-    // Change cursegm_ to the segment containing the specified line
-    // Also updates segmline_, and line_ to position the workspace at line number
-    // Throws std::runtime_error for invalid line numbers or corrupted contents
-    int change_current_line(int lno);
+    // Write segment list content to file
+    bool write_file(const std::string &path);
 
-    // Build list of segments from file descriptor
-    // File descriptor is inherited, and closed in destructor
-    void load_file(int fd);
+    // Compute total line count of all segments.
+    unsigned get_line_count() const;
 
     // Read line content from segment list at specified index
     std::string read_line(int line_no);
 
-    // Write segment list content to file
-    bool write_file(const std::string &path);
+    // Change cursegm_ to the segment containing the specified line
+    // Also updates segmline_, and line_ to position the workspace at line number
+    // Throws std::runtime_error for invalid line numbers or corrupted contents
+    int change_current_line(int lno);
 
     // Clean up segment list
     void cleanup_contents();
@@ -92,18 +95,13 @@ public:
     // Direct iterator access for segment manipulation
     Segment::iterator cursegm() { return cursegm_; }
 
-    // Compute total line count of all segments.
-    unsigned get_line_count() const;
-
     //
     // Segment manipulation (from prototype)
     //
 
-    // Split segment at given line number (breaksegm from prototype)
-    int breaksegm(int line_no, bool realloc_flag = true);
-
-    // Merge adjacent segments (catsegm from prototype)
-    bool catsegm();
+    // Write line content back to workspace at specified line number
+    // Replaces or inserts the line in the segment chain
+    void put_line(int line_no, const std::string &line_content);
 
     // Insert segments into workspace before given line (insert from prototype)
     void insert_contents(std::list<Segment> &segments, int at);
@@ -111,19 +109,21 @@ public:
     // Delete segments from workspace between from and to lines (delete from prototype)
     void delete_contents(int from, int to);
 
+    // Split segment at given line number (breaksegm from prototype)
+    int breaksegm(int line_no, bool realloc_flag = true);
+
+    // Merge adjacent segments (catsegm from prototype)
+    bool catsegm();
+
     // Create segments for n empty lines (blanklines from prototype)
     static std::list<Segment> create_blank_lines(int n);
-
-    // Cleanup a segment list (static helper)
-    static void cleanup_contents(std::list<Segment> &segments);
-
-    // Write line content back to workspace at specified line number
-    // Replaces or inserts the line in the segment chain
-    void put_line(int line_no, const std::string &line_content);
 
     //
     // View management methods (from prototype)
     //
+
+    // Go to a specific line in the file (gtfcn from prototype)
+    void goto_line(int target_line, int max_rows);
 
     // Scroll workspace by nl lines (negative for up, positive for down)
     // max_rows: maximum visible rows in display
@@ -133,9 +133,6 @@ public:
     // Shift horizontal view by nc columns (negative for left, positive for right)
     // max_cols: maximum visible columns in display
     void scroll_horizontal(int nc, int max_cols);
-
-    // Go to a specific line in the file (gtfcn from prototype)
-    void goto_line(int target_line, int max_rows);
 
     // Update topline when file changes (used by wksp_redraw)
     void update_topline_after_edit(int from, int to, int delta);

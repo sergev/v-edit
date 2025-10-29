@@ -336,16 +336,6 @@ std::list<Segment> Workspace::create_blank_lines(int n)
 }
 
 //
-// Cleanup a segment list (static helper for tests).
-// Note: With std::list<Segment>, manual cleanup is not needed since destructors handle it.
-// This method is now a no-op kept for API compatibility during transition.
-//
-void Workspace::cleanup_contents(std::list<Segment> &segments)
-{
-    segments.clear();
-}
-
-//
 // Read line content from segment chain at specified index.
 // Enhanced version using iterator instead of Segment* pointer for safer access and modern C++
 // practices.

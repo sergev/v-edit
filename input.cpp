@@ -786,9 +786,10 @@ void Editor::handle_key_edit(int ch)
     get_line(curLine);
 
     if (ch == KEY_BACKSPACE || ch == 127) {
-        if (cursor_col_ > 0) {
-            if (cursor_col_ <= (int)current_line_.size()) {
-                current_line_.erase((size_t)cursor_col_ - 1, 1);
+        size_t actual_col = get_actual_col();
+        if (actual_col > 0) {
+            if (actual_col <= current_line_.size()) {
+                current_line_.erase(actual_col - 1, 1);
                 current_line_modified_ = true;
                 cursor_col_--;
             }
@@ -813,8 +814,9 @@ void Editor::handle_key_edit(int ch)
     }
 
     if (ch == KEY_DC) {
-        if (cursor_col_ < (int)current_line_.size()) {
-            current_line_.erase((size_t)cursor_col_, 1);
+        size_t actual_col = get_actual_col();
+        if (actual_col < current_line_.size()) {
+            current_line_.erase(actual_col, 1);
             current_line_modified_ = true;
         } else if (curLine + 1 < wksp_->total_line_count()) {
             // Join with next line
@@ -831,10 +833,11 @@ void Editor::handle_key_edit(int ch)
     }
 
     if (ch == '\n' || ch == KEY_ENTER) {
+        size_t actual_col = get_actual_col();
         std::string tail;
-        if (cursor_col_ < (int)current_line_.size()) {
-            tail = current_line_.substr((size_t)cursor_col_);
-            current_line_.erase((size_t)cursor_col_);
+        if (actual_col < current_line_.size()) {
+            tail = current_line_.substr(actual_col);
+            current_line_.erase(actual_col);
         }
         current_line_modified_ = true;
         put_line();
@@ -867,7 +870,8 @@ void Editor::handle_key_edit(int ch)
     }
 
     if (ch == '\t') {
-        current_line_.insert((size_t)cursor_col_, 4, ' ');
+        size_t actual_col = get_actual_col();
+        current_line_.insert(actual_col, 4, ' ');
         cursor_col_ += 4;
         current_line_modified_ = true;
         put_line();
@@ -876,22 +880,23 @@ void Editor::handle_key_edit(int ch)
     }
 
     if (ch >= 32 && ch < 127) {
+        size_t actual_col = get_actual_col();
         if (quote_next_) {
             // Quote mode: insert character literally (including control chars shown as ^X)
             char quoted = (char)ch;
             if (ch < 32) {
                 quoted = (char)(ch + 64); // Convert to ^A, ^B, etc.
             }
-            current_line_.insert((size_t)cursor_col_, 1, quoted);
+            current_line_.insert(actual_col, 1, quoted);
             cursor_col_++;
             quote_next_ = false;
         } else if (insert_mode_) {
-            current_line_.insert((size_t)cursor_col_, 1, (char)ch);
+            current_line_.insert(actual_col, 1, (char)ch);
             cursor_col_++;
         } else {
             // Overwrite mode
-            if (cursor_col_ < (int)current_line_.size()) {
-                current_line_[(size_t)cursor_col_] = (char)ch;
+            if (actual_col < current_line_.size()) {
+                current_line_[actual_col] = (char)ch;
             } else {
                 current_line_.push_back((char)ch);
             }

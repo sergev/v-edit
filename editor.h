@@ -122,6 +122,7 @@ private:
 
     // Helpers
     int current_line_length() const;
+    size_t get_actual_col() const; // Get actual column position in line (basecol + cursor_col)
     void goto_line(int lineNumber);
     bool search_forward(const std::string &needle);
     bool search_next();

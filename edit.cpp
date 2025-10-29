@@ -97,13 +97,18 @@ void Editor::move_down()
 int Editor::current_line_length() const
 {
     int curLine = wksp_->view.topline + cursor_line_;
-
-    // Load the line if not already loaded or if it's a different line
-    if (current_line_no_ != curLine) {
-        const_cast<Editor *>(this)->get_line(curLine);
+    if (curLine < 0 || curLine >= wksp_->total_line_count()) {
+        return 0;
     }
+    return (int)wksp_->read_line(curLine).size();
+}
 
-    return (int)current_line_.size();
+//
+// Get actual column position in line (accounts for horizontal scrolling)
+//
+size_t Editor::get_actual_col() const
+{
+    return static_cast<size_t>(wksp_->view.basecol + cursor_col_);
 }
 
 //

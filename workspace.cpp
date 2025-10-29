@@ -126,14 +126,14 @@ int Workspace::change_current_line(int lno)
         throw std::runtime_error("change_current_line: empty workspace");
 
     // Special case: if we're positioned on a tail segment, all lines are beyond end of file
-    if (cursegm_->file_descriptor == 0) {
+    if (cursegm_->is_empty()) {
         position.line = lno;
         return 1; // Line is beyond end of file
     }
 
     // Move forward to find the segment containing lno
     while (lno >= position.segmline + cursegm_->line_count) {
-        if (cursegm_->file_descriptor == 0) {
+        if (cursegm_->is_empty()) {
             // Hit tail segment - line is beyond end of file
             // Return 1 to signal that line is beyond end of file
             position.line = position.segmline;
@@ -293,7 +293,7 @@ void Workspace::load_file(int fd)
     }
 
     // Create tail segment if needed
-    if (segments_.empty() || segments_.back().file_descriptor != 0) {
+    if (segments_.empty() || !segments_.back().is_empty()) {
         segments_.emplace_back();
     }
 
@@ -319,7 +319,7 @@ std::list<Segment> Workspace::copy_segment_list(Segment::iterator start, Segment
 
         copied_segments.push_back(copy);
 
-        if (it->file_descriptor == 0)
+        if (it->is_empty())
             break;
     }
 
@@ -385,7 +385,7 @@ std::string Workspace::read_line_from_segment(int line_no)
     }
 
     // Verify the segment has contents (not a tail segment)
-    if (!cursegm_->has_contents()) {
+    if (cursegm_->is_empty()) {
         return "";
     }
 
@@ -445,7 +445,7 @@ bool Workspace::write_segments_to_file(const std::string &path)
     char buffer[8192];
 
     for (const auto &seg : segments_) {
-        if (!seg.has_contents())
+        if (seg.is_empty())
             continue; // Skip tail segment
 
         // Calculate total bytes for this segment
@@ -893,7 +893,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         // Find tail and insert before it
         auto tail_it = segments_.end();
         for (auto it = segments_.begin(); it != segments_.end(); ++it) {
-            if (it->file_descriptor == 0) {
+            if (it->is_empty()) {
                 tail_it = it;
                 break;
             }

@@ -37,10 +37,7 @@ public:
 
     // Segment has contents when it comes from some file or contains only newlines.
     // A linked list of segments terminates with a placeholder with file_descriptor=0.
-    bool has_contents() const
-    {
-        return file_descriptor != 0;
-    } // TODO: rename as is_empty(), invert meaning
+    bool is_empty() const { return file_descriptor == 0; }
 
     // Calculate total bytes represented by all line lengths in this segment.
     long get_total_bytes() const; // TODO: rename as total_byte_count()

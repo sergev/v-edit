@@ -109,17 +109,12 @@ private:
 
     // --- Segment-based reading skeleton ---
     void model_init();
-    void build_segments_from_text(const std::string &text);
     bool load_file_segments(const std::string &path);
-    bool load_file_to_segments(const std::string &path);
 
     // Current line buffer operations (prototype's getlin/putline pattern)
     void get_line(int lno);   // load line from workspace into current_line buffer
     void put_line();          // write current_line back to workspace if modified
     void ensure_line_saved(); // flush current line if modified
-
-    // Helper to read line from workspace (replaces get_line_from_model/segs)
-    std::string read_line_from_wksp(int lno);
 
     // Session state
     void save_state();

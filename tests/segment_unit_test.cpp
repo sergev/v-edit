@@ -46,7 +46,7 @@ TEST_F(SegmentTest, LoadFileToSegments)
     editor->load_file_segments(filename);
 
     // Verify segments were created (test now uses wksp_.chain directly)
-    EXPECT_TRUE(editor->wksp_->has_segments());
+    EXPECT_EQ(editor->wksp_->file_state.nlines, 3);
 
     cleanupTestFile(filename);
 }
@@ -58,21 +58,21 @@ TEST_F(SegmentTest, ReadLineFromSegment)
     editor->load_file_segments(filename);
 
     // Verify segments were created
-    EXPECT_TRUE(editor->wksp_->has_segments());
+    EXPECT_EQ(editor->wksp_->file_state.nlines, 3);
 
     // Read first line - position to line 0 first
     editor->wksp_->change_current_line(0);
-    std::string line1 = editor->wksp_->read_line_from_segment(0);
+    std::string line1 = editor->wksp_->read_line(0);
     EXPECT_EQ("First line", line1);
 
     // Read second line - position to line 1 first
     editor->wksp_->change_current_line(1);
-    std::string line2 = editor->wksp_->read_line_from_segment(1);
+    std::string line2 = editor->wksp_->read_line(1);
     EXPECT_EQ("Second line", line2);
 
     // Read third line - position to line 2 first
     editor->wksp_->change_current_line(2);
-    std::string line3 = editor->wksp_->read_line_from_segment(2);
+    std::string line3 = editor->wksp_->read_line(2);
     EXPECT_EQ("Third line", line3);
 
     cleanupTestFile(filename);
@@ -85,7 +85,7 @@ TEST_F(SegmentTest, HandleEmptyFile)
     editor->load_file_segments(filename);
 
     // Should handle empty file without crashing
-    std::string line = editor->wksp_->read_line_from_segment(0);
+    std::string line = editor->wksp_->read_line(0);
     EXPECT_EQ("", line); // Line 0 is beyond end of empty file, returns empty string
 
     cleanupTestFile(filename);
@@ -105,17 +105,17 @@ TEST_F(SegmentTest, HandleLargeFile)
 
     // Read first line - position to line 0 first
     editor->wksp_->change_current_line(0);
-    std::string firstLine = editor->wksp_->read_line_from_segment(0);
+    std::string firstLine = editor->wksp_->read_line(0);
     EXPECT_EQ("Line 0", firstLine);
 
     // Read last line - position to line 999 first
     editor->wksp_->change_current_line(999);
-    std::string lastLine = editor->wksp_->read_line_from_segment(999);
+    std::string lastLine = editor->wksp_->read_line(999);
     EXPECT_EQ("Line 999", lastLine);
 
     // Read middle line - position to line 500 first
     editor->wksp_->change_current_line(500);
-    std::string middleLine = editor->wksp_->read_line_from_segment(500);
+    std::string middleLine = editor->wksp_->read_line(500);
     EXPECT_EQ("Line 500", middleLine);
 
     cleanupTestFile(filename);
@@ -136,12 +136,12 @@ TEST_F(SegmentTest, HandleVeryLongLines)
 
     // Read the long line - position to line 0 first
     editor->wksp_->change_current_line(0);
-    std::string line1 = editor->wksp_->read_line_from_segment(0);
+    std::string line1 = editor->wksp_->read_line(0);
     EXPECT_EQ(longLine, line1);
 
     // Read second line - position to line 1 first
     editor->wksp_->change_current_line(1);
-    std::string line2 = editor->wksp_->read_line_from_segment(1);
+    std::string line2 = editor->wksp_->read_line(1);
     EXPECT_EQ("Second line", line2);
 
     cleanupTestFile(filename);
@@ -155,7 +155,7 @@ TEST_F(SegmentTest, WriteSegmentsToFile)
 
     // Write to a new file
     std::string outputFile = "output_" + filename;
-    bool success           = editor->wksp_->write_segments_to_file(outputFile);
+    bool success           = editor->wksp_->write_file(outputFile);
     EXPECT_TRUE(success);
 
     // Verify content matches
@@ -198,17 +198,17 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     editor->load_file_segments(filename);
 
     // Verify segments were created
-    EXPECT_TRUE(editor->wksp_->has_segments());
+    EXPECT_EQ(editor->wksp_->file_state.nlines, 200);
 
     // Check segment chain structure
-    auto segment_it         = editor->wksp_->get_segments().begin();
+    auto segment_it         = editor->wksp_->get_contents().begin();
     int segment_count       = 0;
     int total_segment_lines = 0;
 
     std::cout << "\n=== Segment Chain Analysis ===\n";
 
     // Store segments for detailed verification - now iterate through std::list
-    const auto &segments_list = editor->wksp_->get_segments();
+    const auto &segments_list = editor->wksp_->get_contents();
     std::vector<const Segment *> segments;
     for (const auto &seg : segments_list) {
         segments.push_back(&seg);
@@ -273,20 +273,20 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     // Verify we can read lines from each segment
     // Test various lines across the file - position to each line first
     editor->wksp_->change_current_line(0);
-    EXPECT_EQ(editor->wksp_->read_line_from_segment(0), "Line 0");
+    EXPECT_EQ(editor->wksp_->read_line(0), "Line 0");
 
     editor->wksp_->change_current_line(1);
-    EXPECT_EQ(editor->wksp_->read_line_from_segment(1), "Medium line 1");
+    EXPECT_EQ(editor->wksp_->read_line(1), "Medium line 1");
 
     editor->wksp_->change_current_line(3);
-    EXPECT_EQ(editor->wksp_->read_line_from_segment(3),
+    EXPECT_EQ(editor->wksp_->read_line(3),
               "This is a very long line number 3 with extra text");
 
     editor->wksp_->change_current_line(100);
-    EXPECT_EQ(editor->wksp_->read_line_from_segment(100), "Line 100");
+    EXPECT_EQ(editor->wksp_->read_line(100), "Line 100");
 
     editor->wksp_->change_current_line(199);
-    EXPECT_EQ(editor->wksp_->read_line_from_segment(199),
+    EXPECT_EQ(editor->wksp_->read_line(199),
               "This is a very long line number 199 with extra text");
 
     cleanupTestFile(filename);

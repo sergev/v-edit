@@ -14,7 +14,7 @@ void Editor::picklines(int startLine, int count)
     // Read lines from workspace segments
     std::vector<std::string> lines;
     for (int i = 0; i < count && (startLine + i) < wksp_->file_state.nlines; ++i) {
-        std::string line = read_line_from_wksp(startLine + i);
+        std::string line = wksp_->read_line(startLine + i);
         lines.push_back(line);
     }
 
@@ -57,9 +57,9 @@ void Editor::paste(int afterLine, int atCol)
             auto temp_segments = tempfile_.write_line_to_temp(line);
             if (!temp_segments.empty()) {
                 // Splice the segments into workspace at the correct position
-                auto insert_pos = wksp_->get_segments().begin();
+                auto insert_pos = wksp_->get_contents().begin();
                 std::advance(insert_pos, afterLine + 1); // Position after the target line
-                wksp_->get_segments().splice(insert_pos, temp_segments);
+                wksp_->get_contents().splice(insert_pos, temp_segments);
                 afterLine++;
                 wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
             }
@@ -83,7 +83,7 @@ void Editor::pickspaces(int line, int col, int number, int nl)
     // Read lines from workspace and extract rectangular block
     std::vector<std::string> lines;
     for (int i = 0; i < nl && (line + i) < wksp_->file_state.nlines; ++i) {
-        std::string full_line = read_line_from_wksp(line + i);
+        std::string full_line = wksp_->read_line(line + i);
         std::string block;
 
         if (col < (int)full_line.size()) {
@@ -144,7 +144,7 @@ void Editor::openspaces(int line, int col, int number, int nl)
         } else {
             // Create new line if needed
             auto blank = wksp_->create_blank_lines(1);
-            wksp_->insert_segments(blank, line + i);
+            wksp_->insert_contents(blank, line + i);
         }
     }
     ensure_cursor_visible();

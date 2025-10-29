@@ -507,7 +507,7 @@ void Editor::handle_area_selection(int ch)
         params_.set_area_end(c, curLine);
     } else {
         auto blank = wksp_->create_blank_lines(1);
-        wksp_->insert_segments(blank, curLine + 1);
+        wksp_->insert_contents(blank, curLine + 1);
     }
 }
 
@@ -582,7 +582,7 @@ void Editor::handle_key_edit(int ch)
             current_line_modified_ = true;
             put_line();
             // Delete next line
-            wksp_->delete_segments(curLine + 1, curLine + 1);
+            wksp_->delete_contents(curLine + 1, curLine + 1);
             ensure_cursor_visible();
         }
         return;
@@ -592,7 +592,7 @@ void Editor::handle_key_edit(int ch)
         int curLine = wksp_->view.topline + cursor_line_;
         if (curLine >= 0 && curLine < wksp_->file_state.nlines) {
             picklines(curLine, 1); // Copy to clipboard_ before deleting
-            wksp_->delete_segments(curLine, curLine);
+            wksp_->delete_contents(curLine, curLine);
             wksp_->file_state.nlines = wksp_->file_state.nlines - 1;
             if (cursor_line_ >= wksp_->file_state.nlines - 1) {
                 cursor_line_ = wksp_->file_state.nlines - 2;
@@ -623,7 +623,7 @@ void Editor::handle_key_edit(int ch)
     if (ch == 15) { // Ctrl-O
         int curLine = wksp_->view.topline + cursor_line_;
         auto blank  = wksp_->create_blank_lines(1);
-        wksp_->insert_segments(blank, curLine + 1);
+        wksp_->insert_contents(blank, curLine + 1);
         wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
         ensure_cursor_visible();
         return;
@@ -804,7 +804,7 @@ void Editor::handle_key_edit(int ch)
             current_line_modified_ = true;
             put_line();
             // Delete current line
-            wksp_->delete_segments(curLine, curLine);
+            wksp_->delete_contents(curLine, curLine);
             cursor_line_ = cursor_line_ > 0 ? cursor_line_ - 1 : 0;
             cursor_col_  = prev.size();
         }
@@ -824,7 +824,7 @@ void Editor::handle_key_edit(int ch)
             current_line_no_       = curLine;
             current_line_modified_ = true;
             put_line();
-            wksp_->delete_segments(curLine + 1, curLine + 1);
+            wksp_->delete_contents(curLine + 1, curLine + 1);
         }
         put_line();
         ensure_cursor_visible();
@@ -844,15 +844,15 @@ void Editor::handle_key_edit(int ch)
             auto temp_segments = tempfile_.write_line_to_temp(tail);
             if (!temp_segments.empty()) {
                 // Insert the segments into workspace
-                wksp_->insert_segments(temp_segments, curLine + 1);
+                wksp_->insert_contents(temp_segments, curLine + 1);
             } else {
                 // Fallback: insert blank line
                 auto blank = wksp_->create_blank_lines(1);
-                wksp_->insert_segments(blank, curLine + 1);
+                wksp_->insert_contents(blank, curLine + 1);
             }
         } else {
             auto blank = wksp_->create_blank_lines(1);
-            wksp_->insert_segments(blank, curLine + 1);
+            wksp_->insert_contents(blank, curLine + 1);
         }
         if (cursor_line_ + 1 < nlines_ - 1) {
             cursor_line_++;

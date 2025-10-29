@@ -116,7 +116,7 @@ bool Editor::search_forward(const std::string &needle)
 
     // Search from current position forward
     for (int i = startLine; i < total; ++i) {
-        std::string line = read_line_from_wksp(i);
+        std::string line = wksp_->read_line(i);
         size_t pos       = (i == startLine) ? (size_t)startCol : 0;
         pos              = line.find(needle, pos);
         if (pos != std::string::npos) {
@@ -138,7 +138,7 @@ bool Editor::search_forward(const std::string &needle)
 
     // Wrap around to beginning
     for (int i = 0; i <= startLine; ++i) {
-        std::string line = read_line_from_wksp(i);
+        std::string line = wksp_->read_line(i);
         size_t pos       = 0;
         if (i == startLine) {
             pos = line.find(needle, (size_t)startCol);
@@ -178,7 +178,7 @@ bool Editor::search_backward(const std::string &needle)
 
     // Search from current position backward
     for (int i = startLine; i >= 0; --i) {
-        std::string line = read_line_from_wksp(i);
+        std::string line = wksp_->read_line(i);
         size_t pos       = std::string::npos;
         if (i == startLine) {
             pos = line.rfind(needle, (size_t)startCol);
@@ -203,7 +203,7 @@ bool Editor::search_backward(const std::string &needle)
 
     // Wrap around to end
     for (int i = total - 1; i > startLine; --i) {
-        std::string line = read_line_from_wksp(i);
+        std::string line = wksp_->read_line(i);
         size_t pos       = line.rfind(needle);
         if (pos != std::string::npos) {
             wksp_->view.topline = i;
@@ -269,7 +269,7 @@ void Editor::insertlines(int from, int number)
 
     // Insert blank lines using workspace segments
     auto blank = wksp_->create_blank_lines(number);
-    wksp_->insert_segments(blank, from);
+    wksp_->insert_contents(blank, from);
     wksp_->file_state.nlines = wksp_->file_state.nlines + number;
 
     ensure_cursor_visible();
@@ -289,13 +289,13 @@ void Editor::deletelines(int from, int number)
     picklines(from, number);
 
     // Delete the lines using workspace segments
-    wksp_->delete_segments(from, from + number - 1);
+    wksp_->delete_contents(from, from + number - 1);
     wksp_->file_state.nlines = std::max(0, wksp_->file_state.nlines - number);
 
     // Ensure at least one line exists
     if (wksp_->file_state.nlines == 0) {
         auto blank = wksp_->create_blank_lines(1);
-        wksp_->insert_segments(blank, 0);
+        wksp_->insert_contents(blank, 0);
         wksp_->file_state.nlines = 1;
     }
 
@@ -336,7 +336,7 @@ void Editor::splitline(int line, int col)
     auto temp_segments = tempfile_.write_line_to_temp(tail);
     if (!temp_segments.empty()) {
         // Move the segment into the workspace segments list
-        wksp_->get_segments().splice(wksp_->get_segments().end(), temp_segments);
+        wksp_->get_contents().splice(wksp_->get_contents().end(), temp_segments);
         wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
     } else {
         // Fallback: insert blank line
@@ -380,7 +380,7 @@ void Editor::combineline(int line, int col)
     put_line();
 
     // Delete the next line
-    wksp_->delete_segments(line + 1, line + 1);
+    wksp_->delete_contents(line + 1, line + 1);
     wksp_->file_state.nlines = std::max(1, wksp_->file_state.nlines - 1);
 
     ensure_cursor_visible();

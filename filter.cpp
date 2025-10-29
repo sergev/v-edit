@@ -40,7 +40,7 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     }
 
     for (int i = start_line; i < end_line; ++i) {
-        std::string line = read_line_from_wksp(i);
+        std::string line = wksp_->read_line(i);
         input_stream << line;
         if (i < end_line - 1) {
             input_stream << '\n';
@@ -95,14 +95,14 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
     }
 
     // Delete old lines
-    wksp_->delete_segments(start_line, start_line + num_lines - 1);
+    wksp_->delete_contents(start_line, start_line + num_lines - 1);
 
     // Build segments from the new lines
     auto temp_segments = tempfile_.write_lines_to_temp(new_lines);
 
     if (!temp_segments.empty()) {
         // Insert the new segments at the deletion point
-        wksp_->insert_segments(temp_segments, start_line);
+        wksp_->insert_contents(temp_segments, start_line);
 
         // Update line count
         wksp_->file_state.nlines = wksp_->file_state.nlines - num_lines + (int)new_lines.size();

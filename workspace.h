@@ -58,51 +58,42 @@ public:
     // Segment list operations
     //
 
-    // Build segment list from in-memory lines vector
+    // Build list of segments from in-memory lines vector
     void load_text(const std::vector<std::string> &lines);
 
-    // Build segment list from text string
+    // Build list of segments from text string
     void load_text(const std::string &text);
 
-    // Change current segment to the segment containing the specified line
-    // Updates cursegm_, segmline_, and line_ to position the workspace at line number
-    // Throws std::runtime_error for invalid line numbers or corrupted segment list
+    // Change cursegm_ to the segment containing the specified line
+    // Also updates segmline_, and line_ to position the workspace at line number
+    // Throws std::runtime_error for invalid line numbers or corrupted contents
     int change_current_line(int lno);
 
-    // Load file content into segment list structure
-    void load_file(const std::string &path,
-                   bool create_if_missing = true); // TODO: set original_fd_
-
-    // Build segment list from file descriptor
-    void load_file(int fd); // TODO: clone to original_fd_
+    // Build list of segments from file descriptor
+    // File descriptor is inherited, and closed in destructor
+    void load_file(int fd);
 
     // Read line content from segment list at specified index
-    std::string read_line_from_segment(int line_no); // TODO: remove 'segment' from method names
+    std::string read_line(int line_no);
 
     // Write segment list content to file
-    bool write_segments_to_file(const std::string &path);
+    bool write_file(const std::string &path);
 
     // Clean up segment list
-    void cleanup_segments();
+    void cleanup_contents();
 
     // Reset workspace state
     void reset();
 
-    // Query methods
-    bool has_segments() const { return !segments_.empty(); } // TODO: rename -> is_empty()
-
     // Access to segments list for internal operations
-    std::list<Segment> &get_segments() { return segments_; }
-    const std::list<Segment> &get_segments() const { return segments_; }
+    std::list<Segment> &get_contents() { return contents_; }
+    const std::list<Segment> &get_contents() const { return contents_; }
 
     // Direct iterator access for segment manipulation
     Segment::iterator cursegm() { return cursegm_; }
 
-    // Line count
-    int get_line_count(int fallback_count) const // TODO: iterate segments_
-    {
-        return segments_.empty() ? fallback_count : file_state.nlines;
-    }
+    // Compute total line count of all segments.
+    unsigned get_line_count() const;
 
     //
     // Segment manipulation (from prototype)
@@ -115,19 +106,16 @@ public:
     bool catsegm();
 
     // Insert segments into workspace before given line (insert from prototype)
-    void insert_segments(std::list<Segment> &segments, int at);
+    void insert_contents(std::list<Segment> &segments, int at);
 
     // Delete segments from workspace between from and to lines (delete from prototype)
-    void delete_segments(int from, int to);
-
-    // Copy segment list (copysegm from prototype)
-    static std::list<Segment> copy_segment_list(Segment::iterator start, Segment::iterator end);
+    void delete_contents(int from, int to);
 
     // Create segments for n empty lines (blanklines from prototype)
     static std::list<Segment> create_blank_lines(int n);
 
     // Cleanup a segment list (static helper)
-    static void cleanup_segments(std::list<Segment> &segments);
+    static void cleanup_contents(std::list<Segment> &segments);
 
     // Write line content back to workspace at specified line number
     // Replaces or inserts the line in the segment chain
@@ -156,8 +144,8 @@ public:
     void debug_print(std::ostream &out) const;
 
 private:
-    std::list<Segment> segments_; // list of segments
-    Segment::iterator cursegm_;   // current segment iterator (points into segments_)
+    std::list<Segment> contents_; // list of segments
+    Segment::iterator cursegm_;   // current segment iterator (points into contents_)
     Tempfile &tempfile_;          // reference to temp file manager
     int original_fd_{ -1 };       // file descriptor for original file
 };

@@ -73,8 +73,8 @@ void Editor::wksp_redraw()
     for (int r = 0; r < nlines_ - 1; ++r) {
         mvhline(r, 0, ' ', ncols_);
         std::string lineText;
-        if (wksp_->has_segments() && r + wksp_->view.topline < wksp_->file_state.nlines) {
-            lineText = read_line_from_wksp(r + wksp_->view.topline);
+        if (r + wksp_->view.topline < wksp_->file_state.nlines) {
+            lineText = wksp_->read_line(r + wksp_->view.topline);
             // horizontal offset and continuation markers
             bool truncated = false;
             if (wksp_->view.basecol > 0 && (int)lineText.size() > wksp_->view.basecol) {

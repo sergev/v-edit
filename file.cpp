@@ -8,15 +8,6 @@
 #include "editor.h"
 
 //
-// Parse text and build segment chain from it.
-//
-void Editor::build_segments_from_text(const std::string &text)
-{
-    // Build segment chain directly from text in workspace
-    wksp_->load_text(text);
-}
-
-//
 // Load line from workspace into current line buffer.
 //
 void Editor::get_line(int lno)
@@ -24,16 +15,7 @@ void Editor::get_line(int lno)
     current_line_modified_ = false;
     current_line_no_       = lno;
 
-    if (!wksp_->has_segments()) {
-        if (current_line_.empty()) {
-            current_line_ = "";
-        } else {
-            current_line_.resize(0);
-        }
-        return;
-    }
-
-    current_line_ = read_line_from_wksp(lno);
+    current_line_ = wksp_->read_line(lno);
 }
 
 //
@@ -62,19 +44,6 @@ void Editor::ensure_line_saved()
 }
 
 //
-// Read line from workspace segments.
-//
-std::string Editor::read_line_from_wksp(int lno)
-{
-    if (!wksp_->has_segments()) {
-        return std::string();
-    }
-
-    // Use workspace's read_line_from_segment
-    return wksp_->read_line_from_segment(lno);
-}
-
-//
 // Open initial file from command line arguments.
 //
 void Editor::open_initial(int argc, char **argv)
@@ -84,35 +53,32 @@ void Editor::open_initial(int argc, char **argv)
         filename_ = argv[1];
         if (!load_file_segments(filename_)) {
             // File doesn't exist or can't be opened - create empty segments for new file
-            build_segments_from_text("");
+            wksp_->load_text("");
         }
     } else {
         // No file specified, create untitled file with one empty line
         filename_ = "untitled";
-        build_segments_from_text("");
+        wksp_->load_text("");
     }
     status_ = "Cmd: ";
 }
 
 //
-// Load file content into segment chain.
+// Load file content into workspace.
 //
 bool Editor::load_file_segments(const std::string &path)
 {
-    // Use workspace's load_file_to_segments to properly set up path and segments
-    return load_file_to_segments(path);
-}
-
-//
-// Load file content into workspace's segment chain.
-//
-bool Editor::load_file_to_segments(const std::string &path)
-{
-    wksp_->load_file(path);
-    if (!wksp_->has_segments()) {
+    // Open file for reading
+    int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0) {
         status_ = std::string("Cannot open file: ") + path;
         return false;
     }
+
+    // Use workspace's load_file_to_segments to properly set up segments.
+    wksp_->load_file(fd);
+
+    // Note: we keep the fd open because segments reference it via file_descriptor
     return true;
 }
 
@@ -122,12 +88,6 @@ bool Editor::load_file_to_segments(const std::string &path)
 void Editor::save_file()
 {
     ensure_line_saved(); // Save any unsaved line modifications
-
-    // Ensure we have segments to save
-    if (!wksp_->has_segments()) {
-        status_ = "No content to save";
-        return;
-    }
 
     // Create backup file if not already done and file exists
     if (!wksp_->file_state.backup_done && filename_ != "untitled") {
@@ -149,8 +109,8 @@ void Editor::save_file()
         unlink(filename_.c_str());
     }
 
-    // Use workspace's write_segments_to_file
-    bool saved = wksp_->write_segments_to_file(filename_);
+    // Use workspace's write_file
+    bool saved = wksp_->write_file(filename_);
     if (saved) {
         status_                    = std::string("Saved: ") + filename_;
         wksp_->file_state.modified = false; // Clear modified flag after save
@@ -169,8 +129,8 @@ void Editor::save_as(const std::string &new_filename)
     // Unlink the original file to ensure backup is not affected by the write
     unlink(new_filename.c_str());
 
-    // Use workspace's write_segments_to_file
-    if (wksp_->write_segments_to_file(new_filename)) {
+    // Use workspace's write_file
+    if (wksp_->write_file(new_filename)) {
         // Update filename
         filename_ = new_filename;
         status_   = std::string("Saved as: ") + new_filename;

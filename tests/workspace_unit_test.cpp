@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <fstream>
+#include <fcntl.h>
 
 #include "tempfile.h"
 #include "workspace.h"
@@ -24,6 +25,15 @@ protected:
 
     std::unique_ptr<Tempfile> tempfile;
     std::unique_ptr<Workspace> wksp;
+
+    int OpenFile(const std::string &path)
+    {
+        int fd = open(path.c_str(), O_RDONLY);
+        if (fd < 0) {
+            throw std::runtime_error("Cannot open file: " + path);
+        }
+        return fd;
+    }
 };
 
 //
@@ -56,20 +66,6 @@ TEST_F(WorkspaceTest, CreateBlankLinesLarge)
     EXPECT_EQ(total_lines, 200);
 }
 
-TEST_F(WorkspaceTest, CopySegmentList)
-{
-    // Create a test segment list
-    std::list<Segment> original = Workspace::create_blank_lines(10);
-
-    // Copy the list
-    auto start              = original.begin();
-    auto end                = original.end();
-    std::list<Segment> copy = Workspace::copy_segment_list(start, end);
-
-    EXPECT_FALSE(copy.empty());
-    EXPECT_EQ(copy.front().line_count, original.front().line_count);
-}
-
 //
 // Test workspace operations with file I/O
 //
@@ -82,7 +78,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     f << content;
     f.close();
 
-    wksp->load_file(filename);
+    wksp->load_file(OpenFile(filename));
 
     EXPECT_EQ(wksp->file_state.nlines, 5);
 
@@ -91,7 +87,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     EXPECT_EQ(result, 0);
 
     // Verify segmentation worked
-    EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
+    EXPECT_NE(wksp->cursegm(), wksp->get_contents().end());
     EXPECT_EQ(wksp->position.segmline, 2);
 
     // Cleanup
@@ -101,7 +97,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
 TEST_F(WorkspaceTest, DISABLED_BuildAndReadLines)
 {
     // DISABLED: This test causes segmentation fault in current implementation
-    // TODO: Fix read_line_from_segment implementation to handle std::list segments properly
+    // TODO: Fix read_line implementation to handle std::list segments properly
 
     // Test that build_segments_from_lines works
     std::vector<std::string> lines = { "First line", "Second line", "Third line" };
@@ -109,13 +105,13 @@ TEST_F(WorkspaceTest, DISABLED_BuildAndReadLines)
     wksp->load_text(lines);
 
     // Verify segments were created
-    EXPECT_TRUE(wksp->has_segments());
     EXPECT_EQ(wksp->file_state.nlines, 3);
+    EXPECT_EQ(wksp->get_line_count(), 3);
 
     // Verify we can read the lines back
-    EXPECT_EQ(wksp->read_line_from_segment(0), "First line");
-    EXPECT_EQ(wksp->read_line_from_segment(1), "Second line");
-    EXPECT_EQ(wksp->read_line_from_segment(2), "Third line");
+    EXPECT_EQ(wksp->read_line(0), "First line");
+    EXPECT_EQ(wksp->read_line(1), "Second line");
+    EXPECT_EQ(wksp->read_line(2), "Third line");
 }
 
 TEST_F(WorkspaceTest, InsertBlankLines)
@@ -127,14 +123,14 @@ TEST_F(WorkspaceTest, InsertBlankLines)
     f << content;
     f.close();
 
-    wksp->load_file(filename);
+    wksp->load_file(OpenFile(filename));
     EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Create blank lines to insert
     std::list<Segment> to_insert = Workspace::create_blank_lines(2);
 
     // Insert at line 1
-    wksp->insert_segments(to_insert, 1);
+    wksp->insert_contents(to_insert, 1);
 
     // Verify line count increased
     EXPECT_EQ(wksp->file_state.nlines, 5);
@@ -152,11 +148,11 @@ TEST_F(WorkspaceTest, DeleteLines)
     f << content;
     f.close();
 
-    wksp->load_file(filename);
+    wksp->load_file(OpenFile(filename));
     EXPECT_EQ(wksp->file_state.nlines, 4);
 
     // Delete lines 1-2
-    wksp->delete_segments(1, 2);
+    wksp->delete_contents(1, 2);
 
     // Verify line count decreased
     EXPECT_EQ(wksp->file_state.nlines, 2);
@@ -204,7 +200,7 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
     f << content;
     f.close();
 
-    wksp->load_file(filename);
+    wksp->load_file(OpenFile(filename));
 
     // Break at line 2 to create two segments
     int result = wksp->breaksegm(2, true);
@@ -235,13 +231,13 @@ TEST_F(WorkspaceTest, SaveAndLoadCycle)
     wksp->load_text(lines);
     std::string out_filename = std::string(__func__) + ".txt";
 
-    bool saved = wksp->write_segments_to_file(out_filename);
+    bool saved = wksp->write_file(out_filename);
     EXPECT_TRUE(saved);
 
     // Load back and verify
-    wksp->load_file(out_filename);
+    wksp->load_file(OpenFile(out_filename));
     EXPECT_EQ(wksp->file_state.nlines, 3);
-    EXPECT_EQ(wksp->read_line_from_segment(0), "Test line 1");
+    EXPECT_EQ(wksp->read_line(0), "Test line 1");
 
     // Cleanup
     std::remove(out_filename.c_str());
@@ -332,21 +328,8 @@ TEST_F(WorkspaceTest, ChainAccessorsEmpty)
 {
     // Test chain access on workspace with only tail segment
     // Note: Workspace always has a tail segment after construction
-    EXPECT_TRUE(wksp->has_segments()); // has tail segment
-    EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
+    EXPECT_NE(wksp->cursegm(), wksp->get_contents().end());
     EXPECT_EQ(wksp->file_state.nlines, 0); // No actual content lines
-}
-
-TEST_F(WorkspaceTest, LineCountTests)
-{
-    // Test line counting with different scenarios
-    wksp->file_state.nlines = 50;
-    EXPECT_EQ(wksp->get_line_count(25), 50); // Use nlines when it's set
-
-    // When nlines is 0, get_line_count returns nlines (not fallback)
-    // because segments exist (tail segment)
-    wksp->file_state.nlines = 0;
-    EXPECT_EQ(wksp->get_line_count(25), 0);
 }
 
 TEST_F(WorkspaceTest, BuildFromText)
@@ -355,14 +338,13 @@ TEST_F(WorkspaceTest, BuildFromText)
     std::string text = "Line one\nLine two\nLine three\nLast line";
     wksp->load_text(text);
 
-    EXPECT_TRUE(wksp->has_segments());
     EXPECT_EQ(wksp->file_state.nlines, 4);
 
     // Position to each line before reading
     wksp->change_current_line(0);
-    EXPECT_EQ(wksp->read_line_from_segment(0), "Line one");
+    EXPECT_EQ(wksp->read_line(0), "Line one");
     wksp->change_current_line(3);
-    EXPECT_EQ(wksp->read_line_from_segment(3), "Last line");
+    EXPECT_EQ(wksp->read_line(3), "Last line");
 }
 
 TEST_F(WorkspaceTest, ResetWorkspace)
@@ -371,14 +353,12 @@ TEST_F(WorkspaceTest, ResetWorkspace)
     wksp->load_text(std::vector<std::string>{ "test", "content" });
 
     // Verify state is set (load_text calls reset first, then sets nlines to 2)
-    EXPECT_TRUE(wksp->has_segments());
     EXPECT_EQ(wksp->file_state.nlines, 2); // load_text sets this based on vector size
     wksp->file_state.modified = true;      // Manually set modified
 
     // Reset workspace
     wksp->reset();
 
-    EXPECT_TRUE(wksp->has_segments()); // Still has tail segment
     EXPECT_EQ(wksp->file_state.nlines, 0);
     EXPECT_FALSE(wksp->file_state.modified);
     EXPECT_EQ(wksp->file_state.writable, 0);
@@ -394,7 +374,7 @@ TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
     int result = wksp->change_current_line(3);
     EXPECT_EQ(result, 0);
     EXPECT_EQ(wksp->position.line, 3);
-    EXPECT_NE(wksp->cursegm(), wksp->get_segments().end());
+    EXPECT_NE(wksp->cursegm(), wksp->get_contents().end());
 
     // Test navigation to line beyond end
     result = wksp->change_current_line(10);
@@ -448,15 +428,15 @@ TEST_F(WorkspaceTest, SegmentDeleteOperations)
     EXPECT_EQ(wksp->file_state.nlines, 5);
 
     // Delete lines 1-2
-    wksp->delete_segments(1, 2);
+    wksp->delete_contents(1, 2);
     EXPECT_EQ(wksp->file_state.nlines, 3);
 
     // Delete line 1
-    wksp->delete_segments(1, 1);
+    wksp->delete_contents(1, 1);
     EXPECT_EQ(wksp->file_state.nlines, 2);
 
     // Delete invalid range (should be safe)
-    wksp->delete_segments(10, 15); // Should handle gracefully
+    wksp->delete_contents(10, 15); // Should handle gracefully
 }
 
 TEST_F(WorkspaceTest, ViewManagementComprehensive)
@@ -498,7 +478,7 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
 
     // Insert blank lines
     std::list<Segment> blanks = Workspace::create_blank_lines(3);
-    wksp->insert_segments(blanks, 1);
+    wksp->insert_contents(blanks, 1);
     EXPECT_EQ(wksp->file_state.nlines, 6);
 
     // Break at various points
@@ -514,10 +494,9 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
     wksp->catsegm(); // Try another merge
 
     // Final state verification
-    EXPECT_TRUE(wksp->has_segments());
     EXPECT_GE(wksp->file_state.nlines, 3); // Should have at least original lines
 
     // Test saving (shouldn't crash)
-    bool saved = wksp->write_segments_to_file("complex_test_out.txt");
+    bool saved = wksp->write_file("complex_test_out.txt");
     EXPECT_TRUE(saved); // May be false if path issues, but shouldn't crash
 }

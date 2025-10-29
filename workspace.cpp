@@ -55,7 +55,10 @@ void Workspace::reset()
 //
 // Compute line count.
 //
-unsigned Workspace::get_line_count() const
+// TODO: This function can be optimized by caching the computed value,
+// TODO: and invalidating the cached value when contents change.
+//
+unsigned Workspace::total_line_count() const
 {
     unsigned total_lines = 0;
 
@@ -464,8 +467,6 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         // Calculate how many blank lines to create
         // position.line was set by change_current_line to segmline of the tail segment
         // Check if workspace is empty (only has a tail segment)
-        // Note: after checking, we found that even with content, if cursegm_ points to tail,
-        // we need to use file_state.nlines to determine where to start
         bool is_empty = (file_state.nlines == 0);
 
         int num_blank_lines;

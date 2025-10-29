@@ -26,8 +26,8 @@ struct ViewState {
 // Position state (navigation within file)
 //
 struct PositionState {
-    int line{ 0 };     // TODO: remove: current line number
-    int segmline{ 0 }; // TODO: remove: first line in current segment
+    int line{ 0 };     // current line number
+    int segmline{ 0 }; // first line in current segment
 };
 
 //
@@ -37,7 +37,7 @@ struct FileState {
     bool modified{ false };    // track if file has been modified
     bool backup_done{ false }; // track if backup file has been created
     int writable{ 0 };         // write permission
-    int nlines{ 0 };           // TODO: remove, use get_line_count() instead
+    int nlines{ 0 };           // TODO: remove, use total_line_count() instead
 };
 
 //
@@ -72,7 +72,7 @@ public:
     bool write_file(const std::string &path);
 
     // Compute total line count of all segments.
-    unsigned get_line_count() const;
+    unsigned total_line_count() const;
 
     // Read line content from segment list at specified index
     std::string read_line(int line_no);

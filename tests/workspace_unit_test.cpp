@@ -106,7 +106,7 @@ TEST_F(WorkspaceTest, DISABLED_BuildAndReadLines)
 
     // Verify segments were created
     EXPECT_EQ(wksp->file_state.nlines, 3);
-    EXPECT_EQ(wksp->get_line_count(), 3);
+    EXPECT_EQ(wksp->total_line_count(), 3);
 
     // Verify we can read the lines back
     EXPECT_EQ(wksp->read_line(0), "First line");

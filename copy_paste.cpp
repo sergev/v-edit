@@ -57,11 +57,12 @@ void Editor::paste(int afterLine, int atCol)
             auto temp_segments = tempfile_.write_line_to_temp(line);
             if (!temp_segments.empty()) {
                 // Splice the segments into workspace at the correct position
+                //TODO: this is wrong, has to be replaced
                 auto insert_pos = wksp_->get_contents().begin();
                 std::advance(insert_pos, afterLine + 1); // Position after the target line
                 wksp_->get_contents().splice(insert_pos, temp_segments);
                 afterLine++;
-                wksp_->file_state.nlines = wksp_->file_state.nlines + 1;
+                wksp_->file_state.nlines += 1;
             }
         }
     }

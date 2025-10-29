@@ -452,6 +452,14 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     if (contents_.empty())
         throw std::runtime_error("breaksegm: empty workspace");
 
+    // Special case: empty workspace and line_no == 0 - just position at start
+    if (total_line_count() == 0 && line_no == 0) {
+        cursegm_          = contents_.begin(); // Position at tail segment
+        position.segmline = 0;
+        position.line     = 0;
+        return 0; // Success, no lines created
+    }
+
     // Position workspace to the target line
     if (change_current_line(line_no)) {
         // Line is beyond end of file - create blank lines to extend it

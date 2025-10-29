@@ -175,6 +175,13 @@ private:
     void pickspaces(int line, int col, int number, int nl);
     void closespaces(int line, int col, int number, int nl);
     void openspaces(int line, int col, int number, int nl);
+
+    // Backend editing operations (testable)
+    void edit_backspace();          // Handle backspace operation
+    void edit_delete();             // Handle delete operation
+    void edit_enter();              // Handle enter/newline operation
+    void edit_tab();                // Handle tab insertion
+    void edit_insert_char(char ch); // Handle character insertion/overwrite
 };
 
 #endif

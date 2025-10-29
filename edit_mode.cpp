@@ -258,132 +258,29 @@ void Editor::handle_key_edit(int ch)
         return;
     }
 
-    // --- Basic editing operations using current_line_ buffer ---
-    int curLine = wksp_->view.topline + cursor_line_;
-    if (curLine < 0)
-        curLine = 0;
-    get_line(curLine);
-
+    // --- Basic editing operations using backend methods ---
     if (ch == KEY_BACKSPACE || ch == 127) {
-        size_t actual_col = get_actual_col();
-        if (actual_col > 0) {
-            if (actual_col <= current_line_.size()) {
-                current_line_.erase(actual_col - 1, 1);
-                current_line_modified_ = true;
-                cursor_col_--;
-            }
-        } else if (curLine > 0) {
-            // Join with previous line
-            get_line(curLine - 1);
-            std::string prev = current_line_;
-            get_line(curLine);
-            prev += current_line_;
-            current_line_          = prev;
-            current_line_no_       = curLine - 1;
-            current_line_modified_ = true;
-            put_line();
-            // Delete current line
-            wksp_->delete_contents(curLine, curLine);
-            cursor_line_ = cursor_line_ > 0 ? cursor_line_ - 1 : 0;
-            cursor_col_  = prev.size();
-        }
-        put_line();
-        ensure_cursor_visible();
+        edit_backspace();
         return;
     }
 
     if (ch == KEY_DC) {
-        size_t actual_col = get_actual_col();
-        if (actual_col < current_line_.size()) {
-            current_line_.erase(actual_col, 1);
-            current_line_modified_ = true;
-        } else if (curLine + 1 < wksp_->total_line_count()) {
-            // Join with next line
-            get_line(curLine + 1);
-            current_line_ += current_line_;
-            current_line_no_       = curLine;
-            current_line_modified_ = true;
-            put_line();
-            wksp_->delete_contents(curLine + 1, curLine + 1);
-        }
-        put_line();
-        ensure_cursor_visible();
+        edit_delete();
         return;
     }
 
     if (ch == '\n' || ch == KEY_ENTER) {
-        size_t actual_col = get_actual_col();
-        std::string tail;
-        if (actual_col < current_line_.size()) {
-            tail = current_line_.substr(actual_col);
-            current_line_.erase(actual_col);
-        }
-        current_line_modified_ = true;
-        put_line();
-        // Insert new line with tail content
-        if (!tail.empty()) {
-            auto temp_segments = tempfile_.write_line_to_temp(tail);
-            if (!temp_segments.empty()) {
-                // Insert the segments into workspace
-                wksp_->insert_contents(temp_segments, curLine + 1);
-            } else {
-                // Fallback: insert blank line
-                auto blank = wksp_->create_blank_lines(1);
-                wksp_->insert_contents(blank, curLine + 1);
-            }
-        } else {
-            auto blank = wksp_->create_blank_lines(1);
-            wksp_->insert_contents(blank, curLine + 1);
-        }
-        if (cursor_line_ + 1 < nlines_ - 1) {
-            cursor_line_++;
-        } else {
-            // At bottom of viewport: scroll down
-            wksp_->view.topline = wksp_->view.topline + 1;
-            // keep cursor on last content row
-            cursor_line_ = nlines_ - 2;
-        }
-        cursor_col_ = 0;
-        ensure_cursor_visible();
+        edit_enter();
         return;
     }
 
     if (ch == '\t') {
-        size_t actual_col = get_actual_col();
-        current_line_.insert(actual_col, 4, ' ');
-        cursor_col_ += 4;
-        current_line_modified_ = true;
-        put_line();
-        ensure_cursor_visible();
+        edit_tab();
         return;
     }
 
     if (ch >= 32 && ch < 127) {
-        size_t actual_col = get_actual_col();
-        if (quote_next_) {
-            // Quote mode: insert character literally (including control chars shown as ^X)
-            char quoted = (char)ch;
-            if (ch < 32) {
-                quoted = (char)(ch + 64); // Convert to ^A, ^B, etc.
-            }
-            current_line_.insert(actual_col, 1, quoted);
-            cursor_col_++;
-            quote_next_ = false;
-        } else if (insert_mode_) {
-            current_line_.insert(actual_col, 1, (char)ch);
-            cursor_col_++;
-        } else {
-            // Overwrite mode
-            if (actual_col < current_line_.size()) {
-                current_line_[actual_col] = (char)ch;
-            } else {
-                current_line_.push_back((char)ch);
-            }
-            cursor_col_++;
-        }
-        current_line_modified_ = true;
-        put_line();
-        ensure_cursor_visible();
+        edit_insert_char((char)ch);
         return;
     }
 }

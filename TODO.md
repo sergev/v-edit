@@ -89,14 +89,15 @@ private:
 
 ### Tasks for Phase 1
 
-- [ ] Add method declarations to editor.h (in testable section)
-- [ ] Implement `edit_backspace()` in input.cpp or edit.cpp
-- [ ] Implement `edit_delete()` in input.cpp or edit.cpp
-- [ ] Implement `edit_enter()` in input.cpp or edit.cpp
-- [ ] Implement `edit_tab()` in input.cpp or edit.cpp
-- [ ] Implement `edit_insert_char(char ch)` in input.cpp or edit.cpp
-- [ ] Ensure all methods properly handle edge cases
-- [ ] Add common helper for `get_line(curLine)` setup if needed
+- [x] Add method declarations to editor.h (in testable section)
+- [x] Implement `edit_backspace()` in edit.cpp
+- [x] Implement `edit_delete()` in edit.cpp
+- [x] Implement `edit_enter()` in edit.cpp
+- [x] Implement `edit_tab()` in edit.cpp
+- [x] Implement `edit_insert_char(char ch)` in edit.cpp
+- [x] Ensure all methods properly handle edge cases
+- [x] Methods use `get_line(curLine)` and `get_actual_col()` internally
+- [x] All 50 tests pass - no regressions
 
 ---
 
@@ -143,15 +144,15 @@ if (ch == KEY_BACKSPACE || ch == 127) {
 
 ### Tasks for Phase 2
 
-- [ ] Replace BACKSPACE handling with `edit_backspace()` call
-- [ ] Replace DELETE handling with `edit_delete()` call
-- [ ] Replace ENTER handling with `edit_enter()` call
-- [ ] Replace TAB handling with `edit_tab()` call
-- [ ] Replace character insertion with `edit_insert_char()` call
-- [ ] Remove now-redundant `int curLine` and `get_line(curLine)` calls
-- [ ] Ensure `current_line_` is loaded before editing operations (may need helper)
-- [ ] Verify all edge cases still work correctly
-- [ ] Build and test existing functionality
+- [x] Replace BACKSPACE handling with `edit_backspace()` call
+- [x] Replace DELETE handling with `edit_delete()` call
+- [x] Replace ENTER handling with `edit_enter()` call
+- [x] Replace TAB handling with `edit_tab()` call
+- [x] Replace character insertion with `edit_insert_char()` call
+- [x] Remove now-redundant `int curLine` and `get_line(curLine)` calls (done - moved to backend methods)
+- [x] Backend methods handle `current_line_` loading internally
+- [x] Verify all edge cases still work correctly
+- [x] Build and test existing functionality - ALL 50 TESTS PASS
 
 ---
 

@@ -3,7 +3,7 @@
 #include "editor.h"
 
 // Test fixture for editing operations with horizontal scroll (basecol > 0)
-class HorizontalScrollEditingTest : public ::testing::Test {
+class HorizontalTest : public ::testing::Test {
 protected:
     void SetUp() override
     {
@@ -42,9 +42,6 @@ protected:
         editor->put_line();
     }
 
-    // Helper: Load a line into current_line_ buffer
-    void LoadLine(int line_no) { editor->get_line(line_no); }
-
     // Helper: Get actual column position
     size_t GetActualCol() const { return editor->get_actual_col(); }
 
@@ -55,11 +52,10 @@ protected:
 // BACKSPACE Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, BackspaceWithScroll)
+TEST_F(HorizontalTest, BackspaceWithScroll)
 {
     // Create line: "0123456789ABCDEFGHIJ"
     CreateLine(0, "0123456789ABCDEFGHIJ");
-    LoadLine(0);
 
     // View scrolled right by 10, cursor at screen position 5
     // Actual position: 10 + 5 = 15 (character 'F')
@@ -77,10 +73,9 @@ TEST_F(HorizontalScrollEditingTest, BackspaceWithScroll)
     EXPECT_EQ(editor->cursor_col_, 4);
 }
 
-TEST_F(HorizontalScrollEditingTest, BackspaceMultiplePositions)
+TEST_F(HorizontalTest, BackspaceMultiplePositions)
 {
     CreateLine(0, "The quick brown fox jumps over the lazy dog");
-    LoadLine(0);
 
     // Test at different scroll positions
     struct TestCase {
@@ -106,10 +101,9 @@ TEST_F(HorizontalScrollEditingTest, BackspaceMultiplePositions)
 // DELETE Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, DeleteWithScroll)
+TEST_F(HorizontalTest, DeleteWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
-    LoadLine(0);
 
     // View scrolled right by 10, cursor at screen position 5
     // Actual position: 10 + 5 = 15 (character 'F')
@@ -126,10 +120,9 @@ TEST_F(HorizontalScrollEditingTest, DeleteWithScroll)
     EXPECT_EQ(editor->cursor_col_, 5); // Cursor position unchanged
 }
 
-TEST_F(HorizontalScrollEditingTest, DeleteAtVariousScrollPositions)
+TEST_F(HorizontalTest, DeleteAtVariousScrollPositions)
 {
     CreateLine(0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    LoadLine(0);
 
     // Test deletion at basecol=15, cursor=5 -> actual=20 (U)
     editor->wksp_->view.basecol = 15;
@@ -148,10 +141,9 @@ TEST_F(HorizontalScrollEditingTest, DeleteAtVariousScrollPositions)
 // ENTER/Newline Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, EnterWithScroll)
+TEST_F(HorizontalTest, EnterWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
-    LoadLine(0);
 
     // View scrolled right by 10, cursor at screen position 5
     // Actual position: 10 + 5 = 15
@@ -176,10 +168,9 @@ TEST_F(HorizontalScrollEditingTest, EnterWithScroll)
     EXPECT_EQ(tail, "FGHIJ");
 }
 
-TEST_F(HorizontalScrollEditingTest, EnterWithLargeScroll)
+TEST_F(HorizontalTest, EnterWithLargeScroll)
 {
     CreateLine(0, "This is a very long line that requires horizontal scrolling to see");
-    LoadLine(0);
 
     // Scrolled far right
     editor->wksp_->view.basecol = 30;
@@ -207,10 +198,9 @@ TEST_F(HorizontalScrollEditingTest, EnterWithLargeScroll)
 // TAB Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, TabWithScroll)
+TEST_F(HorizontalTest, TabWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
-    LoadLine(0);
 
     // View scrolled right by 10, cursor at screen position 5
     editor->wksp_->view.basecol = 10;
@@ -226,10 +216,9 @@ TEST_F(HorizontalScrollEditingTest, TabWithScroll)
     EXPECT_EQ(editor->cursor_col_, 9);
 }
 
-TEST_F(HorizontalScrollEditingTest, TabAtScrollBoundary)
+TEST_F(HorizontalTest, TabAtScrollBoundary)
 {
     CreateLine(0, "AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH");
-    LoadLine(0);
 
     // Right at scroll boundary
     editor->wksp_->view.basecol = 20;
@@ -250,10 +239,9 @@ TEST_F(HorizontalScrollEditingTest, TabAtScrollBoundary)
 // Character Insertion Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, InsertCharacterWithScroll)
+TEST_F(HorizontalTest, InsertCharacterWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
-    LoadLine(0);
 
     // View scrolled, insert at actual position
     editor->wksp_->view.basecol = 10;
@@ -270,10 +258,9 @@ TEST_F(HorizontalScrollEditingTest, InsertCharacterWithScroll)
     EXPECT_EQ(editor->cursor_col_, 6);
 }
 
-TEST_F(HorizontalScrollEditingTest, InsertMultipleCharactersWithScroll)
+TEST_F(HorizontalTest, InsertMultipleCharactersWithScroll)
 {
     CreateLine(0, "StartEnd");
-    LoadLine(0);
 
     editor->wksp_->view.basecol = 3;
     editor->cursor_col_         = 2;
@@ -295,10 +282,9 @@ TEST_F(HorizontalScrollEditingTest, InsertMultipleCharactersWithScroll)
 // Character Overwrite Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, OverwriteWithScroll)
+TEST_F(HorizontalTest, OverwriteWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
-    LoadLine(0);
 
     editor->wksp_->view.basecol = 10;
     editor->cursor_col_         = 5;
@@ -314,10 +300,9 @@ TEST_F(HorizontalScrollEditingTest, OverwriteWithScroll)
     EXPECT_EQ(editor->cursor_col_, 6);
 }
 
-TEST_F(HorizontalScrollEditingTest, OverwriteMultipleWithScroll)
+TEST_F(HorizontalTest, OverwriteMultipleWithScroll)
 {
     CreateLine(0, "The quick brown fox");
-    LoadLine(0);
 
     editor->wksp_->view.basecol = 10;
     editor->cursor_col_         = 0;
@@ -339,12 +324,11 @@ TEST_F(HorizontalScrollEditingTest, OverwriteMultipleWithScroll)
 // Edge Cases with Horizontal Scroll
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, EditingAtMaxScroll)
+TEST_F(HorizontalTest, EditingAtMaxScroll)
 {
     // Create a 100-character line
     std::string long_line(100, 'X');
     CreateLine(0, long_line);
-    LoadLine(0);
 
     // Scroll far to the right
     editor->wksp_->view.basecol = 80;
@@ -359,10 +343,9 @@ TEST_F(HorizontalScrollEditingTest, EditingAtMaxScroll)
     EXPECT_EQ(editor->wksp_->read_line(0).length(), 99);
 }
 
-TEST_F(HorizontalScrollEditingTest, ActualColCalculationVariousScrolls)
+TEST_F(HorizontalTest, ActualColCalculationVariousScrolls)
 {
     CreateLine(0, "Test line for verification");
-    LoadLine(0);
 
     // Test various basecol and cursor_col combinations
     struct TestCase {
@@ -384,10 +367,9 @@ TEST_F(HorizontalScrollEditingTest, ActualColCalculationVariousScrolls)
     }
 }
 
-TEST_F(HorizontalScrollEditingTest, ComplexEditingSequenceWithScroll)
+TEST_F(HorizontalTest, ComplexEditingSequenceWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJKLMNOP");
-    LoadLine(0);
 
     // Start with scroll
     editor->wksp_->view.basecol = 8;
@@ -404,7 +386,6 @@ TEST_F(HorizontalScrollEditingTest, ComplexEditingSequenceWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABXCDEFGHIJKLMNOP");
 
     // Now delete it using backend method
-    LoadLine(0);
     editor->cursor_col_ = 5;       // Moved forward after insert
     EXPECT_EQ(GetActualCol(), 13); // 8 + 5 = 13
 
@@ -414,14 +395,13 @@ TEST_F(HorizontalScrollEditingTest, ComplexEditingSequenceWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDEFGHIJKLMNOP");
 }
 
-TEST_F(HorizontalScrollEditingTest, VerifyBugFixScenario)
+TEST_F(HorizontalTest, VerifyBugFixScenario)
 {
     // This test specifically verifies the bug that was fixed:
     // Without the fix, editing at cursor_col=6 with basecol=6
     // would incorrectly edit at position 6 instead of position 12
 
     CreateLine(0, "Hello World Test Line");
-    LoadLine(0);
 
     editor->wksp_->view.basecol = 6; // Scrolled right by 6
     editor->cursor_col_         = 6; // Cursor at screen position 6
@@ -432,8 +412,9 @@ TEST_F(HorizontalScrollEditingTest, VerifyBugFixScenario)
 
     // Verify character at position 12 before deleting
     size_t actual_col = GetActualCol();
-    ASSERT_LT(actual_col, editor->current_line_.size());
-    char char_at_12 = editor->current_line_[actual_col];
+    auto line = editor->wksp_->read_line(0);
+    ASSERT_LT(actual_col, line.size());
+    char char_at_12 = line[actual_col];
     EXPECT_EQ(char_at_12, 'T'); // The character at position 12 is 'T'
 
     // Call backend method - delete character at actual position 12
@@ -447,10 +428,9 @@ TEST_F(HorizontalScrollEditingTest, VerifyBugFixScenario)
 // Cursor Beyond Line End Tests
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, CursorBeyondLineEndNoScroll)
+TEST_F(HorizontalTest, CursorBeyondLineEndNoScroll)
 {
     CreateLine(0, "Short");
-    LoadLine(0);
 
     // Position cursor beyond line end (no scroll)
     editor->wksp_->view.basecol = 0;
@@ -458,7 +438,7 @@ TEST_F(HorizontalScrollEditingTest, CursorBeyondLineEndNoScroll)
 
     // Actual position: 0 + 10 = 10 (beyond line end)
     EXPECT_EQ(GetActualCol(), 10);
-    EXPECT_GT(GetActualCol(), editor->current_line_.size());
+    EXPECT_GT(GetActualCol(), editor->wksp_->read_line(0).size());
 
     // Insert character beyond line end (should extend line)
     size_t actual_col    = GetActualCol();
@@ -469,10 +449,9 @@ TEST_F(HorizontalScrollEditingTest, CursorBeyondLineEndNoScroll)
     EXPECT_EQ(actual_col, 10);
 }
 
-TEST_F(HorizontalScrollEditingTest, CursorBeyondLineEndWithScroll)
+TEST_F(HorizontalTest, CursorBeyondLineEndWithScroll)
 {
     CreateLine(0, "Short");
-    LoadLine(0);
 
     // Position cursor beyond line end WITH scroll
     editor->wksp_->view.basecol = 5;
@@ -480,17 +459,16 @@ TEST_F(HorizontalScrollEditingTest, CursorBeyondLineEndWithScroll)
 
     // Actual position: 5 + 10 = 15 (way beyond line length of 5)
     EXPECT_EQ(GetActualCol(), 15);
-    EXPECT_GT(GetActualCol(), editor->current_line_.size());
+    EXPECT_GT(GetActualCol(), editor->wksp_->read_line(0).size());
 
     // Verify bounds checking works correctly
     size_t actual_col = GetActualCol();
-    EXPECT_FALSE(actual_col < editor->current_line_.size());
+    EXPECT_FALSE(actual_col < editor->wksp_->read_line(0).size());
 }
 
-TEST_F(HorizontalScrollEditingTest, BackspaceBeyondLineEndWithScroll)
+TEST_F(HorizontalTest, BackspaceBeyondLineEndWithScroll)
 {
     CreateLine(0, "Test");
-    LoadLine(0);
 
     // Cursor beyond line end
     editor->wksp_->view.basecol = 3;
@@ -511,11 +489,10 @@ TEST_F(HorizontalScrollEditingTest, BackspaceBeyondLineEndWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(0), "Test");
 }
 
-TEST_F(HorizontalScrollEditingTest, DeleteBeyondLineEndWithScroll)
+TEST_F(HorizontalTest, DeleteBeyondLineEndWithScroll)
 {
     CreateLine(0, "Test");
     CreateLine(1, "Next");
-    LoadLine(0);
 
     // Cursor beyond line end on first line
     editor->wksp_->view.basecol = 2;
@@ -531,10 +508,9 @@ TEST_F(HorizontalScrollEditingTest, DeleteBeyondLineEndWithScroll)
     // In real code, this would trigger line joining with next line
 }
 
-TEST_F(HorizontalScrollEditingTest, InsertBeyondLineEndWithScroll)
+TEST_F(HorizontalTest, InsertBeyondLineEndWithScroll)
 {
     CreateLine(0, "Hi");
-    LoadLine(0);
 
     // Cursor way beyond line end
     editor->wksp_->view.basecol = 10;
@@ -555,39 +531,29 @@ TEST_F(HorizontalScrollEditingTest, InsertBeyondLineEndWithScroll)
 // Line Joining Operations with Scroll
 // ============================================================================
 
-TEST_F(HorizontalScrollEditingTest, BackspaceJoinLinesNoScroll)
+TEST_F(HorizontalTest, BackspaceJoinLinesNoScroll)
 {
     CreateLine(0, "First");
     CreateLine(1, "Second");
 
     // Start on second line at beginning
-    editor->cursor_line_ = 1;
-    LoadLine(1);
-
+    editor->cursor_line_        = 1;
     editor->wksp_->view.basecol = 0;
     editor->cursor_col_         = 0;
 
     // Actual position: 0 + 0 = 0 (start of line)
     EXPECT_EQ(GetActualCol(), 0);
 
-    size_t actual_col = GetActualCol();
-
-    // Backspace at start of line should join with previous line
-    // actual_col == 0, so the if condition for within-line deletion is false
-    EXPECT_EQ(actual_col, 0);
-
     // In actual implementation, would join "First" + "Second" = "FirstSecond"
 }
 
-TEST_F(HorizontalScrollEditingTest, BackspaceJoinLinesWithScroll)
+TEST_F(HorizontalTest, BackspaceJoinLinesWithScroll)
 {
     CreateLine(0, "First line");
     CreateLine(1, "Second line");
 
     // Start on second line, scrolled to the right
-    editor->cursor_line_ = 1;
-    LoadLine(1);
-
+    editor->cursor_line_        = 1;
     editor->wksp_->view.basecol = 5;
     editor->cursor_col_         = 0;
 
@@ -601,15 +567,13 @@ TEST_F(HorizontalScrollEditingTest, BackspaceJoinLinesWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(1), "Secod line");
 }
 
-TEST_F(HorizontalScrollEditingTest, BackspaceJoinLinesAtTrueStart)
+TEST_F(HorizontalTest, BackspaceJoinLinesAtTrueStart)
 {
     CreateLine(0, "First line");
     CreateLine(1, "Second line");
 
     // Start on second line at TRUE beginning (basecol=0, cursor=0)
-    editor->cursor_line_ = 1;
-    LoadLine(1);
-
+    editor->cursor_line_        = 1;
     editor->wksp_->view.basecol = 0;
     editor->cursor_col_         = 0;
 
@@ -617,16 +581,16 @@ TEST_F(HorizontalScrollEditingTest, BackspaceJoinLinesAtTrueStart)
     EXPECT_EQ(GetActualCol(), 0);
 
     // This should trigger line joining in actual code
-    // Verify we correctly identify this as start of line
-    size_t actual_col = GetActualCol();
-    EXPECT_EQ(actual_col, 0);
+    EXPECT_EQ(editor->wksp_->read_line(0), "First line");
+    EXPECT_EQ(editor->wksp_->read_line(1), "Second line");
+    editor->edit_backspace();
+    EXPECT_EQ(editor->wksp_->read_line(0), "First lineSecond line");
 }
 
-TEST_F(HorizontalScrollEditingTest, DeleteJoinLinesAtEndNoScroll)
+TEST_F(HorizontalTest, DeleteJoinLinesAtEndNoScroll)
 {
     CreateLine(0, "First");
     CreateLine(1, "Second");
-    LoadLine(0);
 
     // At end of first line
     editor->wksp_->view.basecol = 0;
@@ -635,20 +599,17 @@ TEST_F(HorizontalScrollEditingTest, DeleteJoinLinesAtEndNoScroll)
     // Actual position: 0 + 5 = 5 (at end, line length is 5)
     EXPECT_EQ(GetActualCol(), 5);
 
-    size_t actual_col = GetActualCol();
-
     // Delete at end of line should join with next line
-    EXPECT_EQ(actual_col, editor->current_line_.size());
-    EXPECT_FALSE(actual_col < editor->current_line_.size());
-
-    // In actual code, this would join "First" + "Second" = "FirstSecond"
+    // This joins "First" + "Second" = "FirstSecond"
+    editor->edit_delete();
+    EXPECT_EQ(editor->wksp_->read_line(0), "FirstSecond");
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
 }
 
-TEST_F(HorizontalScrollEditingTest, DeleteJoinLinesAtEndWithScroll)
+TEST_F(HorizontalTest, DeleteJoinLinesAtEndWithScroll)
 {
     CreateLine(0, "First");
     CreateLine(1, "Second");
-    LoadLine(0);
 
     // Scrolled right, cursor at what appears to be end
     editor->wksp_->view.basecol = 3;
@@ -660,15 +621,14 @@ TEST_F(HorizontalScrollEditingTest, DeleteJoinLinesAtEndWithScroll)
     size_t actual_col = GetActualCol();
 
     // Delete at end should still trigger line joining
-    EXPECT_EQ(actual_col, editor->current_line_.size());
-    EXPECT_FALSE(actual_col < editor->current_line_.size());
+    EXPECT_EQ(actual_col, editor->wksp_->read_line(0).size());
+    EXPECT_FALSE(actual_col < editor->wksp_->read_line(0).size());
 }
 
-TEST_F(HorizontalScrollEditingTest, DeleteNotAtEndWithScroll)
+TEST_F(HorizontalTest, DeleteNotAtEndWithScroll)
 {
     CreateLine(0, "Testing");
     CreateLine(1, "Second");
-    LoadLine(0);
 
     // Scrolled, but not at actual end
     editor->wksp_->view.basecol = 2;
@@ -680,7 +640,7 @@ TEST_F(HorizontalScrollEditingTest, DeleteNotAtEndWithScroll)
     size_t actual_col = GetActualCol();
 
     // Should delete within line, not join
-    EXPECT_LT(actual_col, editor->current_line_.size());
+    EXPECT_LT(actual_col, editor->wksp_->read_line(0).size());
 
     // Call backend method - delete character at position 5
     editor->edit_delete();
@@ -689,7 +649,7 @@ TEST_F(HorizontalScrollEditingTest, DeleteNotAtEndWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(0), "Testig");
 }
 
-TEST_F(HorizontalScrollEditingTest, LineJoiningEdgeCaseScrolled)
+TEST_F(HorizontalTest, LineJoiningEdgeCaseScrolled)
 {
     CreateLine(0, "Line1");
     CreateLine(1, "Line2");
@@ -697,16 +657,14 @@ TEST_F(HorizontalScrollEditingTest, LineJoiningEdgeCaseScrolled)
 
     // Test multiple scenarios with scroll
     // Scenario 1: Delete at end of line with scroll should join
-    LoadLine(0);
     editor->wksp_->view.basecol = 2;
     editor->cursor_col_         = 3;
 
     // Actual position: 2 + 3 = 5 (end of "Line1")
     EXPECT_EQ(GetActualCol(), 5);
-    EXPECT_EQ(GetActualCol(), editor->current_line_.size());
+    EXPECT_EQ(GetActualCol(), editor->wksp_->read_line(0).size());
 
     // Scenario 2: Verify line 1 is independent
-    LoadLine(1);
     editor->wksp_->view.basecol = 0;
     editor->cursor_col_         = 0;
     EXPECT_EQ(GetActualCol(), 0);

@@ -73,12 +73,18 @@ void Editor::edit_delete()
         current_line_modified_ = true;
     } else if (curLine + 1 < wksp_->total_line_count()) {
         // Join with next line
+        // Preserve current line before loading next
+        std::string curr = current_line_;
         get_line(curLine + 1);
-        current_line_ += current_line_;
+        std::string next = current_line_;
+        curr += next;
+        current_line_          = curr;
         current_line_no_       = curLine;
         current_line_modified_ = true;
         put_line();
         wksp_->delete_contents(curLine + 1, curLine + 1);
+        // Place cursor at the join point (end of original current line)
+        cursor_col_ = (int)actual_col;
     }
     put_line();
     ensure_cursor_visible();

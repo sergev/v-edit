@@ -449,8 +449,20 @@ bool Workspace::write_file(const std::string &path)
 //
 int Workspace::breaksegm(int line_no)
 {
-    if (contents_.empty())
-        throw std::runtime_error("breaksegm: empty workspace");
+    if (contents_.empty()) {
+        if (line_no < 0)
+            throw std::runtime_error("breaksegm: negative line number");
+
+        // Create blank lines up to, but not including, line_no
+        // (so total_line_count() becomes line_no)
+        if (line_no > 0) {
+            contents_ = create_blank_lines(line_no);
+        }
+        // Position logically at requested line (may be just past end)
+        cursegm_      = contents_.end();
+        position.line = line_no;
+        return 1;
+    }
 
     // Position workspace to the target line
     if (change_current_line(line_no)) {
@@ -584,17 +596,24 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     // If workspace is empty, simply insert at the end
     if (contents_.empty()) {
         contents_.splice(contents_.end(), contents_to_insert);
-        cursegm_ = contents_.begin();
+        cursegm_            = contents_.begin();
         file_state.writable = true;
         return;
     }
 
-    // Split at insertion point
-    breaksegm(at);
+    // Capture current total to handle end-insert logic
+    int total_before = total_line_count();
 
-    // after breaksegm, cursegm_ points to the segment at position 'at'
-    // Insert new segments BEFORE cursegm_
+    // Split at insertion point
+    int br = breaksegm(at);
+
+    // Determine correct insertion position
+    // Default behavior: insert BEFORE cursegm_
     auto insert_pos = cursegm_;
+    // Special case: inserting at end (at >= total_before) and breaksegm signaled EOF
+    if (br == 1 && at >= total_before) {
+        insert_pos = contents_.end();
+    }
 
     // Remember the position before splicing so we can find the first inserted segment
     auto before_size = std::distance(contents_.begin(), insert_pos);
@@ -635,19 +654,45 @@ void Workspace::delete_contents(int from, int to)
     if (to >= total)
         to = total - 1;
 
-    // Use breaksegm for positioning (it uses list operations internally now)
-    // Break AFTER the last line to delete (to+1) so we can delete up to and including 'to'
-    int result = breaksegm(to + 1);
-    if (result != 0) {
-        if (to + 1 > total) {
-            change_current_line(total);
-        } else {
-            return;
+    // Fast-path: deleting only the very last line in the file
+    if (from == to && to == total - 1) {
+        // Find last segment that has lines
+        if (!contents_.empty()) {
+            auto it = contents_.end();
+            --it;
+            // Walk back if trailing empty segments (shouldn't exist normally)
+            while (it != contents_.begin() && it->line_count == 0) {
+                --it;
+            }
+            if (it->line_count > 0) {
+                // Remove last line metadata
+                if (!it->line_lengths.empty())
+                    it->line_lengths.pop_back();
+                if (it->line_count > 0)
+                    it->line_count -= 1;
+                if (it->line_count == 0) {
+                    contents_.erase(it);
+                }
+                file_state.writable = true;
+                return;
+            }
         }
     }
 
-    // Find iterators for the deletion range using the list
-    auto end_delete_it = cursegm_;
+    // Use breaksegm for positioning (it uses list operations internally now)
+    // Break AFTER the last line to delete (to+1) so we can delete up to and including 'to'
+    int result = breaksegm(to + 1);
+    // Determine end iterator for erase range
+    auto end_delete_it = contents_.end();
+    if (result == 0) {
+        end_delete_it = cursegm_;
+    } else {
+        // If we asked to break exactly at EOF (to+1 == total), treat end as contents_.end()
+        // Only abort if the requested end is strictly within current contents and we failed
+        if (to + 1 < total) {
+            return;
+        }
+    }
 
     result = breaksegm(from);
     if (result != 0) {
@@ -658,7 +703,15 @@ void Workspace::delete_contents(int from, int to)
     auto after_delete_it = end_delete_it;
 
     // Erase the range from the list
-    contents_.erase(start_delete_it, after_delete_it);
+    if (start_delete_it == after_delete_it) {
+        // Special-case: deleting the final region where end == start (e.g., at EOF)
+        if (start_delete_it != contents_.end()) {
+            auto next_it = std::next(start_delete_it);
+            contents_.erase(start_delete_it, next_it);
+        }
+    } else {
+        contents_.erase(start_delete_it, after_delete_it);
+    }
 
     // Update workspace position
     if (!contents_.empty()) {
@@ -781,6 +834,22 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         return;
     }
 
+    // If workspace is empty, create blanks up to line_no and insert the new segment
+    if (contents_.empty()) {
+        contents_ = temp_segments;
+        cursegm_  = contents_.begin();
+        if (line_no > 0) {
+            auto blanks = create_blank_lines(line_no);
+            contents_.splice(contents_.begin(), blanks);
+        }
+        position.line       = line_no;
+        file_state.modified = true;
+        return;
+    }
+
+    // Capture total lines before any modification to detect append-at-end case
+    int total_before = total_line_count();
+
     // Break segment at line_no position to split into segments before and at line_no
     int break_result = breaksegm(line_no);
 
@@ -813,6 +882,20 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         // Mark workspace as modified
         file_state.modified = true;
     } else if (break_result == 1) {
+        // If target line is at or beyond EOF, append the new segment AFTER any blanks created
+        if (line_no >= total_before) {
+            // Append at end
+            auto insert_pos = contents_.end();
+            // Remember where the first new segment will land after splice
+            contents_.splice(insert_pos, temp_segments);
+            // Set cursegm_ to the newly appended segment (last element)
+            cursegm_ = contents_.end();
+            --cursegm_;
+            position.line       = line_no;
+            file_state.modified = true;
+            return;
+        }
+
         // breaksegm created blank lines and positioned near/at line_no
         // Isolate line_no into its own segment if needed, then replace
         auto seg_it = cursegm_;

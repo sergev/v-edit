@@ -38,7 +38,7 @@ set(TEST_SOURCES
     command_mode_test.cpp
     editor_unit_test.cpp
     basic_editing_test.cpp
-    horizontal_scroll_editing_test.cpp
+    horizontal_test.cpp
     input_test.cpp
     TmuxDriver.cpp
 )

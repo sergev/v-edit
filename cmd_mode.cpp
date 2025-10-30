@@ -158,13 +158,13 @@ void Editor::handle_key_cmd(int ch)
 
     if (ch == 27 || ch == KEY_F(1) || ch == 1) {
         // ESC or F1 or ^A cancels area selection
+        cmd_mode_ = false;
         if (area_selection_mode_) {
             area_selection_mode_ = false;
             params_.set_type(Parameters::PARAM_NONE);
-            cmd_mode_ = false;
             status_   = "Cancelled";
-            return;
         }
+        return;
     }
 
     if (ch == 27) {
@@ -193,13 +193,14 @@ void Editor::handle_key_cmd(int ch)
         if (!cmd_.empty()) {
             if (cmd_ == "qa") {
                 quit_flag_ = true;
-                status_    = "Exiting";
+                status_    = "Exiting without saving changes";
             } else if (cmd_ == "ad") {
-                quit_flag_ = true;
-                status_    = "ABORTED";
+                // Force a crash dump
+                handle_fatal_signal(SIGQUIT);
             } else if (cmd_ == "q") {
+                save_file();
                 quit_flag_ = true;
-                status_    = "Exiting";
+                status_    = "Saving changes and exiting";
             } else if (cmd_ == "r") {
                 // Redraw screen
                 wksp_redraw();

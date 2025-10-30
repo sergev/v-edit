@@ -87,9 +87,12 @@ private:
     void startup(int restart);
     void draw();
     void draw_status(const std::string &msg);
+    void draw_tag();
     void wksp_redraw();
     void start_status_color();
     void end_status_color();
+    void start_tag_color();
+    void end_tag_color();
 
     // Basic editing/input
     //

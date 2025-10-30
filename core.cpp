@@ -60,6 +60,7 @@ void Editor::startup(int restart)
     if (has_colors()) {
         start_color();
         init_pair(1, COLOR_BLACK, COLOR_CYAN); // Status line color pair
+        init_pair(2, COLOR_WHITE, COLOR_RED);  // Cursor position color pair
     }
 
     ncols_       = COLS;
@@ -130,9 +131,6 @@ int Editor::run(int argc, char **argv)
         // Check for interrupts
         check_interrupt();
 
-        // Position cursor at current line and column before reading input
-        move(cursor_line_, cursor_col_);
-
         int ch = journal_read_key();
         if (ch == ERR) {
             // no input, still render
@@ -154,16 +152,17 @@ int Editor::run(int argc, char **argv)
             break;
     }
 
+    // Pause for a little bit to make the last status visible.
     refresh();
-    usleep(100000);
+    usleep(500000);
+
     // Persist minimal session state before exiting
     save_state();
-    // Also emit an exit marker to stdout so tmux capture sees it reliably
     endwin();
-    fputs("Exiting\n", stdout);
-    fflush(stdout);
-    usleep(200000);
     if (journal_fd_ >= 0)
         close(journal_fd_);
+
+    // Also emit an exit marker to stdout so tmux capture sees it reliably
+    std::cout << "Exiting" << std::endl;
     return 0;
 }

@@ -29,6 +29,32 @@ void Editor::end_status_color()
 }
 
 //
+// Start color highlighting for cursor position.
+//
+void Editor::start_tag_color()
+{
+    // Use colors if available, otherwise use reverse video
+    if (has_colors()) {
+        attron(COLOR_PAIR(2));
+    } else {
+        attron(A_REVERSE);
+    }
+}
+
+//
+// End color highlighting for cursor position.
+//
+void Editor::end_tag_color()
+{
+    // Turn off tag line coloring
+    if (has_colors()) {
+        attroff(COLOR_PAIR(2));
+    } else {
+        attroff(A_REVERSE);
+    }
+}
+
+//
 // Display status message at bottom of screen.
 //
 void Editor::draw_status(const std::string &msg)
@@ -40,12 +66,29 @@ void Editor::draw_status(const std::string &msg)
 }
 
 //
+// Display position of cursor.
+//
+void Editor::draw_tag()
+{
+    start_tag_color();
+    if (area_selection_mode_) {
+        int c0, r0;
+        params_.get_area_start(c0, r0);
+        move(r0, c0);
+    } else {
+        move(cursor_line_, cursor_col_);
+    }
+    addch('@');
+    end_tag_color();
+}
+
+//
 // Redraw entire screen and status bar.
 //
 void Editor::draw()
 {
     wksp_redraw();
-    move(cursor_line_, cursor_col_);
+
     // Build status line dynamically
     if (cmd_mode_) {
         if (area_selection_mode_) {
@@ -54,6 +97,11 @@ void Editor::draw()
             std::string s = std::string("Cmd: ") + cmd_;
             draw_status(s);
         }
+        draw_tag();
+    } else if (!status_.empty()) {
+        // Draw status once.
+        draw_status(status_);
+        status_ = "";
     } else {
         std::string modeStr = insert_mode_ ? "INSERT" : "OVERWRITE";
         std::string s       = std::string("Line=") +
@@ -61,6 +109,13 @@ void Editor::draw()
                         "    Col=" + std::to_string(wksp_->view.basecol + cursor_col_ + 1) +
                         "    " + modeStr + "    \"" + filename_ + "\"";
         draw_status(s);
+    }
+
+    // Position cursor at current line and column before reading input
+    if (cmd_mode_ && !area_selection_mode_) {
+        move(nlines_ - 1, 5 + cmd_.size());
+    } else {
+        move(cursor_line_, cursor_col_);
     }
     refresh();
 }

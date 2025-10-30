@@ -235,25 +235,27 @@ bool Editor::mdeftag(char tag_name)
     int tagCol  = pos.second;
 
     // Set up area between current cursor and tag
-    params_.set_type(Parameters::PARAM_TAG_AREA);
-    params_.set_area_start(curCol, curLine);
-    params_.set_area_end(tagCol, tagLine);
+    params_.type = Parameters::PARAM_TAG_AREA;
+    params_.c0 = curCol;
+    params_.r0 = curLine;
+    params_.c1 = tagCol;
+    params_.r1 = tagLine;
 
     // Normalize bounds
     bool needs_reposition = false;
     bool was_swaped       = false;
 
-    if (params_.get_type() == Parameters::PARAM_TAG_AREA) {
+    if (params_.type == Parameters::PARAM_TAG_AREA) {
         // Get original coordinates
-        int start_col, start_row;
-        params_.get_area_start(start_col, start_row);
+        int start_col = params_.c0;
+        int start_row = params_.r0;
         bool was_start_at_cursor = (curLine == start_row && curCol == start_col);
 
         params_.normalize_area();
 
         // Check if coordinates were swapped
-        int new_start_col, new_start_row;
-        params_.get_area_start(new_start_col, new_start_row);
+        int new_start_col = params_.c0;
+        int new_start_row = params_.r0;
         was_swaped = (new_start_row != curLine || new_start_col != curCol);
 
         if (was_swaped) {
@@ -272,10 +274,8 @@ bool Editor::mdeftag(char tag_name)
 
     // Move cursor to start if needed
     if (needs_reposition) {
-        int col, row;
-        params_.get_area_start(col, row);
-        goto_line(row);
-        wksp_->view.basecol = col;
+        goto_line(params_.r0);
+        wksp_->view.basecol = params_.c0;
         cursor_col_         = 0;
         ensure_cursor_visible();
     }

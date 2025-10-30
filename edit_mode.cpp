@@ -139,20 +139,20 @@ void Editor::handle_key_edit(int ch)
     }
     // ^X f - Shift view right
     if (ctrlx_state_ && (ch == 'f' || ch == 'F')) {
-        int shift           = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
+        int shift           = params_.count > 0 ? params_.count : ncols_ / 4;
         wksp_->view.basecol = wksp_->view.basecol + shift;
-        params_.set_count(0);
+        params_.count = 0;
         ctrlx_state_ = false;
         ensure_cursor_visible();
         return;
     }
     // ^X b - Shift view left
     if (ctrlx_state_ && (ch == 'b' || ch == 'B')) {
-        int shift           = params_.get_count() > 0 ? params_.get_count() : ncols_ / 4;
+        int shift           = params_.count > 0 ? params_.count : ncols_ / 4;
         wksp_->view.basecol = wksp_->view.basecol - shift;
         if (wksp_->view.basecol < 0)
             wksp_->view.basecol = 0;
-        params_.set_count(0);
+        params_.count = 0;
         ctrlx_state_ = false;
         ensure_cursor_visible();
         return;

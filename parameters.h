@@ -2,82 +2,52 @@
 #define PARAMETERS_H
 
 #include <string>
+#include <algorithm>
 
-// Class to encapsulate editor parameter system
-class Parameters {
-public:
-    // Parameter types
+// Parameter types
+struct Parameters {
     static constexpr int PARAM_NONE     = 0;
     static constexpr int PARAM_STRING   = 1;
     static constexpr int PARAM_AREA     = -1;
     static constexpr int PARAM_TAG_AREA = -2;
 
-    Parameters() = default;
-
-    // Getters
-    int get_type() const { return type_; }
-    const std::string &get_string() const { return str_; }
-    int get_count() const { return count_; }
-
-    // Area coordinates
-    void get_area_start(int &col, int &row) const
-    {
-        col = c0_;
-        row = r0_;
-    }
-
-    void get_area_end(int &col, int &row) const
-    {
-        col = c1_;
-        row = r1_;
-    }
-
-    // Setters
-    void set_type(int type) { type_ = type; }
-    void set_string(const std::string &str) { str_ = str; }
-    void set_count(int count) { count_ = count; }
-
-    void set_area_start(int col, int row)
-    {
-        c0_ = col;
-        r0_ = row;
-    }
-
-    void set_area_end(int col, int row)
-    {
-        c1_ = col;
-        r1_ = row;
-    }
+    // Public fields
+    int type{ PARAM_NONE }; // Parameter type
+    std::string str;        // String parameter
+    int c0{ 0 }, r0{ 0 };   // Area top-left corner
+    int c1{ 0 }, r1{ 0 };   // Area bottom-right corner
+    int count{ 0 };         // Numeric count parameter
 
     // Utility functions
     void reset()
     {
-        type_ = PARAM_NONE;
-        str_.clear();
-        count_ = 0;
-        c0_ = r0_ = c1_ = r1_ = 0;
+        type = PARAM_NONE;
+        str.clear();
+        count = 0;
+        c0 = r0 = c1 = r1 = 0;
     }
 
     // Area operations
     void normalize_area()
     {
-        if (r0_ > r1_) {
-            std::swap(r0_, r1_);
+        if (r0 > r1) {
+            std::swap(r0, r1);
         }
-        if (c0_ > c1_) {
-            std::swap(c0_, c1_);
+        if (c0 > c1) {
+            std::swap(c0, c1);
         }
     }
 
-    bool is_horizontal_area() const { return r1_ == r0_; }
-    bool is_vertical_area() const { return c1_ == c0_; }
+    // On input, rA and cA are coordinates of one corner of the area.
+    // On output (rB and cB), return coordinates of the opposite corner.
+    void get_opposite_corner(int rA, int cA, int &rB, int &cB)
+    {
+        rB = (rA == r0) ? r1 : r0;
+        cB = (cA == c0) ? c1 : c0;
+    }
 
-private:
-    int type_{ PARAM_NONE }; // Parameter type
-    std::string str_;        // String parameter
-    int c0_{ 0 }, r0_{ 0 };  // Area top-left corner
-    int c1_{ 0 }, r1_{ 0 };  // Area bottom-right corner
-    int count_{ 0 };         // Numeric count parameter
+    bool is_horizontal_area() const { return r1 == r0; }
+    bool is_vertical_area() const { return c1 == c0; }
 };
 
 #endif // PARAMETERS_H

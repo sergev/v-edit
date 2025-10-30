@@ -14,12 +14,9 @@ void Editor::handle_key_cmd(int ch)
         if (ch == 3) { // ^C - Copy rectangular block
             // Finalize area bounds
             params_.normalize_area();
-            int c0, r0, c1, r1;
-            params_.get_area_start(c0, r0);
-            params_.get_area_end(c1, r1);
-            int numCols  = c1 - c0 + 1;
-            int numLines = r1 - r0 + 1;
-            pickspaces(r0, c0, numCols, numLines);
+            int numCols  = params_.c1 - params_.c0 + 1;
+            int numLines = params_.r1 - params_.r0 + 1;
+            pickspaces(params_.r0, params_.c0, numCols, numLines);
 
             // Check if we should store to a named buffer (>name)
             if (!cmd_.empty() && cmd_[0] == '>' && cmd_.size() == 2 && cmd_[1] >= 'a' &&
@@ -33,18 +30,15 @@ void Editor::handle_key_cmd(int ch)
             cmd_mode_            = false;
             area_selection_mode_ = false;
             cmd_.clear();
-            params_.set_type(Parameters::PARAM_NONE);
+            params_.type = Parameters::PARAM_NONE;
             return;
         }
         if (ch == 25) { // ^Y - Delete rectangular block
             // Finalize area bounds
             params_.normalize_area();
-            int c0, r0, c1, r1;
-            params_.get_area_start(c0, r0);
-            params_.get_area_end(c1, r1);
-            int num_cols  = c1 - c0 + 1;
-            int num_lines = r1 - r0 + 1;
-            closespaces(r0, c0, num_cols, num_lines);
+            int num_cols  = params_.c1 - params_.c0 + 1;
+            int num_lines = params_.r1 - params_.r0 + 1;
+            closespaces(params_.r0, params_.c0, num_cols, num_lines);
 
             // Check if we should store to a named buffer (>name)
             if (!cmd_.empty() && cmd_[0] == '>' && cmd_.size() == 2 && cmd_[1] >= 'a' &&
@@ -58,23 +52,20 @@ void Editor::handle_key_cmd(int ch)
             cmd_mode_            = false;
             area_selection_mode_ = false;
             cmd_.clear();
-            params_.set_type(Parameters::PARAM_NONE);
+            params_.type = Parameters::PARAM_NONE;
             return;
         }
         if (ch == 15) { // ^O - Insert rectangular block of spaces
             // Finalize area bounds
             params_.normalize_area();
-            int c0, r0, c1, r1;
-            params_.get_area_start(c0, r0);
-            params_.get_area_end(c1, r1);
-            int num_cols  = c1 - c0 + 1;
-            int num_lines = r1 - r0 + 1;
-            openspaces(r0, c0, num_cols, num_lines);
+            int num_cols  = params_.c1 - params_.c0 + 1;
+            int num_lines = params_.r1 - params_.r0 + 1;
+            openspaces(params_.r0, params_.c0, num_cols, num_lines);
             status_              = "Inserted rectangular spaces";
             cmd_mode_            = false;
             area_selection_mode_ = false;
             cmd_.clear();
-            params_.set_type(Parameters::PARAM_NONE);
+            params_.type = Parameters::PARAM_NONE;
             return;
         }
     }
@@ -140,8 +131,10 @@ void Editor::handle_key_cmd(int ch)
             area_selection_mode_ = true;
             int cur_col          = wksp_->view.basecol + cursor_col_;
             int cur_row          = wksp_->view.topline + cursor_line_;
-            params_.set_area_start(cur_col, cur_row);
-            params_.set_area_end(cur_col, cur_row);
+            params_.c0 = cur_col;
+            params_.r0 = cur_row;
+            params_.c1 = cur_col;
+            params_.r1 = cur_row;
             status_ = "*** Area defined by cursor ***";
         }
         handle_area_selection(ch);
@@ -161,7 +154,7 @@ void Editor::handle_key_cmd(int ch)
         cmd_mode_ = false;
         if (area_selection_mode_) {
             area_selection_mode_ = false;
-            params_.set_type(Parameters::PARAM_NONE);
+            params_.type = Parameters::PARAM_NONE;
             status_ = "Cancelled";
         }
         return;
@@ -171,7 +164,7 @@ void Editor::handle_key_cmd(int ch)
         cmd_.clear();
         filter_mode_         = false;
         area_selection_mode_ = false;
-        params_.set_type(Parameters::PARAM_NONE);
+        params_.type = Parameters::PARAM_NONE;
         return;
     } // ESC
     if (ch == '\n' || ch == KEY_ENTER) {
@@ -186,7 +179,7 @@ void Editor::handle_key_cmd(int ch)
                 i++;
             }
             if (i > 0) {
-                params_.set_count(std::atoi(cmd_.substr(0, i).c_str()));
+                params_.count = std::atoi(cmd_.substr(0, i).c_str());
                 cmd_ = cmd_.substr(i);
             }
         }
@@ -387,11 +380,11 @@ void Editor::handle_key_cmd(int ch)
     if (ch == 3) { // ^C - Copy
         if (cmd_mode_ && !area_selection_mode_ && !filter_mode_) {
             int curLine = wksp_->view.topline + cursor_line_;
-            int count   = params_.get_count() > 0 ? params_.get_count() : 1;
+            int count   = params_.count > 0 ? params_.count : 1;
             picklines(curLine, count);
             status_   = std::string("Copied ") + std::to_string(count) + " line(s)";
             cmd_mode_ = false;
-            params_.set_count(0);
+            params_.count = 0;
             cmd_.clear();
             return;
         }
@@ -399,11 +392,11 @@ void Editor::handle_key_cmd(int ch)
     if (ch == 25) { // ^Y - Delete
         if (cmd_mode_ && !area_selection_mode_ && !filter_mode_) {
             int curLine = wksp_->view.topline + cursor_line_;
-            int count   = params_.get_count() > 0 ? params_.get_count() : 1;
+            int count   = params_.count > 0 ? params_.count : 1;
             deletelines(curLine, count);
             status_   = std::string("Deleted ") + std::to_string(count) + " line(s)";
             cmd_mode_ = false;
-            params_.set_count(0);
+            params_.count = 0;
             cmd_.clear();
             return;
         }
@@ -411,11 +404,11 @@ void Editor::handle_key_cmd(int ch)
     if (ch == 15) { // ^O - Insert blank lines
         if (cmd_mode_ && !area_selection_mode_ && !filter_mode_) {
             int curLine = wksp_->view.topline + cursor_line_;
-            int count   = params_.get_count() > 0 ? params_.get_count() : 1;
+            int count   = params_.count > 0 ? params_.count : 1;
             insertlines(curLine, count);
             status_   = std::string("Inserted ") + std::to_string(count) + " line(s)";
             cmd_mode_ = false;
-            params_.set_count(0);
+            params_.count = 0;
             cmd_.clear();
             return;
         }
@@ -442,6 +435,9 @@ bool Editor::is_movement_key(int ch) const
 //
 void Editor::handle_area_selection(int ch)
 {
+    bool on_c0 = (wksp_->view.basecol + cursor_col_ == params_.c0);
+    bool on_r0 = (wksp_->view.topline + cursor_line_ == params_.r0);
+
     // Move cursor based on key
     switch (ch) {
     case KEY_LEFT:
@@ -476,28 +472,17 @@ void Editor::handle_area_selection(int ch)
     }
 
     // Update area bounds
-    int curCol  = wksp_->view.basecol + cursor_col_;
-    int curLine = wksp_->view.topline + cursor_line_;
-
-    // Get current area bounds
-    int c0, r0, c1, r1;
-    params_.get_area_start(c0, r0);
-    params_.get_area_end(c1, r1);
-
-    if (curCol > c0) {
-        params_.set_area_end(curCol, r1);
+    if (on_c0) {
+        params_.c0 = wksp_->view.basecol + cursor_col_;
     } else {
-        params_.set_area_start(curCol, r0);
+        params_.c1 = wksp_->view.basecol + cursor_col_;
     }
-
-    if (curLine > r0) {
-        int c;
-        params_.get_area_end(c, r1);
-        params_.set_area_end(c, curLine);
+    if (on_r0) {
+        params_.r0 = wksp_->view.topline + cursor_line_;
     } else {
-        auto blank = wksp_->create_blank_lines(1);
-        wksp_->insert_contents(blank, curLine + 1);
+        params_.r1 = wksp_->view.topline + cursor_line_;
     }
+    params_.normalize_area();
 }
 
 //

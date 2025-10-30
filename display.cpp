@@ -44,16 +44,23 @@ void Editor::draw_status(const std::string &msg)
 //
 void Editor::draw_tag()
 {
-    start_color(Color::POSITION);
     if (area_selection_mode_) {
-        int c0, r0;
-        params_.get_area_start(c0, r0);
-        move(r0, c0);
+        int r, c;
+        params_.get_opposite_corner(cursor_line_ + wksp_->view.topline,
+                                    cursor_col_ + wksp_->view.basecol, r, c);
+        r -= wksp_->view.topline;
+        c -= wksp_->view.basecol;
+        if (r >= 0 && c >= 0 && r < nlines_ - 1 && c < ncols_) {
+            // The opposite corner is visible.
+            start_color(Color::POSITION);
+            mvaddch(r, c, '@');
+            end_color(Color::POSITION);
+        }
     } else {
-        move(cursor_line_, cursor_col_);
+        start_color(Color::POSITION);
+        mvaddch(cursor_line_, cursor_col_, '@');
+        end_color(Color::POSITION);
     }
-    addch('@');
-    end_color(Color::POSITION);
 }
 
 //

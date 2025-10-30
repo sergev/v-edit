@@ -465,7 +465,7 @@ bool Workspace::write_file(const std::string &path)
 // with blank lines.
 // Returns 0 on success, 1 if blank lines were appended.
 //
-int Workspace::breaksegm(int line_no, bool realloc_flag)
+int Workspace::breaksegm(int line_no)
 {
     if (contents_.empty())
         throw std::runtime_error("breaksegm: empty workspace");
@@ -492,8 +492,9 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         contents_.splice(cursegm_, blank_segments);
         cursegm_ = first_blank_seg;
 
-        // Position workspace to the target line
-        if (change_current_line(line_no))
+        // Position workspace to the target line.
+        // Note: it legal to position right behind the last line.
+        if (change_current_line(line_no) && !cursegm_->is_empty())
             throw std::runtime_error("breaksegm: bad blank segments");
 
         return 1; // Signal that we created lines
@@ -601,7 +602,7 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
         return;
 
     // Split at insertion point
-    breaksegm(at, true);
+    breaksegm(at);
 
     // after breaksegm, cursegm_ points to the segment at position 'at'
     // Insert new segments BEFORE cursegm_
@@ -648,7 +649,7 @@ void Workspace::delete_contents(int from, int to)
 
     // Use breaksegm for positioning (it uses list operations internally now)
     // Break AFTER the last line to delete (to+1) so we can delete up to and including 'to'
-    int result = breaksegm(to + 1, true);
+    int result = breaksegm(to + 1);
     if (result != 0) {
         if (to + 1 > total) {
             change_current_line(total);
@@ -660,7 +661,7 @@ void Workspace::delete_contents(int from, int to)
     // Find iterators for the deletion range using the list
     auto end_delete_it = cursegm_;
 
-    result = breaksegm(from, true);
+    result = breaksegm(from);
     if (result != 0) {
         return;
     }
@@ -793,7 +794,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     }
 
     // Break segment at line_no position to split into segments before and at line_no
-    int break_result = breaksegm(line_no, true);
+    int break_result = breaksegm(line_no);
 
     // Get the new segment to use
     auto new_seg_it = temp_segments.begin();
@@ -808,7 +809,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
 
         if (!only_one_line) {
             // Break at line_no + 1 to isolate the line
-            breaksegm(line_no + 1, false);
+            breaksegm(line_no + 1);
             // Now cursegm_ points to segment starting at line_no + 1
             // The segment containing line_no is the previous segment
             --cursegm_;
@@ -845,14 +846,14 @@ void Workspace::put_line(int line_no, const std::string &line_content)
             // Need to isolate line_no into its own segment
             // First, split before line_no if it's not at the start
             if (!at_segment_start) {
-                breaksegm(line_no, false);
+                breaksegm(line_no);
                 // Now cursegm_ points to segment starting at line_no
                 blank_seg_it = cursegm_;
             }
 
             // Then split after line_no if there are more lines in the segment
             if (blank_seg_it->line_count > 1) {
-                breaksegm(line_no + 1, false);
+                breaksegm(line_no + 1);
                 // Now cursegm_ points to segment starting at line_no + 1
                 // Go back to the segment containing line_no
                 --blank_seg_it;

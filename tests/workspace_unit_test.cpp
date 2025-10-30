@@ -83,7 +83,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Break at line 2
-    int result = wksp->breaksegm(2, true);
+    int result = wksp->breaksegm(2);
     EXPECT_EQ(result, 0);
 
     // Verify segmentation worked
@@ -94,18 +94,12 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     std::remove(filename.c_str());
 }
 
-TEST_F(WorkspaceTest, DISABLED_BuildAndReadLines)
+TEST_F(WorkspaceTest, BuildAndReadLines)
 {
-    // DISABLED: This test causes segmentation fault in current implementation
-    // TODO: Fix read_line implementation to handle std::list segments properly
-
-    // Test that build_segments_from_lines works
     std::vector<std::string> lines = { "First line", "Second line", "Third line" };
-
     wksp->load_text(lines);
 
     // Verify segments were created
-    EXPECT_EQ(wksp->total_line_count(), 3);
     EXPECT_EQ(wksp->total_line_count(), 3);
 
     // Verify we can read the lines back
@@ -207,7 +201,7 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
     wksp->load_file(OpenFile(filename));
 
     // Break at line 2 to create two segments
-    int result = wksp->breaksegm(2, true);
+    int result = wksp->breaksegm(2);
     EXPECT_EQ(result, 0);
 
     // Position to second segment (line 2)
@@ -362,20 +356,30 @@ TEST_F(WorkspaceTest, BreakSegmentVariations)
 {
     std::vector<std::string> lines = { "Line 0", "Line 1", "Line 2", "Line 3", "Line 4" };
     wksp->load_text(lines);
+    wksp->debug_print(std::cout);
+    EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Break at line 0 (should be no-op)
-    int result = wksp->breaksegm(0, true);
+    std::cout << "--- Break at line 0, no-op\n";
+    int result = wksp->breaksegm(0);
+    wksp->debug_print(std::cout);
     EXPECT_EQ(result, 0);
+    EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Break at line 3
-    result = wksp->breaksegm(3, true);
+    std::cout << "--- Break at line 3\n";
+    result = wksp->breaksegm(3);
+    wksp->debug_print(std::cout);
     EXPECT_EQ(result, 0);
     EXPECT_EQ(wksp->position.line, 3);
+    EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Break beyond end (should create blank lines)
-    result = wksp->breaksegm(8, true);
+    std::cout << "--- Break beyond end, create blank lines\n";
+    result = wksp->breaksegm(8);
+    wksp->debug_print(std::cout);
     EXPECT_EQ(result, 1); // Should extend file
-    EXPECT_EQ(wksp->total_line_count(), 9);
+    EXPECT_EQ(wksp->total_line_count(), 8);
 }
 
 TEST_F(WorkspaceTest, SegmentCatOperations)
@@ -384,7 +388,7 @@ TEST_F(WorkspaceTest, SegmentCatOperations)
     wksp->load_text(lines);
 
     // Break to create segments to merge
-    wksp->breaksegm(2, true);
+    wksp->breaksegm(2);
     wksp->change_current_line(2);
 
     // Test merge conditions - may or may not succeed depending on implementation
@@ -461,9 +465,9 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
     EXPECT_EQ(wksp->total_line_count(), 6);
 
     // Break at various points
-    wksp->breaksegm(2, true);
+    wksp->breaksegm(2);
     wksp->change_current_line(4);
-    wksp->breaksegm(4, true);
+    wksp->breaksegm(4);
 
     // Try some merges (may or may not succeed)
     wksp->change_current_line(2);

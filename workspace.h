@@ -112,7 +112,7 @@ public:
     void delete_contents(int from, int to);
 
     // Split segment at given line number (breaksegm from prototype)
-    int breaksegm(int line_no, bool realloc_flag = true);
+    int breaksegm(int line_no);
 
     // Merge adjacent segments (catsegm from prototype)
     bool catsegm();

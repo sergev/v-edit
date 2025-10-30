@@ -259,6 +259,21 @@ TEST_F(KeyHandlingIntegrationTest, CharacterInsertionWithScroll)
     EXPECT_EQ(editor->cursor_col_, 6);
 }
 
+TEST_F(KeyHandlingIntegrationTest, CharacterInsertionFooLineCount)
+{
+    editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 0);
+
+    editor->handle_key_edit('f');
+    editor->handle_key_edit('o');
+    editor->handle_key_edit('o');
+    editor->handle_key_edit('\n');
+
+    editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->read_line(0), "foo");
+    EXPECT_EQ(editor->wksp_->total_line_count(), 2);
+}
+
 TEST_F(KeyHandlingIntegrationTest, CharacterInsertionFooBarQuz)
 {
     editor->handle_key_edit('f');

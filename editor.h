@@ -15,7 +15,7 @@
 class Editor {
 public:
     Editor();
-    int run(int argc, char **argv);
+    int run(int restart, int argc, char **argv);
 
 #ifndef GOOGLETEST_INCLUDE_GTEST_GTEST_H_
 private:

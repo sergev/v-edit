@@ -2,9 +2,7 @@
 
 This file captures comprehensive context and conventions for assisting on this repository. This is the detailed reference guide.
 
-**Note**: For Cursor IDE users, see `.cursorrules` in the project root for quick reference and mandatory TDD requirements.
-
-⚠️ **IMPORTANT**: All development MUST follow Test-Driven Development (TDD). Write tests first, then implement.
+**Note**: For Cursor IDE users, see `.cursorrules` in the project root for quick reference.
 
 ## Project at a glance
 - **Name**: ve — minimal ncurses-based text editor (C++17)
@@ -319,11 +317,10 @@ handle_key()
   - Fields and local variables: snake_case (`start_line`, `first_seg`)
   - Classes/Structs: PascalCase (`Editor`, `Clipboard`, `Workspace`)
 
-### Development Workflow (TDD)
-- **When Adding Features**: Write test first → Implement minimum code → Refactor
-- **When Fixing Bugs**: Write test that reproduces bug → Fix → Verify → Refactor
-- **Always run tests** after each change to ensure they pass
-- **Never write implementation code** without corresponding tests
+### Development Workflow
+- **When Adding Features**: Implement code, then add tests
+- **When Fixing Bugs**: Fix the bug, then add tests to prevent regressions
+- **Run tests** after changes to ensure they pass
 
 ### Architecture Decisions
 - **Dual workspaces**: Independent editing contexts with shared tempfile

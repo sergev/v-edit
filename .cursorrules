@@ -1,12 +1,5 @@
 # Cursor Rules for ve Editor Project
 
-⚠️ **MANDATORY DEVELOPMENT RULE: Test-Driven Development (TDD)**
-**ALL development in this project MUST follow TDD. NO EXCEPTIONS.**
-- **ALWAYS write tests FIRST** before implementing any feature or bug fix
-- **ALWAYS run tests** after each change to ensure they pass
-- **NEVER write implementation code** without corresponding tests
-- **Red-Green-Refactor cycle**: Write failing test → Implement minimum code → Refactor
-
 ## Project Overview
 - **Name**: ve — minimal ncurses-based text editor (C++17)
 - **Binary**: `ve` (two letters, simple)
@@ -154,15 +147,15 @@ make v_edit_tests
 ## Development Workflow
 
 ### When Adding Features
-1. **Write test first** (TDD Red phase)
-2. **Implement minimum code** to pass test (TDD Green phase)
+1. **Implement the feature**
+2. **Add tests** to verify the feature works
 3. **Run tests** to verify
-4. **Refactor** while keeping tests passing (TDD Refactor phase)
+4. **Refactor** while keeping tests passing
 5. **Ensure all existing tests still pass**
 
 ### When Fixing Bugs
-1. **Write test** that reproduces the bug (TDD Red phase)
-2. **Fix the bug** to make test pass (TDD Green phase)
+1. **Fix the bug**
+2. **Add tests** to prevent the bug from recurring
 3. **Verify fix** doesn't break existing tests
 4. **Refactor** if needed
 
@@ -188,15 +181,14 @@ make -C build install  # Optional
 
 ## Important Notes for AI Assistants
 
-1. **ALWAYS follow TDD** - no implementation without tests first
-2. **Understand the dual-workspace model** before modifying workspace logic
-3. **Respect the current line buffer pattern** when editing line operations
-4. **Maintain singleton pattern** for Editor class (signal handlers depend on it)
-5. **Use snake_case** for methods and variables, PascalCase for classes
-6. **Private members** use underscore suffix, public API does not
-7. **Test isolation** - each test should be independent and runnable standalone
-8. **Check existing tests** for similar patterns before writing new ones
-9. **For detailed features, key bindings, and comprehensive architecture**: See `docs/AI_Prompt.md`
+1. **Understand the dual-workspace model** before modifying workspace logic
+2. **Respect the current line buffer pattern** when editing line operations
+3. **Maintain singleton pattern** for Editor class (signal handlers depend on it)
+4. **Use snake_case** for methods and variables, PascalCase for classes
+5. **Private members** use underscore suffix, public API does not
+6. **Test isolation** - each test should be independent and runnable standalone
+7. **Check existing tests** for similar patterns before writing new ones
+8. **For detailed features, key bindings, and comprehensive architecture**: See `docs/AI_Prompt.md`
 
 ## Repository Structure
 - `/docs/` - Documentation including AI_Prompt.md with comprehensive technical details
@@ -204,6 +196,3 @@ make -C build install  # Optional
 - `/build/` - CMake build output
 - Root level - Source code files (.cpp, .h)
 
----
-
-**Remember: TDD is MANDATORY. Write tests first, always.**

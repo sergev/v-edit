@@ -110,14 +110,8 @@ void Editor::model_init()
 //
 // Main event loop and program flow coordinator.
 //
-int Editor::run(int argc, char **argv)
+int Editor::run(int restart, int argc, char **argv)
 {
-    int restart = 0;
-    if (argc == 1)
-        restart = 1; // restore attempt
-    else if (argc > 1 && argv[1][0] == '-' && argv[1][1] == '\0')
-        restart = 2; // replay
-
     startup(restart);
 
     // Setup signal handlers

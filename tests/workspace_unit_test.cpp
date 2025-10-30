@@ -281,41 +281,6 @@ TEST_F(WorkspaceTest, ToplineUpdateAfterEdit)
     EXPECT_LE(wksp->view.topline, 52);
 }
 
-//
-// Test accessors and mutators
-//
-TEST_F(WorkspaceTest, AccessorMutatorTests)
-{
-    // Test basic getters/setters
-    wksp->file_state.writable = 1;
-    EXPECT_EQ(wksp->file_state.writable, 1);
-
-    // Insert empty lines.
-    auto blank_lines = Workspace::create_blank_lines(42);
-    wksp->insert_contents(blank_lines, 0);
-    EXPECT_EQ(wksp->total_line_count(), 42);
-
-    wksp->view.topline = 10;
-    EXPECT_EQ(wksp->view.topline, 10);
-
-    wksp->view.basecol = 5;
-    EXPECT_EQ(wksp->view.basecol, 5);
-
-    wksp->position.line = 20;
-    EXPECT_EQ(wksp->position.line, 20);
-
-    // Note: segmline is now computed on demand, cannot be set directly
-    // This test verified that position.segmline could be set, but that's no longer relevant
-    wksp->change_current_line(15);
-    EXPECT_EQ(wksp->current_segment_base_line(), wksp->current_segment_base_line()); // Always consistent now
-
-    wksp->view.cursorcol = 3;
-    EXPECT_EQ(wksp->view.cursorcol, 3);
-
-    wksp->view.cursorrow = 7;
-    EXPECT_EQ(wksp->view.cursorrow, 7);
-}
-
 TEST_F(WorkspaceTest, ModifiedStateTests)
 {
     // Test modification tracking

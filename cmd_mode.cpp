@@ -207,10 +207,10 @@ void Editor::handle_key_cmd(int ch)
             } else if (cmd_.size() >= 2 && cmd_.substr(0, 2) == "w ") {
                 // w + to make writable (or other w commands)
                 if (cmd_.size() >= 3 && cmd_[2] == '+') {
-                    wksp_->file_state.writable = 1;
+                    wksp_->file_state.writable = true;
                     status_                    = "File marked writable";
                 } else {
-                    wksp_->file_state.writable = 0;
+                    wksp_->file_state.writable = false;
                     status_                    = "File marked read-only";
                 }
             } else if (cmd_ == "s") {

@@ -35,7 +35,7 @@ struct PositionState {
 struct FileState {
     bool modified{ false };    // track if file has been modified
     bool backup_done{ false }; // track if backup file has been created
-    int writable{ 0 };         // write permission
+    bool writable{ false };    // write permission
 };
 
 //

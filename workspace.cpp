@@ -36,12 +36,12 @@ void Workspace::cleanup_contents()
 void Workspace::reset()
 {
     cleanup_contents();
-    file_state.writable    = 0;
     view.topline           = 0;
     view.basecol           = 0;
     position.line          = 0;
     view.cursorcol         = 0;
     view.cursorrow         = 0;
+    file_state.writable    = false;
     file_state.modified    = false;
     file_state.backup_done = false;
 
@@ -73,7 +73,7 @@ int Workspace::total_line_count() const
 void Workspace::load_text(const std::vector<std::string> &lines)
 {
     reset();
-    file_state.writable = 1;
+    file_state.writable = true;
 
     if (lines.size() > 0) {
         // Write lines to temp file and get a segment
@@ -505,8 +505,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         return 0; // Already at the right position
     }
     if (rel_line >= cursegm_->line_count) {
-        throw std::runtime_error(
-            "breaksegm: inconsistent rel_line after change_current_line()");
+        throw std::runtime_error("breaksegm: inconsistent rel_line after change_current_line()");
     }
 
     //
@@ -621,7 +620,7 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     // NOTE: We do NOT update position.line here.
     // The workspace position is managed by the editor, not by insert_contents.
 
-    file_state.writable = 1; // Mark as edited
+    file_state.writable = true; // Mark as edited
 }
 
 //
@@ -680,7 +679,7 @@ void Workspace::delete_contents(int from, int to)
         cursegm_ = contents_.begin();
     }
 
-    file_state.writable = 1; // Mark as edited
+    file_state.writable = true; // Mark as edited
 }
 
 //
@@ -879,8 +878,7 @@ void Workspace::debug_print(std::ostream &out) const
 {
     out << "Workspace line=" << position.line
         << ", modified=" << (file_state.modified ? "true" : "false")
-        << ", writable=" << file_state.writable
-        << ", original_fd=" << original_fd_ << "\n";
+        << ", writable=" << file_state.writable << ", original_fd=" << original_fd_ << "\n";
 
     // Print segment chain
     int seg_idx = 0;

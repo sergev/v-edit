@@ -381,8 +381,8 @@ std::string Workspace::read_line(int line_no)
 
     // Read line from file using iterator's segment data
     std::string result(line_len - 1, '\0'); // exclude newline
-    if (lseek(cursegm_->file_descriptor, seek_pos, SEEK_SET) >= 0) {
-        read(cursegm_->file_descriptor, static_cast<void *>(&result[0]), result.size());
+    if (result.size() > 0 && lseek(cursegm_->file_descriptor, seek_pos, SEEK_SET) >= 0) {
+        read(cursegm_->file_descriptor, &result[0], result.size());
     }
     return result;
 }
@@ -628,7 +628,9 @@ bool Workspace::catsegm()
     Segment &prev = *prev_it;
 
     // Check if segments can be merged
-    // They must be from the same file (not tail segments) and together have < 127 lines
+    // They must be from the same file (not tail segments), have same file descriptor,
+    // and together have < 127 lines
+    // IMPORTANT: Do not merge if file descriptors are different (e.g., temp file vs original file)
     if (prev.file_descriptor > 0 && prev.file_descriptor == curr.file_descriptor &&
         (prev.line_count + curr.line_count) < 127) {
         // Calculate if they're adjacent

@@ -111,9 +111,8 @@ private:
     bool load_file_segments(const std::string &path);
 
     // Current line buffer operations (prototype's getlin/putline pattern)
-    void get_line(int lno);   // load line from workspace into current_line buffer
-    void put_line();          // write current_line back to workspace if modified
-    void ensure_line_saved(); // flush current line if modified
+    void get_line(int lno); // load line from workspace into current_line buffer
+    void put_line();        // write current_line back to workspace if modified
 
     // Session state
     void save_state();

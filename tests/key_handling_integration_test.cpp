@@ -405,9 +405,9 @@ TEST_F(KeyHandlingIntegrationTest, PrintableCharacterRange)
     editor->get_line(0);
 
     // Test boundary characters (32 = space, 126 = ~)
-    editor->handle_key_edit(' ');  // 32
-    editor->handle_key_edit('A');  // 65
-    editor->handle_key_edit('~');  // 126
+    editor->handle_key_edit(' '); // 32
+    editor->handle_key_edit('A'); // 65
+    editor->handle_key_edit('~'); // 126
 
     EXPECT_EQ(editor->wksp_->read_line(0), " A~");
 }

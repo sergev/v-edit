@@ -432,7 +432,7 @@ void Editor::insertlines(int from, int number)
     if (from < 0 || number < 1)
         return;
 
-    ensure_line_saved();
+    put_line();
 
     // Insert blank lines using workspace segments
     auto blank = wksp_->create_blank_lines(number);
@@ -449,7 +449,7 @@ void Editor::deletelines(int from, int number)
     if (from < 0 || number < 1)
         return;
 
-    ensure_line_saved();
+    put_line();
 
     // Save to clipboard (delete buffer)
     picklines(from, number);
@@ -468,7 +468,7 @@ void Editor::splitline(int line, int col)
     if (line < 0 || col < 0)
         return;
 
-    ensure_line_saved();
+    put_line();
 
     // Get the line using current_line_ buffer
     get_line(line);
@@ -515,7 +515,7 @@ void Editor::combineline(int line, int col)
     if (line + 1 >= total)
         return; // No next line to combine
 
-    ensure_line_saved();
+    put_line();
 
     // Get both lines
     get_line(line);

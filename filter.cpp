@@ -28,7 +28,7 @@ bool Editor::execute_external_filter(const std::string &command, int start_line,
         return false;
     }
 
-    ensure_line_saved();
+    put_line();
 
     // Create temporary files for input and output
     std::string input_file  = "/tmp/v-edit_filter_input_" + std::to_string(getpid());

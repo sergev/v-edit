@@ -9,7 +9,7 @@ void Editor::picklines(int startLine, int count)
         return;
     }
 
-    ensure_line_saved(); // Save any unsaved modifications
+    put_line(); // Save any unsaved modifications
 
     // Read lines from workspace segments
     std::vector<std::string> lines;
@@ -32,7 +32,7 @@ void Editor::paste(int afterLine, int atCol)
         return;
     }
 
-    ensure_line_saved(); // Save any unsaved modifications
+    put_line(); // Save any unsaved modifications
 
     const std::vector<std::string> &clip_lines = clipboard_.get_lines();
 
@@ -71,7 +71,7 @@ void Editor::pickspaces(int line, int col, int number, int nl)
         return;
     }
 
-    ensure_line_saved(); // Save any unsaved modifications
+    put_line(); // Save any unsaved modifications
 
     // Read lines from workspace and extract rectangular block
     std::vector<std::string> lines;
@@ -101,7 +101,7 @@ void Editor::closespaces(int line, int col, int number, int nl)
     pickspaces(line, col, number, nl); // copy first
 
     // Now delete the rectangular area using get_line/put_line pattern
-    ensure_line_saved();
+    put_line();
     auto total = wksp_->total_line_count();
     for (int i = 0; i < nl; ++i) {
         if (line + i < total) {
@@ -123,7 +123,7 @@ void Editor::closespaces(int line, int col, int number, int nl)
 void Editor::openspaces(int line, int col, int number, int nl)
 {
     // Insert spaces in rectangular area using get_line/put_line pattern
-    ensure_line_saved();
+    put_line();
     auto total = wksp_->total_line_count();
     for (int i = 0; i < nl; ++i) {
         if (line + i < total) {

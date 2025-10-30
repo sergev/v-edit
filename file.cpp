@@ -12,10 +12,17 @@
 //
 void Editor::get_line(int lno)
 {
-    current_line_modified_ = false;
-    current_line_no_       = lno;
+    if (current_line_no_ == lno) {
+        // We already have this line.
+        return;
+    }
 
-    current_line_ = wksp_->read_line(lno);
+    // Save any unsaved modifications
+    put_line();
+
+    current_line_          = wksp_->read_line(lno);
+    current_line_no_       = lno;
+    current_line_modified_ = false;
 }
 
 //
@@ -23,24 +30,10 @@ void Editor::get_line(int lno)
 //
 void Editor::put_line()
 {
-    if (!current_line_modified_ || current_line_no_ < 0) {
-        current_line_no_ = -1;
-        return;
-    }
-
-    wksp_->put_line(current_line_no_, current_line_);
-    current_line_modified_ = false;
-    current_line_no_       = -1;
-}
-
-//
-// Ensure current line is saved before operations.
-//
-void Editor::ensure_line_saved()
-{
     if (current_line_modified_ && current_line_no_ >= 0) {
-        put_line();
+        wksp_->put_line(current_line_no_, current_line_);
     }
+    current_line_modified_ = false;
 }
 
 //
@@ -87,7 +80,7 @@ bool Editor::load_file_segments(const std::string &path)
 //
 void Editor::save_file()
 {
-    ensure_line_saved(); // Save any unsaved line modifications
+    put_line(); // Save any unsaved line modifications
 
     // Create backup file if not already done and file exists
     if (!wksp_->file_state.backup_done && filename_ != "untitled") {
@@ -124,7 +117,7 @@ void Editor::save_file()
 //
 void Editor::save_as(const std::string &new_filename)
 {
-    ensure_line_saved(); // Save any unsaved line modifications
+    put_line(); // Save any unsaved line modifications
 
     // Unlink the original file to ensure backup is not affected by the write
     unlink(new_filename.c_str());

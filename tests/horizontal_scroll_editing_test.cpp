@@ -405,7 +405,7 @@ TEST_F(HorizontalScrollEditingTest, ComplexEditingSequenceWithScroll)
 
     // Now delete it using backend method
     LoadLine(0);
-    editor->cursor_col_ = 5;   // Moved forward after insert
+    editor->cursor_col_ = 5;       // Moved forward after insert
     EXPECT_EQ(GetActualCol(), 13); // 8 + 5 = 13
 
     editor->edit_backspace();

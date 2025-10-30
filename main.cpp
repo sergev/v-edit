@@ -20,12 +20,11 @@ static void print_usage(const char *progname)
     std::cout << "  (no args)      Restore last session" << std::endl;
     std::cout << std::endl;
     std::cout << "Keys:" << std::endl;
-    std::cout << "  ^A        Enter command mode" << std::endl;
+    std::cout << "  ^A or F1  Enter command mode" << std::endl;
+    std::cout << "  ^A q      Save and quit" << std::endl;
     std::cout << "  ^A qa     Quit without save" << std::endl;
-    std::cout << "  /text     Search forward" << std::endl;
-    std::cout << "  ?text     Search backward" << std::endl;
-    std::cout << "  n         Repeat search" << std::endl;
     std::cout << "  F2        Save file" << std::endl;
+    std::cout << "  F3        Show help, switch workspaces" << std::endl;
 }
 
 int main(int argc, char *argv[])

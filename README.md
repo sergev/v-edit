@@ -10,6 +10,12 @@ make -C build
 make -C build install  # Optional
 ```
 
+## Development
+
+**⚠️ MANDATORY: All development in this project MUST follow Test-Driven Development (TDD). Write tests first, then implement.**
+
+See [Testing.md](docs/Testing.md) for test execution details.
+
 ## Usage
 
 ```bash

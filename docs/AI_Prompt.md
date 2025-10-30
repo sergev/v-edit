@@ -1,6 +1,10 @@
 # Project AI Prompt
 
-This file captures context and conventions for assisting on this repository. Load it before working in this codebase.
+This file captures comprehensive context and conventions for assisting on this repository. This is the detailed reference guide.
+
+**Note**: For Cursor IDE users, see `.cursorrules` in the project root for quick reference and mandatory TDD requirements.
+
+⚠️ **IMPORTANT**: All development MUST follow Test-Driven Development (TDD). Write tests first, then implement.
 
 ## Project at a glance
 - **Name**: ve — minimal ncurses-based text editor (C++17)
@@ -219,8 +223,8 @@ class Macro {
 ### CMake Structure
 ```cmake
 v_edit_lib (static)
-    ↳ core.cpp display.cpp input.cpp edit.cpp file.cpp files.cpp
-      clipboard.cpp session.cpp filter.cpp segments.cpp signal.cpp
+    ↳ core.cpp display.cpp edit_mode.cpp cmd_mode.cpp file.cpp files.cpp
+      clipboard.cpp session.cpp filter.cpp segment.cpp signal.cpp macro.cpp
 
 ve (executable) ← v_edit_lib
 
@@ -233,18 +237,25 @@ v_edit_tests ← v_edit_lib + GoogleTest + TmuxDriver
 - **Install**: Both binary and library installed
 - **Tests**: GoogleTest 1.15.2 with TmuxDriver for ncurses UI testing
 
-Typical build:
+### Build Commands
 ```bash
-cmake -B build
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
 make -C build
 make -C build install  # Optional
 ```
 
 ### Testing Framework
 - **Unit tests**: Direct Editor/Workspace instantiation
-- **Integration tests**: tmux-based UI testing
+- **Integration tests**: tmux-based UI testing using TmuxDriver
 - **Test isolation**: Unique tmux socket per PID
-- **Mock requirement**: GoogleTest with disabled GMock
+- **Framework**: GoogleTest 1.15.2 with TmuxDriver for ncurses UI testing
+
+### Running Tests
+```bash
+cd build
+make v_edit_tests
+./tests/v_edit_tests
+```
 
 ## Key Implementation Patterns
 
@@ -306,7 +317,13 @@ handle_key()
   - Public API: no suffix (`get_lines()`, `topline()`)
   - Methods: snake_case (`handle_key()`, `draw()`)
   - Fields and local variables: snake_case (`start_line`, `first_seg`)
-  - Classes/Structs: PascalCase (`Editor`, `Clipboard`)
+  - Classes/Structs: PascalCase (`Editor`, `Clipboard`, `Workspace`)
+
+### Development Workflow (TDD)
+- **When Adding Features**: Write test first → Implement minimum code → Refactor
+- **When Fixing Bugs**: Write test that reproduces bug → Fix → Verify → Refactor
+- **Always run tests** after each change to ensure they pass
+- **Never write implementation code** without corresponding tests
 
 ### Architecture Decisions
 - **Dual workspaces**: Independent editing contexts with shared tempfile
@@ -325,6 +342,9 @@ handle_key()
 - Create focused unit tests to reproduce the issue
 - Insert debug prints for visibility
 - Use `lldb` for debugging crashes
+
+### Code Navigation
+- **compile_commands.json**: Generated in `build/` directory after CMake configuration. Used by LSP servers (clangd) for accurate code analysis and IDE navigation.
 
 ## Repository Structure
 ```

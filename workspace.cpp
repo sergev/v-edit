@@ -145,18 +145,12 @@ int Workspace::change_current_line(int lno)
     if (cursegm_ == contents_.end())
         throw std::runtime_error("change_current_line: empty workspace");
 
-    // Special case: if we're positioned on a tail segment, all lines are beyond end of file
-    if (cursegm_->is_empty()) {
-        position.line = lno;
-        return 1; // Line is beyond end of file
-    }
-
     // Move forward to find the segment containing lno
     while (lno >= position.segmline + cursegm_->line_count) {
         if (cursegm_->is_empty()) {
-            // Hit tail segment - line is beyond end of file
-            // Return 1 to signal that line is beyond end of file
-            position.line = position.segmline;
+            // Hit tail segment.
+            // Return 1 to signal that line is beyond end of file.
+            position.line = lno;
             return 1;
         }
         position.segmline += cursegm_->line_count;
@@ -468,134 +462,59 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     if (contents_.empty())
         throw std::runtime_error("breaksegm: empty workspace");
 
-    // Special case: empty workspace and line_no == 0 - position at tail
-    // Return 1 to indicate line is beyond EOF (needs to be created by caller)
-    if (total_line_count() == 0 && line_no == 0) {
-        cursegm_          = contents_.begin(); // Position at tail segment
-        position.segmline = 0;
-        position.line     = 0;
-        return 1; // Line is beyond EOF, no lines created
-    }
-
     // Position workspace to the target line
     if (change_current_line(line_no)) {
-        // Line is beyond end of file - create blank lines to extend it
-        // This matches the prototype behavior
-        // Calculate how many blank lines to create
-        // position.line was set by change_current_line to segmline of the tail segment
-        // Check if workspace is empty (only has a tail segment)
-        bool is_empty = contents_.front().is_empty();
+        //
+        // Line is beyond end of file - create blank lines to extend it.
+        //
 
-        int num_blank_lines;
-
-        if (is_empty) {
-            // Empty file, create lines from 0 up to (but not including) line_no
-            // The caller will provide the content for line_no itself
-            num_blank_lines = line_no;
-        } else {
-            // Normal case: create lines from position.line up to (but not including) line_no
-            // The caller will provide the content for line_no itself
-            num_blank_lines = (line_no - position.line);
+        // Calculate how many blank lines to create.
+        int num_blank_lines = line_no - position.segmline;
+        if (num_blank_lines < 0)
+            throw std::runtime_error("breaksegm: bad num_blank_lines");
+        if (num_blank_lines == 0) {
+            return 1; // Already at the right position
         }
-
-        // If no blank lines are needed (caller will insert at current position),
-        // the cursegm_ is already at the tail segment from change_current_line
-        // The tail segment's position should be at the current total line count
-        if (num_blank_lines <= 0) {
-            // Keep cursegm_ at the tail, position.segmline should be the start of tail
-            // which is position.line (already set by change_current_line)
-            position.segmline = position.line;
-            position.line     = line_no;
-            return 1; // Signal that line is beyond EOF but no lines were created
-        }
-
-        // Create blank lines using new list-based approach
-        auto blank_segments = create_blank_lines(num_blank_lines);
-
-        // Find where to insert blank segments (before tail segment)
-        auto insert_pos = cursegm_;
-
-        // Record where blank segments start before splicing
-        int start_line = is_empty ? 0 : position.line;
 
         // Get iterator to first blank segment before splicing (since splice will move them)
+        auto blank_segments  = create_blank_lines(num_blank_lines);
         auto first_blank_seg = blank_segments.begin();
 
-        // Insert blank segments
-        contents_.splice(insert_pos, blank_segments);
+        // Insert blank lines.
+        contents_.splice(cursegm_, blank_segments);
+        cursegm_ = first_blank_seg;
 
-        // After splicing, first_blank_seg is now part of contents_ and points to the first inserted
-        // segment Position to it
-        cursegm_          = first_blank_seg;
-        position.segmline = start_line;
-        position.line     = start_line;
-
-        // Walk forward through the inserted segments to find the one containing line_no
-        while (cursegm_ != insert_pos && line_no >= position.segmline + cursegm_->line_count) {
-            position.segmline += cursegm_->line_count;
-            ++cursegm_;
-        }
-
-        position.line = line_no;
+        // Position workspace to the target line
+        if (change_current_line(line_no))
+            throw std::runtime_error("breaksegm: bad blank segments");
 
         return 1; // Signal that we created lines
     }
 
     // Now we're at the segment containing line_no
     int rel_line = line_no - position.segmline;
-
     if (rel_line == 0) {
         return 0; // Already at the right position
     }
-
-    // Special case: blank line segment (file_descriptor == -1) - split by line_lengths array
-    if (cursegm_->file_descriptor == -1) {
-        if (rel_line >= cursegm_->line_count) {
-            throw std::runtime_error(
-                "breaksegm: inconsistent rel_line after change_current_line()");
-        }
-
-        // Find where to insert the new segment (after current segment)
-        auto insert_pos = std::next(cursegm_);
-
-        // Create new segment in place
-        auto new_it             = contents_.insert(insert_pos, Segment());
-        Segment &new_seg        = *new_it;
-        new_seg.line_count      = cursegm_->line_count - rel_line;
-        new_seg.file_descriptor = -1; // Still blank lines
-        new_seg.file_offset     = cursegm_->file_offset;
-
-        // Copy remaining sizes
-        for (size_t i = rel_line; i < cursegm_->line_lengths.size(); ++i) {
-            new_seg.line_lengths.push_back(cursegm_->line_lengths[i]);
-        }
-
-        // Truncate original segment sizes
-        cursegm_->line_lengths.resize(rel_line);
-        cursegm_->line_count = rel_line;
-
-        // Update workspace position
-        cursegm_          = new_it;
-        position.segmline = line_no;
-
-        return 0;
+    if (rel_line >= cursegm_->line_count) {
+        throw std::runtime_error(
+            "breaksegm: inconsistent rel_line after change_current_line()");
     }
 
-    // Normal file segment - record where we are in the data
-    size_t split_point = rel_line;
-
-    // Walk through the first rel_line lines to calculate offset
-    long offs = 0;
-    for (int i = 0; i < rel_line; ++i) {
-        if (i >= cursegm_->line_count) {
-            split_point = cursegm_->line_count;
-            break;
-        }
-        offs += cursegm_->line_lengths[i];
-    }
+    //
+    // Either normal file segment or blank lines.
+    //
 
     // Find where to insert the new segment (after current segment)
     auto insert_pos = std::next(cursegm_);
+
+    // Walk through the first rel_line lines to calculate offset.
+    long offs = 0;
+    if (cursegm_->file_descriptor > 0) {
+        for (int i = 0; i < rel_line; ++i) {
+            offs += cursegm_->line_lengths[i];
+        }
+    }
 
     // Create new segment in place
     auto new_it             = contents_.insert(insert_pos, Segment());
@@ -604,19 +523,18 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     new_seg.file_descriptor = cursegm_->file_descriptor;
     new_seg.file_offset     = cursegm_->file_offset + offs;
 
-    // Copy remaining data bytes from split_point to end
-    for (size_t i = split_point; i < cursegm_->line_count; ++i) {
+    // Copy remaining sizes from split point to end
+    for (size_t i = rel_line; i < cursegm_->line_count; ++i) {
         new_seg.line_lengths.push_back(cursegm_->line_lengths[i]);
     }
 
-    // Truncate original segment data - keep only first rel_line data
-    cursegm_->line_lengths.resize(split_point);
+    // Truncate original sizes - keep only first rel_line data
+    cursegm_->line_lengths.resize(rel_line);
     cursegm_->line_count = rel_line;
 
     // Update workspace position
     cursegm_          = new_it;
     position.segmline = line_no;
-
     return 0;
 }
 

@@ -5,11 +5,11 @@
 //
 // Start status line color highlighting.
 //
-void Editor::start_status_color()
+void Editor::start_color(Color pair)
 {
     // Use colors if available, otherwise use reverse video
     if (has_colors()) {
-        attron(COLOR_PAIR(1));
+        attron(COLOR_PAIR(pair));
     } else {
         attron(A_REVERSE);
     }
@@ -18,37 +18,11 @@ void Editor::start_status_color()
 //
 // End status line color highlighting.
 //
-void Editor::end_status_color()
+void Editor::end_color(Color pair)
 {
     // Turn off status line coloring
     if (has_colors()) {
-        attroff(COLOR_PAIR(1));
-    } else {
-        attroff(A_REVERSE);
-    }
-}
-
-//
-// Start color highlighting for cursor position.
-//
-void Editor::start_tag_color()
-{
-    // Use colors if available, otherwise use reverse video
-    if (has_colors()) {
-        attron(COLOR_PAIR(2));
-    } else {
-        attron(A_REVERSE);
-    }
-}
-
-//
-// End color highlighting for cursor position.
-//
-void Editor::end_tag_color()
-{
-    // Turn off tag line coloring
-    if (has_colors()) {
-        attroff(COLOR_PAIR(2));
+        attroff(COLOR_PAIR(pair));
     } else {
         attroff(A_REVERSE);
     }
@@ -59,10 +33,10 @@ void Editor::end_tag_color()
 //
 void Editor::draw_status(const std::string &msg)
 {
-    start_status_color();
+    start_color(Color::STATUS);
     mvhline(nlines_ - 1, 0, ' ', ncols_);
     mvaddnstr(nlines_ - 1, 0, msg.c_str(), ncols_ - 1);
-    end_status_color();
+    end_color(Color::STATUS);
 }
 
 //
@@ -70,7 +44,7 @@ void Editor::draw_status(const std::string &msg)
 //
 void Editor::draw_tag()
 {
-    start_tag_color();
+    start_color(Color::POSITION);
     if (area_selection_mode_) {
         int c0, r0;
         params_.get_area_start(c0, r0);
@@ -79,7 +53,7 @@ void Editor::draw_tag()
         move(cursor_line_, cursor_col_);
     }
     addch('@');
-    end_tag_color();
+    end_color(Color::POSITION);
 }
 
 //
@@ -132,12 +106,15 @@ void Editor::wksp_redraw()
         if (r + wksp_->view.topline < total) {
             lineText = wksp_->read_line(r + wksp_->view.topline);
             // horizontal offset and continuation markers
+            bool clipped = false;
             bool truncated = false;
             if (wksp_->view.basecol > 0 && (int)lineText.size() > wksp_->view.basecol) {
                 lineText.erase(0, (size_t)wksp_->view.basecol);
+                clipped = true;
             } else if (wksp_->view.basecol > 0 && (int)lineText.size() <= wksp_->view.basecol) {
                 // Beyond line content - show blank spaces (virtual column position)
                 lineText.clear();
+                clipped = true;
             }
             if ((int)lineText.size() > ncols_ - 1) {
                 truncated = true;
@@ -145,14 +122,20 @@ void Editor::wksp_redraw()
             }
             mvaddnstr(r, 0, lineText.c_str(), ncols_ - 1);
             if (truncated) {
+                start_color(Color::TRUNCATION);
                 mvaddch(r, ncols_ - 2, '~');
+                end_color(Color::TRUNCATION);
             }
-            if (wksp_->view.basecol > 0 && !lineText.empty()) {
+            if (clipped) {
+                start_color(Color::TRUNCATION);
                 mvaddch(r, 0, '<');
+                end_color(Color::TRUNCATION);
             }
         } else {
             // Beyond end of file - show virtual line marker
+            start_color(Color::EMPTY);
             mvaddch(r, 0, '~');
+            end_color(Color::EMPTY);
         }
     }
 }

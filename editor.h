@@ -89,10 +89,16 @@ private:
     void draw_status(const std::string &msg);
     void draw_tag();
     void wksp_redraw();
-    void start_status_color();
-    void end_status_color();
-    void start_tag_color();
-    void end_tag_color();
+
+    // Colors
+    enum class Color {
+        EMPTY = 1,  // Empty line
+        STATUS,     // Status line
+        POSITION,   // Cursor position
+        TRUNCATION, // Truncation
+    };
+    void start_color(Color pair);
+    void end_color(Color pair);
 
     // Basic editing/input
     //

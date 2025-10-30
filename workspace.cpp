@@ -488,16 +488,24 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         int num_blank_lines;
 
         if (is_empty) {
-            // Empty file, create lines from 0 to line_no
-            num_blank_lines = line_no + 1;
+            // Empty file, create lines from 0 up to (but not including) line_no
+            // The caller will provide the content for line_no itself
+            num_blank_lines = line_no;
         } else {
-            // Normal case: create lines from position.line to line_no
-            num_blank_lines = (line_no - position.line) + 1;
+            // Normal case: create lines from position.line up to (but not including) line_no
+            // The caller will provide the content for line_no itself
+            num_blank_lines = (line_no - position.line);
         }
 
-        // Must create at least 1 blank line
+        // If no blank lines are needed (caller will insert at current position),
+        // the cursegm_ is already at the tail segment from change_current_line
+        // The tail segment's position should be at the current total line count
         if (num_blank_lines <= 0) {
-            num_blank_lines = 1;
+            // Keep cursegm_ at the tail, position.segmline should be the start of tail
+            // which is position.line (already set by change_current_line)
+            position.segmline = position.line;
+            position.line     = line_no;
+            return 1; // Signal that line is beyond EOF but no lines were created
         }
 
         // Create blank lines using new list-based approach

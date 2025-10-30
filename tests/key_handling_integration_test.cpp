@@ -277,17 +277,40 @@ TEST_F(KeyHandlingIntegrationTest, CharacterInsertionFooLineCount)
 TEST_F(KeyHandlingIntegrationTest, CharacterInsertionFooBarQuz)
 {
     editor->handle_key_edit('f');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('o');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('o');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('\n');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('b');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('a');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('r');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('\n');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('q');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('u');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('z');
+    editor->wksp_->debug_print(std::cout);
+
     editor->handle_key_edit('\n');
+    editor->wksp_->debug_print(std::cout);
 
     EXPECT_EQ(editor->wksp_->read_line(0), "foo");
     EXPECT_EQ(editor->wksp_->read_line(1), "bar");

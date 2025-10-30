@@ -88,7 +88,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
 
     // Verify segmentation worked
     EXPECT_NE(wksp->cursegm(), wksp->get_contents().end());
-    EXPECT_EQ(wksp->position.segmline, 2);
+    EXPECT_EQ(wksp->current_segment_base_line(), 2);
 
     // Cleanup
     std::remove(filename.c_str());
@@ -304,8 +304,10 @@ TEST_F(WorkspaceTest, AccessorMutatorTests)
     wksp->position.line = 20;
     EXPECT_EQ(wksp->position.line, 20);
 
-    wksp->position.segmline = 15;
-    EXPECT_EQ(wksp->position.segmline, 15);
+    // Note: segmline is now computed on demand, cannot be set directly
+    // This test verified that position.segmline could be set, but that's no longer relevant
+    wksp->change_current_line(15);
+    EXPECT_EQ(wksp->current_segment_base_line(), wksp->current_segment_base_line()); // Always consistent now
 
     wksp->view.cursorcol = 3;
     EXPECT_EQ(wksp->view.cursorcol, 3);

@@ -26,8 +26,7 @@ struct ViewState {
 // Position state (navigation within file)
 //
 struct PositionState {
-    int line{ 0 };     // current line number
-    int segmline{ 0 }; // first line in current segment
+    int line{ 0 }; // current line number
 };
 
 //
@@ -77,9 +76,13 @@ public:
     std::string read_line(int line_no);
 
     // Change cursegm_ to the segment containing the specified line
-    // Also updates segmline_, and line_ to position the workspace at line number
+    // Also updates line_ to position the workspace at line number
     // Throws std::runtime_error for invalid line numbers or corrupted contents
     int change_current_line(int lno);
+
+    // Compute the line number of the first line in the current segment
+    // by walking backwards from cursegm_ and summing line counts
+    int current_segment_base_line() const;
 
     // Clean up segment list
     void cleanup_contents();

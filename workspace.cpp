@@ -40,7 +40,6 @@ void Workspace::reset()
     view.topline           = 0;
     view.basecol           = 0;
     position.line          = 0;
-    position.segmline      = 0;
     view.cursorcol         = 0;
     view.cursorrow         = 0;
     file_state.modified    = false;
@@ -90,9 +89,8 @@ void Workspace::load_text(const std::vector<std::string> &lines)
     // Tail segment already exists from reset(), no need to add another
 
     // Set cursegm_ to the first segment (the content, not the tail)
-    cursegm_          = contents_.begin();
-    position.segmline = 0;
-    position.line     = 0;
+    cursegm_      = contents_.begin();
+    position.line = 0;
 }
 
 //
@@ -118,19 +116,33 @@ void Workspace::load_text(const std::string &text)
 }
 
 //
+// Compute the line number of the first line in the current segment.
+//
+// TODO: This function can be optimized by caching the computed value,
+// TODO: and invalidating the cached value when contents change.
+//
+int Workspace::current_segment_base_line() const
+{
+    int segmline = 0;
+    for (auto it = contents_.begin(); it != cursegm_; ++it) {
+        segmline += it->line_count;
+    }
+    return segmline;
+}
+
+//
 // Set current segment to the segment containing the specified line number.
 // Based on wksp_position() from prototype/r.edit.c
 //
 // This method positions the workspace by updating:
 //   - cursegm_: points to the segment containing the line
-//   - segmline_: first line number in the current segment
 //   - line_: the absolute line number requested
 //
 // The method walks the segment chain forward or backward to find the segment
 // containing the requested line.
 //
 // Returns:
-//   0 - success, cursegm_ and segmline_ updated to the correct segment
+//   0 - success, cursegm_ updated to the correct segment
 //   1 - line number is beyond end of file (hit tail segment)
 //
 // Throws:
@@ -145,15 +157,17 @@ int Workspace::change_current_line(int lno)
     if (cursegm_ == contents_.end())
         throw std::runtime_error("change_current_line: empty workspace");
 
+    int segmline = current_segment_base_line();
+
     // Move forward to find the segment containing lno
-    while (lno >= position.segmline + cursegm_->line_count) {
+    while (lno >= segmline + cursegm_->line_count) {
         if (cursegm_->is_empty()) {
             // Hit tail segment.
             // Return 1 to signal that line is beyond end of file.
             position.line = lno;
             return 1;
         }
-        position.segmline += cursegm_->line_count;
+        segmline += cursegm_->line_count;
 
         // Check if there's a next segment before moving
         auto next_it = std::next(cursegm_);
@@ -164,16 +178,11 @@ int Workspace::change_current_line(int lno)
     }
 
     // Move backward to find the segment containing lno
-    while (lno < position.segmline) {
+    while (lno < segmline) {
         if (cursegm_ == contents_.begin())
             throw std::runtime_error("change_current_line: null previous segment");
         --cursegm_;
-        position.segmline -= cursegm_->line_count;
-    }
-
-    // Consistency check: segmline should not be negative
-    if (position.segmline < 0) {
-        throw std::runtime_error("change_current_line: line count lost (segmline < 0)");
+        segmline -= cursegm_->line_count;
     }
 
     // Update workspace state
@@ -288,9 +297,8 @@ void Workspace::load_file(int fd)
         contents_.emplace_back();
     }
 
-    cursegm_          = contents_.begin();
-    position.segmline = 0;
-    position.line     = 0;
+    cursegm_      = contents_.begin();
+    position.line = 0;
 }
 
 //
@@ -347,7 +355,7 @@ std::string Workspace::read_line(int line_no)
     }
 
     // Calculate relative line position within the current segment
-    int rel_line = line_no - position.segmline;
+    int rel_line = line_no - current_segment_base_line();
 
     // Bounds checking: ensure rel_line is within segment bounds
     if (rel_line < 0 || rel_line >= static_cast<int>(cursegm_->line_lengths.size())) {
@@ -469,7 +477,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
         //
 
         // Calculate how many blank lines to create.
-        int num_blank_lines = line_no - position.segmline;
+        int num_blank_lines = line_no - current_segment_base_line();
         if (num_blank_lines < 0)
             throw std::runtime_error("breaksegm: bad num_blank_lines");
         if (num_blank_lines == 0) {
@@ -492,7 +500,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     }
 
     // Now we're at the segment containing line_no
-    int rel_line = line_no - position.segmline;
+    int rel_line = line_no - current_segment_base_line();
     if (rel_line == 0) {
         return 0; // Already at the right position
     }
@@ -533,8 +541,7 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     cursegm_->line_count = rel_line;
 
     // Update workspace position
-    cursegm_          = new_it;
-    position.segmline = line_no;
+    cursegm_ = new_it;
     return 0;
 }
 
@@ -577,9 +584,6 @@ bool Workspace::catsegm()
             // Ensure our positioning is still valid after the merge.
             // The current line should still be valid, so re-position to it.
 
-            // Reset segmline to allow proper repositioning
-            position.segmline = 0;
-
             // Re-position properly using change_current_line logic
             change_current_line(position.line);
 
@@ -614,7 +618,9 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     cursegm_ = contents_.begin();
     std::advance(cursegm_, before_size);
 
-    position.segmline   = at;
+    // NOTE: We do NOT update position.line here.
+    // The workspace position is managed by the editor, not by insert_contents.
+
     file_state.writable = 1; // Mark as edited
 }
 
@@ -670,10 +676,8 @@ void Workspace::delete_contents(int from, int to)
     if (!contents_.empty()) {
         cursegm_ =
             (after_delete_it != contents_.end()) ? after_delete_it : std::prev(contents_.end());
-        position.segmline = from;
     } else {
-        cursegm_          = contents_.begin();
-        position.segmline = 0;
+        cursegm_ = contents_.begin();
     }
 
     file_state.writable = 1; // Mark as edited
@@ -798,7 +802,9 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     if (break_result == 0) {
         // Normal case: line exists, split it
         // Now cursegm_ points to the segment starting at line_no
-        int segmline       = position.segmline;
+
+        // Check if we need to isolate the line AFTER the first breaksegm
+        // because breaksegm may have already isolated it into a single-line segment
         bool only_one_line = (cursegm_->line_count == 1);
 
         if (!only_one_line) {
@@ -811,8 +817,7 @@ void Workspace::put_line(int line_no, const std::string &line_content)
 
         // Now cursegm_ points to the segment containing only line_no
         // Replace it with new segment
-        *cursegm_         = std::move(*new_seg_it);
-        position.segmline = segmline;
+        *cursegm_ = std::move(*new_seg_it);
 
         // Try to merge adjacent segments
         catsegm();
@@ -823,21 +828,19 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         // breaksegm signaled line is beyond EOF (may or may not have created blank lines)
         // The workspace is now positioned at line_no, which may be at a tail or blank segment
         auto blank_seg_it = cursegm_;
-        int segmline      = position.segmline;
 
         // Special case: if we're at a tail segment (line_count == 0), insert before it
         if (blank_seg_it->line_count == 0) {
             contents_.splice(blank_seg_it, temp_segments);
             auto inserted_seg   = std::prev(blank_seg_it);
             cursegm_            = inserted_seg;
-            position.segmline   = segmline;
             position.line       = line_no;
             file_state.modified = true;
             return;
         }
 
         // Check if line_no is at the start of the segment
-        bool at_segment_start = (line_no == segmline);
+        bool at_segment_start = (line_no == current_segment_base_line());
 
         if (!at_segment_start || blank_seg_it->line_count > 1) {
             // Need to isolate line_no into its own segment
@@ -846,7 +849,6 @@ void Workspace::put_line(int line_no, const std::string &line_content)
                 breaksegm(line_no, false);
                 // Now cursegm_ points to segment starting at line_no
                 blank_seg_it = cursegm_;
-                segmline     = line_no;
             }
 
             // Then split after line_no if there are more lines in the segment
@@ -862,9 +864,8 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         // Replace it with the content segment
         *blank_seg_it = std::move(*new_seg_it);
 
-        cursegm_          = blank_seg_it;
-        position.segmline = segmline;
-        position.line     = line_no;
+        cursegm_      = blank_seg_it;
+        position.line = line_no;
 
         // Mark workspace as modified
         file_state.modified = true;
@@ -877,7 +878,6 @@ void Workspace::put_line(int line_no, const std::string &line_content)
 void Workspace::debug_print(std::ostream &out) const
 {
     out << "Workspace line=" << position.line
-        << ", segmline=" << position.segmline
         << ", modified=" << (file_state.modified ? "true" : "false")
         << ", writable=" << file_state.writable
         << ", original_fd=" << original_fd_ << "\n";

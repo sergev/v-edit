@@ -427,17 +427,17 @@ TEST_F(EditorTest, SetCurrentSegmentUpdatesSegmline)
 
     // Set current segment at line 0
     editor->wksp_->change_current_line(0);
-    EXPECT_EQ(editor->wksp_->position.segmline, 0);
+    EXPECT_EQ(editor->wksp_->current_segment_base_line(), 0);
 
     // Set current segment at line 10
     editor->wksp_->change_current_line(10);
-    int segmline10 = editor->wksp_->position.segmline;
+    int segmline10 = editor->wksp_->current_segment_base_line();
     EXPECT_GE(segmline10, 0);
     EXPECT_LE(segmline10, 10);
 
     // Set current segment at line 15
     editor->wksp_->change_current_line(15);
-    int segmline15 = editor->wksp_->position.segmline;
+    int segmline15 = editor->wksp_->current_segment_base_line();
     EXPECT_GE(segmline15, segmline10);
     EXPECT_LE(segmline15, 15);
 }
@@ -455,7 +455,7 @@ TEST_F(EditorTest, SetCurrentSegmentBackwardMovement)
     auto startSeg_it = editor->wksp_->cursegm();
 
     EXPECT_EQ(editor->wksp_->position.line, 0);
-    EXPECT_EQ(editor->wksp_->position.segmline, 0);
+    EXPECT_EQ(editor->wksp_->current_segment_base_line(), 0);
 }
 
 TEST_F(EditorTest, SetCurrentSegmentForwardMovement)

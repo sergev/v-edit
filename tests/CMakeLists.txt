@@ -40,6 +40,7 @@ set(TEST_SOURCES
     basic_editing_test.cpp
     horizontal_test.cpp
     input_test.cpp
+    virtual_position_test.cpp
     TmuxDriver.cpp
 )
 

@@ -406,9 +406,14 @@ bool Workspace::write_file(const std::string &path)
         const auto &seg = *it;
 
         // Skip trailing blank lines (blank segments after the last content segment)
-        if (seg.file_descriptor == -1 && last_nonblank != contents_.end() &&
-            std::distance(last_nonblank, it) > 0) {
-            continue;
+        // Note: Only skip blanks that come AFTER the last non-blank in iterator order
+        if (seg.file_descriptor == -1 && last_nonblank != contents_.end()) {
+            // Check if this blank segment comes after the last non-blank segment
+            // Compare indices directly: if it > last_nonblank, then it comes after
+            if (it != last_nonblank && std::distance(contents_.begin(), it) >
+                                           std::distance(contents_.begin(), last_nonblank)) {
+                continue;
+            }
         }
 
         // Calculate total bytes for this segment

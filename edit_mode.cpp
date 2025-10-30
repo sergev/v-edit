@@ -226,13 +226,10 @@ void Editor::handle_key_edit(int ch)
         return;
     }
     if (ch == KEY_NPAGE) {
-        auto total = wksp_->total_line_count();
-        int step   = nlines_ - 2;
+        int step = nlines_ - 2;
         if (step < 1)
             step = 1;
         wksp_->view.topline = wksp_->view.topline + step;
-        if (wksp_->view.topline > std::max(0, total - (nlines_ - 1)))
-            wksp_->view.topline = std::max(0, total - (nlines_ - 1));
         ensure_cursor_visible();
         return;
     }

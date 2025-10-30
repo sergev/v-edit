@@ -24,6 +24,8 @@ TEST_F(TmuxDriver, SaveAndExitWritesFile)
     // Type lines: "hello", newline, "world", newline, "!"
     sendKeys(sessionName, "hello");
     sendKeys(sessionName, "Enter");
+    sendKeys(sessionName, "Down");
+    sendKeys(sessionName, "Down");
     sendKeys(sessionName, "world");
     sendKeys(sessionName, "Enter");
     sendKeys(sessionName, "!");
@@ -48,7 +50,7 @@ TEST_F(TmuxDriver, SaveAndExitWritesFile)
     in.close();
 
     // Note: newline is appended by editor.
-    EXPECT_EQ(contents, std::string("hello\nworld\n!\n"));
+    EXPECT_EQ(contents, std::string("hello\n\n\nworld\n!\n"));
 
     // Cleanup
     std::remove(filePath.c_str());

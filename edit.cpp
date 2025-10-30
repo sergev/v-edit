@@ -165,6 +165,10 @@ void Editor::edit_insert_char(char ch)
     get_line(curLine);
 
     size_t actual_col = get_actual_col();
+    // Pad with spaces if inserting at virtual column position beyond line end
+    if (actual_col > current_line_.size()) {
+        current_line_.resize(actual_col, ' ');
+    }
     if (quote_next_) {
         // Quote mode: insert character literally
         char quoted = ch;
@@ -216,15 +220,10 @@ void Editor::move_left()
 //
 void Editor::move_right()
 {
-    int len = current_line_length();
-    if (cursor_col_ < len && cursor_col_ < ncols_ - 1) {
+    if (cursor_col_ < ncols_ - 1) {
         cursor_col_++;
-    } else if (cursor_col_ >= ncols_ - 1) {
+    } else {
         wksp_->view.basecol = wksp_->view.basecol + 1;
-    } else if (cursor_line_ < nlines_ - 2) {
-        cursor_line_++;
-        cursor_col_         = 0;
-        wksp_->view.basecol = 0;
     }
 }
 
@@ -246,17 +245,10 @@ void Editor::move_up()
 //
 void Editor::move_down()
 {
-    auto total = wksp_->total_line_count();
     if (cursor_line_ < nlines_ - 2) {
-        int absLine = wksp_->view.topline + cursor_line_ + 1;
-        if (absLine < total) {
-            cursor_line_++;
-        }
+        cursor_line_++;
     } else {
-        int absLine = wksp_->view.topline + cursor_line_ + 1;
-        if (absLine < total) {
-            wksp_->view.topline = wksp_->view.topline + 1;
-        }
+        wksp_->view.topline = wksp_->view.topline + 1;
     }
     ensure_cursor_visible();
 }

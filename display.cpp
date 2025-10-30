@@ -136,6 +136,7 @@ void Editor::wksp_redraw()
             if (wksp_->view.basecol > 0 && (int)lineText.size() > wksp_->view.basecol) {
                 lineText.erase(0, (size_t)wksp_->view.basecol);
             } else if (wksp_->view.basecol > 0 && (int)lineText.size() <= wksp_->view.basecol) {
+                // Beyond line content - show blank spaces (virtual column position)
                 lineText.clear();
             }
             if ((int)lineText.size() > ncols_ - 1) {
@@ -150,6 +151,7 @@ void Editor::wksp_redraw()
                 mvaddch(r, 0, '<');
             }
         } else {
+            // Beyond end of file - show virtual line marker
             mvaddch(r, 0, '~');
         }
     }
@@ -160,13 +162,14 @@ void Editor::wksp_redraw()
 //
 void Editor::ensure_cursor_visible()
 {
-    // First clamp cursor_line_ to visible range
+    // First clamp cursor_line_ to visible range (screen position)
     if (cursor_line_ < 0)
         cursor_line_ = 0;
     if (cursor_line_ > nlines_ - 2)
         cursor_line_ = nlines_ - 2;
 
     // Now adjust wksp_->topline so that the absolute line is visible
+    // Allow absLine to exceed total_line_count() for virtual positions
     int absLine      = wksp_->view.topline + cursor_line_;
     int visible_rows = nlines_ - 1;
 

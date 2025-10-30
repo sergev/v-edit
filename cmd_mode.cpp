@@ -162,7 +162,7 @@ void Editor::handle_key_cmd(int ch)
         if (area_selection_mode_) {
             area_selection_mode_ = false;
             params_.set_type(Parameters::PARAM_NONE);
-            status_   = "Cancelled";
+            status_ = "Cancelled";
         }
         return;
     }

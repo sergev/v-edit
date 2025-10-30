@@ -412,7 +412,7 @@ TEST_F(HorizontalTest, VerifyBugFixScenario)
 
     // Verify character at position 12 before deleting
     size_t actual_col = GetActualCol();
-    auto line = editor->wksp_->read_line(0);
+    auto line         = editor->wksp_->read_line(0);
     ASSERT_LT(actual_col, line.size());
     char char_at_12 = line[actual_col];
     EXPECT_EQ(char_at_12, 'T'); // The character at position 12 is 'T'

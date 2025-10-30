@@ -28,6 +28,7 @@ protected:
 
 private:
     std::string serverName;
+    std::string qualify(const std::string &sessionName) const;
 
     static std::string escapeSingleQuotes(const std::string &text);
     int runSystem(const std::string &cmd) const;

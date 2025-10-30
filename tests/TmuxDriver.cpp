@@ -74,6 +74,12 @@ std::string TmuxDriver::shellQuote(const std::string &text)
     return std::string("'") + escapeSingleQuotes(text) + "'";
 }
 
+std::string TmuxDriver::qualify(const std::string &sessionName) const
+{
+    // Namespace session by server name to avoid collisions across parallel runs
+    return sessionName + std::string("-") + serverName;
+}
+
 int TmuxDriver::runSystem(const std::string &cmd) const
 {
     return std::system(cmd.c_str());
@@ -99,13 +105,14 @@ std::string TmuxDriver::runAndCapture(const std::string &cmd) const
 void TmuxDriver::createSession(const std::string &sessionName, const std::string &command)
 {
     // tmux -L <srv> new-session -d -s <name> '<cmd>'
-    const std::string cmd = "TERM=xterm tmux -L '" + serverName + "' new-session -d -s '" +
-                            escapeSingleQuotes(sessionName) + "' " + command + " > /dev/null 2>&1";
+    const std::string qname = qualify(sessionName);
+    const std::string cmd   = "TERM=xterm tmux -L '" + serverName + "' new-session -d -s '" +
+                            escapeSingleQuotes(qname) + "' " + command + " > /dev/null 2>&1";
     runSystem(cmd);
 
     // Set a fixed window size for deterministic tests: 30 columns x 10 rows
     const std::string resize = "tmux -L '" + serverName + "' resize-window -t '" +
-                               escapeSingleQuotes(sessionName) + "' -x 30 -y 10 > /dev/null 2>&1";
+                               escapeSingleQuotes(qname) + "' -x 30 -y 10 > /dev/null 2>&1";
     runSystem(resize);
 }
 
@@ -113,8 +120,9 @@ void TmuxDriver::sendKeys(const std::string &sessionName, const std::string &key
 {
     // tmux -L <srv> send-keys -t <name> <keys>
     // Quote the keys using shellQuote to handle spaces properly
-    const std::string cmd = "TERM=xterm tmux -L '" + serverName + "' send-keys -t '" +
-                            escapeSingleQuotes(sessionName) + "' " + shellQuote(keys) +
+    const std::string qname = qualify(sessionName);
+    const std::string cmd   = "TERM=xterm tmux -L '" + serverName + "' send-keys -t '" +
+                            escapeSingleQuotes(qname) + "' " + shellQuote(keys) +
                             " > /dev/null 2>&1";
     runSystem(cmd);
 }
@@ -122,23 +130,26 @@ void TmuxDriver::sendKeys(const std::string &sessionName, const std::string &key
 std::string TmuxDriver::capturePane(const std::string &sessionName, int start)
 {
     // tmux -L <srv> capture-pane -t <name> -pS <start>
-    const std::string cmd = "TERM=xterm tmux -L '" + serverName + "' capture-pane -t '" +
-                            escapeSingleQuotes(sessionName) + "' -pS " + std::to_string(start) +
+    const std::string qname = qualify(sessionName);
+    const std::string cmd   = "TERM=xterm tmux -L '" + serverName + "' capture-pane -t '" +
+                            escapeSingleQuotes(qname) + "' -pS " + std::to_string(start) +
                             " 2>/dev/null";
     return runAndCapture(cmd);
 }
 
 void TmuxDriver::killSession(const std::string &sessionName)
 {
-    const std::string cmd = "TERM=xterm tmux -L '" + serverName + "' kill-session -t '" +
-                            escapeSingleQuotes(sessionName) + "' > /dev/null 2>&1";
+    const std::string qname = qualify(sessionName);
+    const std::string cmd   = "TERM=xterm tmux -L '" + serverName + "' kill-session -t '" +
+                            escapeSingleQuotes(qname) + "' > /dev/null 2>&1";
     runSystem(cmd);
 }
 
 std::string TmuxDriver::captureScreen(const std::string &sessionName)
 {
     // Capture exactly the visible screen using -p (no scrollback) and -J to join wrapped lines
-    const std::string cmd = "TERM=xterm tmux -L '" + serverName + "' capture-pane -t '" +
-                            escapeSingleQuotes(sessionName) + "' -p -J 2>/dev/null";
+    const std::string qname = qualify(sessionName);
+    const std::string cmd   = "TERM=xterm tmux -L '" + serverName + "' capture-pane -t '" +
+                            escapeSingleQuotes(qname) + "' -p -J 2>/dev/null";
     return runAndCapture(cmd);
 }

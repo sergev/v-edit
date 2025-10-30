@@ -63,4 +63,4 @@ add_dependencies(v_edit_tests v_edit ve)
 target_compile_definitions(v_edit_tests PRIVATE V_EDIT_BIN_PATH="$<TARGET_FILE:ve>")
 
 include(GoogleTest)
-gtest_discover_tests(v_edit_tests EXTRA_ARGS --gtest_repeat=1 PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
+gtest_discover_tests(v_edit_tests EXTRA_ARGS --gtest_repeat=1 PROPERTIES TIMEOUT 30)

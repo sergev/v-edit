@@ -827,95 +827,42 @@ void Workspace::update_topline_after_edit(int from, int to, int delta)
 //
 void Workspace::put_line(int line_no, const std::string &line_content)
 {
-    // Write the modified line to temp file and get a segment for it
+    // Emit new content into temp and obtain a single-line segment
     auto temp_segments = tempfile_.write_line_to_temp(line_content);
     if (temp_segments.empty()) {
-        // TODO: error message, as we lost contents of the current line.
-        return;
+        return; // Failed to persist line content
     }
+    auto new_seg_it = temp_segments.begin(); // for overwrite path below
 
-    // If workspace is empty, create blanks up to line_no and insert the new segment
-    if (contents_.empty()) {
-        contents_ = temp_segments;
-        cursegm_  = contents_.begin();
-        if (line_no > 0) {
-            auto blanks = create_blank_lines(line_no);
-            contents_.splice(contents_.begin(), blanks);
+    // Append beyond EOF (also covers empty workspace via total==0)
+    int total = total_line_count();
+    if (line_no >= total) {
+        // Create blanks as needed
+        int current_total = total_line_count();
+        if (line_no > current_total) {
+            auto blanks = create_blank_lines(line_no - current_total);
+            contents_.splice(contents_.end(), blanks);
         }
+        contents_.splice(contents_.end(), temp_segments);
+        cursegm_ = contents_.end();
+        --cursegm_;
         position.line       = line_no;
         file_state.modified = true;
         return;
     }
 
-    // Capture total lines before any modification to detect append-at-end case
-    int total_before = total_line_count();
-
-    // Break segment at line_no position to split into segments before and at line_no
-    int break_result = breaksegm(line_no);
-
-    // Get the new segment to use
-    auto new_seg_it = temp_segments.begin();
-
-    if (break_result == 0) {
-        // Normal case: line exists, split it
-        // Now cursegm_ points to the segment starting at line_no
-
-        // Check if we need to isolate the line AFTER the first breaksegm
-        // because breaksegm may have already isolated it into a single-line segment
-        bool only_one_line = (cursegm_->line_count == 1);
-
-        if (!only_one_line) {
-            // Break at line_no + 1 to isolate the line
-            breaksegm(line_no + 1);
-            // Now cursegm_ points to segment starting at line_no + 1
-            // The segment containing line_no is the previous segment
-            --cursegm_;
-        }
-
-        // Now cursegm_ points to the segment containing only line_no
-        // Replace it with new segment
-        *cursegm_ = std::move(*new_seg_it);
-
-        // Try to merge adjacent segments
-        catsegm();
-
-        // Mark workspace as modified
-        file_state.modified = true;
-    } else if (break_result == 1) {
-        // If target line is at or beyond EOF, append the new segment AFTER any blanks created
-        if (line_no >= total_before) {
-            // Append at end
-            auto insert_pos = contents_.end();
-            // Remember where the first new segment will land after splice
-            contents_.splice(insert_pos, temp_segments);
-            // Set cursegm_ to the newly appended segment (last element)
-            cursegm_ = contents_.end();
-            --cursegm_;
-            position.line       = line_no;
-            file_state.modified = true;
-            return;
-        }
-
-        // breaksegm created blank lines and positioned near/at line_no
-        // Isolate line_no into its own segment if needed, then replace
-        auto seg_it = cursegm_;
-
-        bool at_segment_start = (line_no == current_segment_base_line());
-        if (!at_segment_start) {
-            breaksegm(line_no);
-            seg_it = cursegm_;
-        }
-        if (seg_it->line_count > 1) {
-            breaksegm(line_no + 1);
-            --cursegm_;
-            seg_it = cursegm_;
-        }
-
-        *seg_it             = std::move(*new_seg_it);
-        cursegm_            = seg_it;
-        position.line       = line_no;
-        file_state.modified = true;
+    // Overwrite existing line: isolate target line into its own segment, then replace
+    // Ensure cursegm_ starts exactly at line_no
+    breaksegm(line_no);
+    if (cursegm_->line_count > 1) {
+        breaksegm(line_no + 1);
+        --cursegm_;
     }
+
+    *cursegm_ = std::move(*new_seg_it);
+    catsegm();
+    position.line       = line_no;
+    file_state.modified = true;
 }
 
 //

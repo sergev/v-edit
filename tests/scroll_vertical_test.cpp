@@ -30,14 +30,17 @@ TEST_F(TmuxDriver, VerticalScrollingShowsLaterLines)
         TmuxDriver::sleepMs(10);
     }
 
+    TmuxDriver::sleepMs(400);
+    // Force a redraw via command mode 'r' to ensure pane has content
+    sendKeys(sessionName, "F1");
+    TmuxDriver::sleepMs(150);
+    sendKeys(sessionName, "r");
+    TmuxDriver::sleepMs(100);
+    sendKeys(sessionName, "Enter");
     TmuxDriver::sleepMs(200);
-    std::string paneAll = captureScreen(sessionName);
+    std::string paneAll = capturePane(sessionName, -500);
     if (paneAll.empty()) {
         TmuxDriver::sleepMs(300);
-        paneAll = capturePane(sessionName, -50);
-    }
-    if (paneAll.empty()) {
-        // fall back to larger capture window
         paneAll = capturePane(sessionName, -500);
     }
     ASSERT_FALSE(paneAll.empty());

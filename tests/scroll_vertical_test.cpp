@@ -2,7 +2,9 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include "TmuxDriver.h"
@@ -109,6 +111,116 @@ TEST_F(TmuxDriver, VerticalScrollingShowsLaterLines)
         EXPECT_EQ(lines[i], expected[i])
             << "Mismatch at row " << i << " got='" << lines[i] << "' exp='" << expected[i] << "'";
     }
+
+    // Exit and cleanup
+    sendKeys(sessionName, "C-a");
+    sendKeys(sessionName, "q");
+    sendKeys(sessionName, "a");
+    sendKeys(sessionName, "Enter");
+    TmuxDriver::sleepMs(300);
+    std::remove(fileName.c_str());
+    killSession(sessionName);
+}
+
+TEST_F(TmuxDriver, PageDownScrollingAndVirtualPositions)
+{
+    const std::string sessionName = "v-edit_pagedown";
+    const std::string appPath     = V_EDIT_BIN_PATH;
+
+    // Create a file with 20 lines (numbered 0-19)
+    const std::string fileName =
+        std::string("v-edit_pagedown_test_") + std::to_string(getpid()) + ".txt";
+    std::remove(fileName.c_str());
+    std::ofstream f(fileName);
+    for (int i = 0; i < 20; i++) {
+        f << "Line " << i << "\n";
+    }
+    f.close();
+
+    // Launch editor with the file
+    createSession(sessionName, shellQuote(appPath + std::string(" ") + fileName));
+    TmuxDriver::sleepMs(300);
+
+    // Test 1: Page Down within the file should show later lines
+    // Press Page Down a few times to scroll through the file
+    sendKeys(sessionName, "NPage");
+    TmuxDriver::sleepMs(200);
+    sendKeys(sessionName, "NPage");
+    TmuxDriver::sleepMs(200);
+
+    std::string pane1 = capturePane(sessionName, -10);
+    // Should see some lines from the middle/end of the file
+    bool foundLaterLine = false;
+    for (int i = 8; i < 20; i++) {
+        std::ostringstream oss;
+        oss << "Line " << i;
+        if (pane1.find(oss.str()) != std::string::npos) {
+            foundLaterLine = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(foundLaterLine) << "Page Down should show later lines. Pane: " << pane1;
+
+    // Test 2: Page Down can scroll beyond file end (virtual positions)
+    // Continue pressing Page Down until we scroll beyond the 20-line file
+    // With ~8 lines visible per page, we need about 20/8 = 2.5 pages to reach the end
+    // Then a few more to go beyond
+    for (int i = 0; i < 5; i++) {
+        sendKeys(sessionName, "NPage");
+        TmuxDriver::sleepMs(200);
+    }
+
+    std::string pane2 = capturePane(sessionName, -10);
+
+    // Should see virtual lines (marked with ~) when beyond file end
+    // Check if we're showing virtual lines
+    bool hasVirtualLines = (pane2.find('~') != std::string::npos);
+
+    // Check status line - should show a line number >= 20 (beyond file end)
+    bool beyondFileEnd = false;
+    std::istringstream statusStream(pane2);
+    std::string line;
+    while (std::getline(statusStream, line)) {
+        size_t linePos = line.find("Line=");
+        if (linePos != std::string::npos) {
+            size_t numStart = linePos + 5; // "Line=" is 5 chars
+            size_t numEnd   = line.find_first_not_of("0123456789", numStart);
+            if (numEnd != std::string::npos) {
+                std::string lineNumStr = line.substr(numStart, numEnd - numStart);
+                int lineNum            = std::stoi(lineNumStr);
+                if (lineNum >= 20) {
+                    beyondFileEnd = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Verify we can scroll beyond file end
+    EXPECT_TRUE(beyondFileEnd || hasVirtualLines)
+        << "Page Down should allow scrolling beyond file end. Pane: " << pane2;
+
+    // Test 3: Page Up should bring us back into the file
+    // Press Page Up multiple times to scroll back into the file content
+    // We scrolled 7 pages total (2 initially + 5 more), so need to scroll back enough
+    for (int i = 0; i < 6; i++) {
+        sendKeys(sessionName, "PPage");
+        TmuxDriver::sleepMs(200);
+    }
+
+    std::string pane3 = capturePane(sessionName, -10);
+    // Should see actual content lines again
+    bool foundContentLine = false;
+    for (int i = 0; i < 20; i++) {
+        std::ostringstream oss;
+        oss << "Line " << i;
+        if (pane3.find(oss.str()) != std::string::npos) {
+            foundContentLine = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(foundContentLine) << "Page Up should bring us back to actual content. Pane: "
+                                  << pane3;
 
     // Exit and cleanup
     sendKeys(sessionName, "C-a");

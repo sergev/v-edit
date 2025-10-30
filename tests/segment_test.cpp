@@ -160,14 +160,18 @@ TEST_F(TmuxDriver, SegmentsAllowScrollingToEndOfLargeFile)
     createSession(session, shellQuote(app) + " " + shellQuote(testFile));
     TmuxDriver::sleepMs(300);
 
-    // Go to the end using Page Down - need enough to scroll through all 500 lines
-    // With 10-line screen and 8 lines per page, we need about 500/8 = 62+ pages
-    for (int i = 0; i < 70; i++) {
-        sendKeys(session, "NPage");
-        TmuxDriver::sleepMs(50);
-    }
+    // Go to near the end using goto command (g490) to avoid scrolling beyond file end
+    // This ensures we see actual content lines, not virtual lines
+    sendKeys(session, "F1"); // Enter command mode
+    TmuxDriver::sleepMs(100);
+    sendKeys(session, "g");
+    sendKeys(session, "4");
+    sendKeys(session, "9");
+    sendKeys(session, "0");
+    sendKeys(session, "Enter");
+    TmuxDriver::sleepMs(200);
 
-    // Verify we're near the end
+    // Verify we're near the end (should see actual content, not just virtual lines)
     std::string pane = capturePane(session, -10);
     // Should find a line with a high number (400+)
     bool foundHighLine = false;

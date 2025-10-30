@@ -265,52 +265,76 @@ TEST_F(KeyHandlingIntegrationTest, CharacterInsertionFooLineCount)
     EXPECT_EQ(editor->wksp_->total_line_count(), 0);
 
     editor->handle_key_edit('f');
-    editor->handle_key_edit('o');
-    editor->handle_key_edit('o');
-    editor->handle_key_edit('\n');
-
     editor->wksp_->debug_print(std::cout);
-    EXPECT_EQ(editor->wksp_->read_line(0), "foo");
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
+
+    editor->handle_key_edit('o');
+    editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
+
+    editor->handle_key_edit('o');
+    editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
+
+    editor->handle_key_edit('\n');
+    editor->wksp_->debug_print(std::cout);
     EXPECT_EQ(editor->wksp_->total_line_count(), 2);
+
+    EXPECT_EQ(editor->wksp_->read_line(0), "foo");
 }
 
 TEST_F(KeyHandlingIntegrationTest, CharacterInsertionFooBarQuz)
 {
+    editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 0);
+
     editor->handle_key_edit('f');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
 
     editor->handle_key_edit('o');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
 
     editor->handle_key_edit('o');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 1);
 
     editor->handle_key_edit('\n');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 2);
 
     editor->handle_key_edit('b');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 2);
 
     editor->handle_key_edit('a');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 2);
 
     editor->handle_key_edit('r');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 2);
 
     editor->handle_key_edit('\n');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
 
     editor->handle_key_edit('q');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
 
     editor->handle_key_edit('u');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
 
     editor->handle_key_edit('z');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 3);
 
     editor->handle_key_edit('\n');
     editor->wksp_->debug_print(std::cout);
+    EXPECT_EQ(editor->wksp_->total_line_count(), 4);
 
     EXPECT_EQ(editor->wksp_->read_line(0), "foo");
     EXPECT_EQ(editor->wksp_->read_line(1), "bar");

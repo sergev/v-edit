@@ -117,6 +117,9 @@ void Editor::edit_enter()
         wksp_->insert_contents(blank, curLine + 1);
     }
 
+    // Invalidate current_line_no_ since we've moved to a different line
+    current_line_no_ = -1;
+
     if (cursor_line_ + 1 < nlines_ - 1) {
         cursor_line_++;
     } else {

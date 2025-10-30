@@ -468,12 +468,13 @@ int Workspace::breaksegm(int line_no, bool realloc_flag)
     if (contents_.empty())
         throw std::runtime_error("breaksegm: empty workspace");
 
-    // Special case: empty workspace and line_no == 0 - just position at start
+    // Special case: empty workspace and line_no == 0 - position at tail
+    // Return 1 to indicate line is beyond EOF (needs to be created by caller)
     if (total_line_count() == 0 && line_no == 0) {
         cursegm_          = contents_.begin(); // Position at tail segment
         position.segmline = 0;
         position.line     = 0;
-        return 0; // Success, no lines created
+        return 1; // Line is beyond EOF, no lines created
     }
 
     // Position workspace to the target line
@@ -870,29 +871,6 @@ void Workspace::put_line(int line_no, const std::string &line_content)
         return;
     }
 
-    // If the file is currently empty (line_count == 0) and we're adding line 0,
-    // we can just insert the segment without calling breaksegm
-    auto total = total_line_count();
-    if (total == 0 && line_no == 0) {
-        // Simple case: empty file, adding first line
-        // Find tail and insert before it
-        auto tail_it = contents_.end();
-        for (auto it = contents_.begin(); it != contents_.end(); ++it) {
-            if (it->is_empty()) {
-                tail_it = it;
-                break;
-            }
-        }
-        contents_.splice(tail_it, temp_segments);
-        auto new_seg_it = std::prev(tail_it);
-
-        cursegm_            = new_seg_it;
-        position.line       = 0;
-        position.segmline   = 0;
-        file_state.modified = true;
-        return;
-    }
-
     // Break segment at line_no position to split into segments before and at line_no
     int break_result = breaksegm(line_no, true);
 
@@ -902,36 +880,43 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     if (break_result == 0) {
         // Normal case: line exists, split it
         // Now cursegm_ points to the segment starting at line_no
-        // Get iterator to the segment we want to replace (the one containing line_no)
-        auto old_seg_it = cursegm_;
-
-        // Check if the segment only contains one line (or if we're at end of file)
         int segmline       = position.segmline;
-        bool only_one_line = (old_seg_it->line_count == 1);
+        bool only_one_line = (cursegm_->line_count == 1);
 
         if (!only_one_line) {
             // Break at line_no + 1 to isolate the line
             breaksegm(line_no + 1, false);
             // Now cursegm_ points to segment starting at line_no + 1
+            // The segment containing line_no is the previous segment
+            --cursegm_;
         }
 
-        // Replace old segment with new segment
-        *old_seg_it       = std::move(*new_seg_it);
-        cursegm_          = old_seg_it;
+        // Now cursegm_ points to the segment containing only line_no
+        // Replace it with new segment
+        *cursegm_         = std::move(*new_seg_it);
         position.segmline = segmline;
 
-        // Try to merge adjacent segments (but not if we just created blank lines)
-        if (only_one_line || line_no < total) {
-            catsegm();
-        }
+        // Try to merge adjacent segments
+        catsegm();
 
         // Mark workspace as modified
         file_state.modified = true;
     } else if (break_result == 1) {
-        // breaksegm created blank lines
-        // The workspace is now positioned at line_no, which may be in the middle of a blank segment
+        // breaksegm signaled line is beyond EOF (may or may not have created blank lines)
+        // The workspace is now positioned at line_no, which may be at a tail or blank segment
         auto blank_seg_it = cursegm_;
         int segmline      = position.segmline;
+
+        // Special case: if we're at a tail segment (line_count == 0), insert before it
+        if (blank_seg_it->line_count == 0) {
+            contents_.splice(blank_seg_it, temp_segments);
+            auto inserted_seg   = std::prev(blank_seg_it);
+            cursegm_            = inserted_seg;
+            position.segmline   = segmline;
+            position.line       = line_no;
+            file_state.modified = true;
+            return;
+        }
 
         // Check if line_no is at the start of the segment
         bool at_segment_start = (line_no == segmline);
@@ -973,22 +958,13 @@ void Workspace::put_line(int line_no, const std::string &line_content)
 //
 void Workspace::debug_print(std::ostream &out) const
 {
-    out << "Workspace["
-        << "writable=" << file_state.writable << ", "
-        << "topline=" << view.topline << ", "
-        << "basecol=" << view.basecol << ", "
-        << "line=" << position.line << ", "
-        << "segmline=" << position.segmline << ", "
-        << "cursorcol=" << view.cursorcol << ", "
-        << "cursorrow=" << view.cursorrow << ", "
-        << "modified=" << (file_state.modified ? "true" : "false") << ", "
-        << "backup_done=" << (file_state.backup_done ? "true" : "false") << ", "
-        << "original_fd=" << original_fd_ << ", "
-        << "cursegm=" << (cursegm_ == contents_.end() ? nullptr : &*cursegm_) << ", "
-        << "head=" << (contents_.empty() ? nullptr : &contents_.front()) << "]\n";
+    out << "Workspace line=" << position.line
+        << ", segmline=" << position.segmline
+        << ", modified=" << (file_state.modified ? "true" : "false")
+        << ", writable=" << file_state.writable
+        << ", original_fd=" << original_fd_ << "\n";
 
     // Print segment chain
-    out << "Segment chain:\n";
     int seg_idx = 0;
     for (const auto &seg : contents_) {
         out << "  [" << seg_idx << "] ";

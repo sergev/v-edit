@@ -214,8 +214,8 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
         segments.push_back(&seg);
     }
 
-    // Verify segment count
-    EXPECT_EQ(segments.size(), 3);
+    // Verify segment count (no tail segment)
+    EXPECT_EQ(segments.size(), 2);
     segment_count = segments.size();
 
     // Verify Segment 1
@@ -240,16 +240,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     std::cout << "  fdesc: " << segments[1]->file_descriptor << "\n";
     std::cout << "  data.size(): " << segments[1]->line_lengths.size() << "\n";
 
-    // Verify Segment 3 (tail)
-    EXPECT_EQ(segments[2]->line_count, 0);
-    EXPECT_EQ(segments[2]->file_descriptor, 0); // Tail segment has file_descriptor = 0
-    EXPECT_EQ(segments[2]->line_lengths.size(), 0);
-
-    std::cout << "Segment 3:\n";
-    std::cout << "  nlines: " << segments[2]->line_count << "\n";
-    std::cout << "  seek: " << segments[2]->file_offset << "\n";
-    std::cout << "  fdesc: " << segments[2]->file_descriptor << "\n";
-    std::cout << "  data.size(): " << segments[2]->line_lengths.size() << "\n";
+    // No tail segment expected
 
     // Calculate total lines
     for (const auto *seg : segments) {
@@ -257,7 +248,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
         EXPECT_GE(seg->line_count, 0);
         EXPECT_LE(seg->line_count, 127); // Max lines per segment
 
-        // Verify segment data is not empty (except for tail segment)
+        // Verify segment data is not empty when there are lines
         if (seg->line_count > 0) {
             EXPECT_FALSE(seg->line_lengths.empty());
         }
@@ -267,7 +258,7 @@ TEST_F(SegmentTest, SegmentChainFromVariableLines)
     std::cout << "Total lines across all segments: " << total_segment_lines << "\n";
     std::cout << "================================\n\n";
 
-    EXPECT_EQ(segment_count, 3);
+    EXPECT_EQ(segment_count, 2);
     EXPECT_EQ(total_segment_lines, 200);
 
     // Verify we can read lines from each segment

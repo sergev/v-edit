@@ -179,14 +179,10 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
 
 TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
 {
-    // Initially workspace is empty (has tail segment)
+    // Initially workspace is empty
     EXPECT_EQ(editor->wksp_->total_line_count(), 0);
-
-    // Verify the tail segment
-    auto tail_it = editor->wksp_->get_contents().begin();
-    ASSERT_NE(tail_it, editor->wksp_->get_contents().end());
-    EXPECT_EQ(tail_it->line_count, 0);
-    EXPECT_EQ(tail_it->file_descriptor, 0);
+    // No segments should exist
+    EXPECT_EQ(editor->wksp_->get_contents().begin(), editor->wksp_->get_contents().end());
 
     // Add the first line via put_line (should create it, not fail)
     editor->current_line_          = "First line";
@@ -393,7 +389,7 @@ TEST_F(EditorTest, SetCurrentSegmentBeyondEndByOne)
 
 TEST_F(EditorTest, SetCurrentSegmentEmptyWorkspaceReturnsOne)
 {
-    // Empty workspace (has tail but no content)
+    // Empty workspace (no content)
     EXPECT_EQ(editor->wksp_->total_line_count(), 0);
 
     // Any position should return 1 (beyond end)

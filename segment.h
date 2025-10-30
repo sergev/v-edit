@@ -15,16 +15,14 @@ public:
     unsigned line_count{ 0 };
 
     // Descriptor of the file, where these text lines are stored.
-    // There are four cases:
+    // Cases:
     //  * file_descriptor == original_fd of the enclosing workspace
-    //      - when this segment holds unmodified lines of the original file.
+    //      - this segment holds unmodified lines of the original file.
     //  * file_descriptor == tempfile_fd
-    //      - when this segment holds modified lines stored in temporary file.
+    //      - this segment holds modified lines stored in temporary file.
     //  * file_descriptor == -1
-    //      - when this segment holds empty lines (only newlines).
-    //  * file_descriptor == 0
-    //      - placeholder without contents (tail).
-    int file_descriptor{ 0 };
+    //      - this segment holds empty lines (only newlines).
+    int file_descriptor{ -1 };
 
     // Offset in file_descriptor for data of this segment.
     long file_offset{ 0 };
@@ -36,8 +34,6 @@ public:
     Segment() = default;
 
     // Segment has contents when it comes from some file or contains only newlines.
-    // A linked list of segments terminates with a placeholder with file_descriptor=0.
-    bool is_empty() const { return file_descriptor == 0; }
 
     // Calculate total bytes represented by all line lengths in this segment.
     long total_byte_count() const;

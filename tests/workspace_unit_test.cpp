@@ -57,11 +57,7 @@ TEST_F(WorkspaceTest, CreateBlankLinesLarge)
     // Should split large line counts into multiple segments
     int total_lines = 0;
     for (const auto &seg : seg_list) {
-        if (seg.file_descriptor != 0) { // Skip tail segment
-            total_lines += seg.line_count;
-        } else {
-            break;
-        }
+        total_lines += seg.line_count;
     }
     EXPECT_EQ(total_lines, 200);
 }
@@ -297,10 +293,9 @@ TEST_F(WorkspaceTest, BackupDoneStateTests)
 
 TEST_F(WorkspaceTest, ChainAccessorsEmpty)
 {
-    // Test chain access on workspace with only tail segment
-    // Note: Workspace always has a tail segment after construction
-    EXPECT_NE(wksp->cursegm(), wksp->get_contents().end());
-    EXPECT_EQ(wksp->total_line_count(), 0); // No actual content lines
+    // Empty workspace has no segments and cursegm() is end()
+    EXPECT_EQ(wksp->cursegm(), wksp->get_contents().end());
+    EXPECT_EQ(wksp->total_line_count(), 0);
 }
 
 TEST_F(WorkspaceTest, BuildFromText)

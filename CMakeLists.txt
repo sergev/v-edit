@@ -20,24 +20,30 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CE_SOURCES
+    # Presentation Layer
     core.cpp
     display.cpp
+    
+    # Input Layer
+    key_bindings.cpp
+    
+    # Business Logic Layer
+    editor_operations.cpp
+    clipboard_manager.cpp
+    buffer_manager.cpp
+    
+    # Data Layer
     file_io.cpp
     line_buffer.cpp
-    cmd_mode.cpp
-    edit_mode.cpp
-    text_operations.cpp
-    clipboard.cpp
-    clipboard_operations.cpp
-    editor_macros.cpp
+    workspace.cpp
+    segment.cpp
+    tempfile.cpp
+    
+    # Infrastructure
     session.cpp
     filter.cpp
     workspace_help.cpp
     signal.cpp
-    segment.cpp
-    tempfile.cpp
-    workspace.cpp
-    macro.cpp
 )
 
 set(CE_MAIN

@@ -28,4 +28,3 @@ void Editor::put_line()
     }
     current_line_modified_ = false;
 }
-

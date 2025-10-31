@@ -19,26 +19,26 @@ TEST_F(TmuxDriver, BasicCommandQuit)
     f << "test\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Type 'q' to quit
-    sendKeys(session, "q");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "q");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
     // Verify editor exited
-    std::string pane = capturePane(session, -5);
+    std::string pane = capture_pane(session, -5);
     EXPECT_TRUE(pane.find("Exiting") != std::string::npos ||
                 pane.find("Exiting") == std::string::npos)
         << "Editor should have exited or shown exit message";
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -54,29 +54,29 @@ TEST_F(TmuxDriver, RedrawCommand)
     f << "Line 1\nLine 2\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Type 'r' to redraw
-    sendKeys(session, "r");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "r");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
     // Verify content still visible
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_TRUE(pane.find("Line 1") != std::string::npos)
         << "Content should still be visible after redraw";
 
-    sendKeys(session, "qa");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "qa");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -93,18 +93,18 @@ TEST_F(TmuxDriver, SaveAsCommand)
     f << "Original content\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Type 's' + new filename
-    sendKeys(session, "s");
-    sendKeys(session, newFile);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "s");
+    send_keys(session, newFile);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(300);
 
     // Verify new file was created
     EXPECT_TRUE(fs::exists(newFile)) << "New file should exist";
@@ -117,11 +117,11 @@ TEST_F(TmuxDriver, SaveAsCommand)
 
     newf.close();
 
-    sendKeys(session, "qa");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "qa");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
     fs::remove(newFile);
 }
@@ -138,31 +138,31 @@ TEST_F(TmuxDriver, InsertLinesWithCount)
     f << "Line 1\nLine 2\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Position cursor at line 2
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(200);
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Type '3' for count, then C-o
-    sendKeys(session, "3");
-    sendKeys(session, "C-o");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "3");
+    send_keys(session, "C-o");
+    TmuxDriver::sleep_ms(300);
 
     // Verify blank lines were inserted
-    std::string pane = capturePane(session, -15);
+    std::string pane = capture_pane(session, -15);
     // Should have more lines now
 
-    sendKeys(session, "qa");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "qa");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -178,30 +178,30 @@ TEST_F(TmuxDriver, DeleteLinesWithCount)
     f << "Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Position cursor at line 2
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(200);
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Type '2' for count, then C-y
-    sendKeys(session, "2");
-    sendKeys(session, "C-y");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "2");
+    send_keys(session, "C-y");
+    TmuxDriver::sleep_ms(300);
 
     // Verify lines were deleted
-    std::string pane = capturePane(session, -15);
+    std::string pane = capture_pane(session, -15);
 
-    sendKeys(session, "qa");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "qa");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -224,38 +224,38 @@ TEST_F(TmuxDriver, MacroPositionMarkers)
     f << "Line 1\nLine 2\nLine 3\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Save position: >>a
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
-    sendKeys(session, ">>");
-    sendKeys(session, "a");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
+    send_keys(session, ">>");
+    send_keys(session, "a");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(300);
 
     // Move cursor
-    sendKeys(session, "Down");
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "Down");
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(200);
 
     // Jump back to saved position: $a
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
-    sendKeys(session, "$a");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
+    send_keys(session, "$a");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
     // Verify we're back at line 1
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_TRUE(pane.find("Line 1") != std::string::npos) << "Should be at saved position (line 1)";
 
-    sendKeys(session, "qa");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "qa");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -271,22 +271,22 @@ TEST_F(TmuxDriver, AbortCommand)
     f << "test\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Type 'ad' to abort
-    sendKeys(session, "ad");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "ad");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(300);
 
     // Verify abort message or exit
-    std::string pane = capturePane(session, -5);
+    std::string pane = capture_pane(session, -5);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -302,31 +302,31 @@ TEST_F(TmuxDriver, FileWritableToggle)
     f << "Line 1\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Type 'w +' to make writable (need to send space after w)
-    sendKeys(session, "w");
-    sendKeys(session, " ");
-    sendKeys(session, "+");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "w");
+    send_keys(session, " ");
+    send_keys(session, "+");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(300);
 
     // Verify command completed (w command needs more work)
-    TmuxDriver::sleepMs(200);
-    std::string pane = capturePane(session, -10);
+    TmuxDriver::sleep_ms(200);
+    std::string pane = capture_pane(session, -10);
     // Check that we're back in normal mode
     bool inCommandMode = pane.find("Cmd:") != std::string::npos;
     EXPECT_FALSE(inCommandMode) << "Should exit command mode after w command";
 
-    sendKeys(session, "qa");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "qa");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }

@@ -24,23 +24,23 @@ TEST_F(TmuxDriver, SegmentsLoadLargeFileEfficiently)
     f.close();
 
     // Start editor with the large file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Verify we can see the first line
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_TRUE(pane.find("Line 0 of 1000") != std::string::npos)
         << "Expected to find first line. Pane content: " << pane;
 
     // Verify editor is responsive (not hanging)
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(100);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(100);
 
-    std::string pane2 = capturePane(session, -10);
+    std::string pane2 = capture_pane(session, -10);
     EXPECT_TRUE(pane2.find("Line 1 of 1000") != std::string::npos)
         << "Expected to find second line after Down. Pane content: " << pane2;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -56,22 +56,22 @@ TEST_F(TmuxDriver, SegmentsHandleEmptyFile)
     f.close();
 
     // Start editor with the empty file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Verify editor started successfully
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_FALSE(pane.empty()) << "Expected editor to start with empty file";
 
     // Should be able to add content
-    sendKeys(session, "Test content");
-    TmuxDriver::sleepMs(100);
+    send_keys(session, "Test content");
+    TmuxDriver::sleep_ms(100);
 
-    std::string pane2 = capturePane(session, -10);
+    std::string pane2 = capture_pane(session, -10);
     EXPECT_TRUE(pane2.find("Test content") != std::string::npos)
         << "Expected to find inserted content. Pane content: " << pane2;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -88,16 +88,16 @@ TEST_F(TmuxDriver, SegmentsHandleSingleLineFile)
     f.close();
 
     // Start editor with the single line file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Verify the line is displayed (check for the beginning since it's longer than the window
     // width)
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_TRUE(pane.find("Single line without final ne~") != std::string::npos)
         << "Expected to find single line content. Pane content: " << pane;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -122,23 +122,23 @@ TEST_F(TmuxDriver, SegmentsHandleFileWithVeryLongLines)
     f.close();
 
     // Start editor with the file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Verify the first part of the long line is displayed
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_TRUE(pane.find("This is a very long line") != std::string::npos)
         << "Expected to find beginning of long line. Pane content: " << pane;
 
     // Move to second line
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(100);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(100);
 
-    std::string pane2 = capturePane(session, -10);
+    std::string pane2 = capture_pane(session, -10);
     EXPECT_TRUE(pane2.find("Second line") != std::string::npos)
         << "Expected to find second line. Pane content: " << pane2;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -157,22 +157,22 @@ TEST_F(TmuxDriver, SegmentsAllowScrollingToEndOfLargeFile)
     f.close();
 
     // Start editor with the file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Go to near the end using goto command (g490) to avoid scrolling beyond file end
     // This ensures we see actual content lines, not virtual lines
-    sendKeys(session, "F1"); // Enter command mode
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "g");
-    sendKeys(session, "4");
-    sendKeys(session, "9");
-    sendKeys(session, "0");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1"); // Enter command mode
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "g");
+    send_keys(session, "4");
+    send_keys(session, "9");
+    send_keys(session, "0");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
     // Verify we're near the end (should see actual content, not just virtual lines)
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     // Should find a line with a high number (400+)
     bool foundHighLine = false;
     for (int i = 450; i < 500; i++) {
@@ -187,7 +187,7 @@ TEST_F(TmuxDriver, SegmentsAllowScrollingToEndOfLargeFile)
     EXPECT_TRUE(foundHighLine)
         << "Expected to find a line number 450-499 near the end. Pane content: " << pane;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -212,23 +212,23 @@ TEST_F(TmuxDriver, SegmentsHandleMixedLineLengths)
     f.close();
 
     // Start editor with the file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Verify all lines are accessible
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_TRUE(pane.find("Short") != std::string::npos)
         << "Expected to find short line. Pane content: " << pane;
 
     // Move through the lines
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(100);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(100);
 
-    std::string pane2 = capturePane(session, -10);
+    std::string pane2 = capture_pane(session, -10);
     EXPECT_TRUE(pane2.find("medium length") != std::string::npos)
         << "Expected to find medium length line. Pane content: " << pane2;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -247,24 +247,24 @@ TEST_F(TmuxDriver, SegmentsPreserveFileContentOnSave)
     f.close();
 
     // Start editor
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Modify the content
-    sendKeys(session, "Modified ");
-    TmuxDriver::sleepMs(100);
+    send_keys(session, "Modified ");
+    TmuxDriver::sleep_ms(100);
 
     // Save the file
-    sendKeys(session, "F2");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "F2");
+    TmuxDriver::sleep_ms(300);
 
     // Exit
-    sendKeys(session, "C-x");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "C-c");
-    TmuxDriver::sleepMs(300);
+    send_keys(session, "C-x");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "C-c");
+    TmuxDriver::sleep_ms(300);
 
-    killSession(session);
+    kill_session(session);
 
     // Verify file was saved
     std::ifstream savedFile(testFile);

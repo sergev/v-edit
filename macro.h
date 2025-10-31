@@ -19,32 +19,32 @@ public:
     Macro();
 
     // Check if this is a position marker
-    bool isPosition() const;
+    bool is_position() const;
 
     // Check if this is a buffer
-    bool isBuffer() const;
+    bool is_buffer() const;
 
     // Check if buffer is empty
-    bool isBufferEmpty() const;
+    bool is_buffer_empty() const;
 
     // Set position data
-    void setPosition(int line, int col);
+    void set_position(int line, int col);
 
     // Set buffer data
-    void setBuffer(const std::vector<std::string> &lines, int s_line, int e_line, int s_col,
-                   int e_col, bool is_rect);
+    void set_buffer(const std::vector<std::string> &lines, int s_line, int e_line, int s_col,
+                    int e_col, bool is_rect);
 
     // Get position (returns 0,0 if not a position macro)
-    std::pair<int, int> getPosition() const;
+    std::pair<int, int> get_position() const;
 
     // Get buffer bounds
-    void getBufferBounds(int &s_line, int &e_line, int &s_col, int &e_col, bool &is_rect) const;
+    void get_buffer_bounds(int &s_line, int &e_line, int &s_col, int &e_col, bool &is_rect) const;
 
     // Get buffer lines (for BUFFER type)
-    const std::vector<std::string> &getBufferLines() const;
+    const std::vector<std::string> &get_buffer_lines() const;
 
     // Check if macro exists and has valid data
-    bool isValid() const;
+    bool is_valid() const;
 
     // Get all buffer data at once (for restoring to clipboard)
     struct BufferData {
@@ -53,7 +53,7 @@ public:
         int start_col, end_col;
         bool is_rectangular;
     };
-    BufferData getAllBufferData() const;
+    BufferData get_all_buffer_data() const;
 
     // Serialization
     void serialize(std::ostream &out) const;

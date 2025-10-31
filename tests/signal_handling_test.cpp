@@ -23,11 +23,11 @@ TEST_F(TmuxDriver, SignalHandlingGracefullyHandlesSIGINT)
     f.close();
 
     // Start editor with the test file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Verify we're in the editor
-    std::string pane1 = capturePane(session, -10);
+    std::string pane1 = capture_pane(session, -10);
     EXPECT_TRUE(pane1.find("Test content") != std::string::npos)
         << "Expected to find 'Test content'. Pane content: " << pane1;
 
@@ -36,13 +36,13 @@ TEST_F(TmuxDriver, SignalHandlingGracefullyHandlesSIGINT)
     // In tmux, we can't easily send signals to the process
 
     // Instead, just verify the editor is still responsive
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(100);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(100);
 
-    std::string pane2 = capturePane(session, -10);
+    std::string pane2 = capture_pane(session, -10);
     EXPECT_TRUE(pane2.find("Line 2") != std::string::npos)
         << "Expected to find 'Line 2' after Down. Pane content: " << pane2;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }

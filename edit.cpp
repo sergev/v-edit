@@ -3,18 +3,18 @@
 //
 // Navigate to specified line number.
 //
-void Editor::goto_line(int lineNumber)
+void Editor::goto_line(int line_number)
 {
     auto total = wksp_->total_line_count();
 
-    if (lineNumber < 0)
-        lineNumber = 0;
-    if (lineNumber >= total)
-        lineNumber = total - 1;
-    if (lineNumber < 0)
-        lineNumber = 0;
+    if (line_number < 0)
+        line_number = 0;
+    if (line_number >= total)
+        line_number = total - 1;
+    if (line_number < 0)
+        line_number = 0;
 
-    wksp_->view.topline = lineNumber;
+    wksp_->view.topline = line_number;
     cursor_line_        = 0;
     cursor_col_         = 0;
     wksp_->view.basecol = 0;
@@ -26,10 +26,10 @@ void Editor::goto_line(int lineNumber)
 //
 void Editor::edit_backspace()
 {
-    int curLine = wksp_->view.topline + cursor_line_;
-    if (curLine < 0)
-        curLine = 0;
-    get_line(curLine);
+    int cur_line = wksp_->view.topline + cursor_line_;
+    if (cur_line < 0)
+        cur_line = 0;
+    get_line(cur_line);
 
     size_t actual_col = get_actual_col();
     if (actual_col > 0) {
@@ -38,18 +38,18 @@ void Editor::edit_backspace()
             current_line_modified_ = true;
             cursor_col_--;
         }
-    } else if (curLine > 0) {
+    } else if (cur_line > 0) {
         // Join with previous line
-        get_line(curLine - 1);
+        get_line(cur_line - 1);
         std::string prev = current_line_;
-        get_line(curLine);
+        get_line(cur_line);
         prev += current_line_;
         current_line_          = prev;
-        current_line_no_       = curLine - 1;
+        current_line_no_       = cur_line - 1;
         current_line_modified_ = true;
         put_line();
         // Delete current line
-        wksp_->delete_contents(curLine, curLine);
+        wksp_->delete_contents(cur_line, cur_line);
         cursor_line_ = cursor_line_ > 0 ? cursor_line_ - 1 : 0;
         cursor_col_  = prev.size();
     }
@@ -62,27 +62,27 @@ void Editor::edit_backspace()
 //
 void Editor::edit_delete()
 {
-    int curLine = wksp_->view.topline + cursor_line_;
-    if (curLine < 0)
-        curLine = 0;
-    get_line(curLine);
+    int cur_line = wksp_->view.topline + cursor_line_;
+    if (cur_line < 0)
+        cur_line = 0;
+    get_line(cur_line);
 
     size_t actual_col = get_actual_col();
     if (actual_col < current_line_.size()) {
         current_line_.erase(actual_col, 1);
         current_line_modified_ = true;
-    } else if (curLine + 1 < wksp_->total_line_count()) {
+    } else if (cur_line + 1 < wksp_->total_line_count()) {
         // Join with next line
         // Preserve current line before loading next
         std::string curr = current_line_;
-        get_line(curLine + 1);
+        get_line(cur_line + 1);
         std::string next = current_line_;
         curr += next;
         current_line_          = curr;
-        current_line_no_       = curLine;
+        current_line_no_       = cur_line;
         current_line_modified_ = true;
         put_line();
-        wksp_->delete_contents(curLine + 1, curLine + 1);
+        wksp_->delete_contents(cur_line + 1, cur_line + 1);
         // Place cursor at the join point (end of original current line)
         cursor_col_ = (int)actual_col;
     }
@@ -95,10 +95,10 @@ void Editor::edit_delete()
 //
 void Editor::edit_enter()
 {
-    int curLine = wksp_->view.topline + cursor_line_;
-    if (curLine < 0)
-        curLine = 0;
-    get_line(curLine);
+    int cur_line = wksp_->view.topline + cursor_line_;
+    if (cur_line < 0)
+        cur_line = 0;
+    get_line(cur_line);
 
     size_t actual_col = get_actual_col();
     std::string tail;
@@ -113,14 +113,14 @@ void Editor::edit_enter()
     if (!tail.empty()) {
         auto temp_segments = tempfile_.write_line_to_temp(tail);
         if (!temp_segments.empty()) {
-            wksp_->insert_contents(temp_segments, curLine + 1);
+            wksp_->insert_contents(temp_segments, cur_line + 1);
         } else {
             auto blank = wksp_->create_blank_lines(1);
-            wksp_->insert_contents(blank, curLine + 1);
+            wksp_->insert_contents(blank, cur_line + 1);
         }
     } else {
         auto blank = wksp_->create_blank_lines(1);
-        wksp_->insert_contents(blank, curLine + 1);
+        wksp_->insert_contents(blank, cur_line + 1);
     }
 
     // Invalidate current_line_no_ since we've moved to a different line
@@ -141,10 +141,10 @@ void Editor::edit_enter()
 //
 void Editor::edit_tab()
 {
-    int curLine = wksp_->view.topline + cursor_line_;
-    if (curLine < 0)
-        curLine = 0;
-    get_line(curLine);
+    int cur_line = wksp_->view.topline + cursor_line_;
+    if (cur_line < 0)
+        cur_line = 0;
+    get_line(cur_line);
 
     size_t actual_col = get_actual_col();
     current_line_.insert(actual_col, 4, ' ');
@@ -159,10 +159,10 @@ void Editor::edit_tab()
 //
 void Editor::edit_insert_char(char ch)
 {
-    int curLine = wksp_->view.topline + cursor_line_;
-    if (curLine < 0)
-        curLine = 0;
-    get_line(curLine);
+    int cur_line = wksp_->view.topline + cursor_line_;
+    if (cur_line < 0)
+        cur_line = 0;
+    get_line(cur_line);
 
     size_t actual_col = get_actual_col();
     // Pad with spaces if inserting at virtual column position beyond line end
@@ -258,11 +258,11 @@ void Editor::move_down()
 //
 int Editor::current_line_length() const
 {
-    int curLine = wksp_->view.topline + cursor_line_;
-    if (curLine < 0 || curLine >= wksp_->total_line_count()) {
+    int cur_line = wksp_->view.topline + cursor_line_;
+    if (cur_line < 0 || cur_line >= wksp_->total_line_count()) {
         return 0;
     }
-    return (int)wksp_->read_line(curLine).size();
+    return (int)wksp_->read_line(cur_line).size();
 }
 
 //
@@ -278,14 +278,14 @@ size_t Editor::get_actual_col() const
 //
 bool Editor::search_forward(const std::string &needle)
 {
-    int startLine = wksp_->view.topline + cursor_line_;
-    int startCol  = wksp_->view.basecol + cursor_col_;
-    auto total    = wksp_->total_line_count();
+    int start_line = wksp_->view.topline + cursor_line_;
+    int start_col  = wksp_->view.basecol + cursor_col_;
+    auto total     = wksp_->total_line_count();
 
     // Search from current position forward
-    for (int i = startLine; i < total; ++i) {
+    for (int i = start_line; i < total; ++i) {
         std::string line = wksp_->read_line(i);
-        size_t pos       = (i == startLine) ? (size_t)startCol : 0;
+        size_t pos       = (i == start_line) ? (size_t)start_col : 0;
         pos              = line.find(needle, pos);
         if (pos != std::string::npos) {
             // Found it - position cursor
@@ -305,11 +305,11 @@ bool Editor::search_forward(const std::string &needle)
     }
 
     // Wrap around to beginning
-    for (int i = 0; i <= startLine; ++i) {
+    for (int i = 0; i <= start_line; ++i) {
         std::string line = wksp_->read_line(i);
         size_t pos       = 0;
-        if (i == startLine) {
-            pos = line.find(needle, (size_t)startCol);
+        if (i == start_line) {
+            pos = line.find(needle, (size_t)start_col);
             if (pos == std::string::npos)
                 continue;
         } else {
@@ -340,16 +340,16 @@ bool Editor::search_forward(const std::string &needle)
 //
 bool Editor::search_backward(const std::string &needle)
 {
-    int startLine = wksp_->view.topline + cursor_line_;
-    int startCol  = wksp_->view.basecol + cursor_col_;
-    auto total    = wksp_->total_line_count();
+    int start_line = wksp_->view.topline + cursor_line_;
+    int start_col  = wksp_->view.basecol + cursor_col_;
+    auto total     = wksp_->total_line_count();
 
     // Search from current position backward
-    for (int i = startLine; i >= 0; --i) {
+    for (int i = start_line; i >= 0; --i) {
         std::string line = wksp_->read_line(i);
         size_t pos       = std::string::npos;
-        if (i == startLine) {
-            pos = line.rfind(needle, (size_t)startCol);
+        if (i == start_line) {
+            pos = line.rfind(needle, (size_t)start_col);
         } else {
             pos = line.rfind(needle);
         }
@@ -370,7 +370,7 @@ bool Editor::search_backward(const std::string &needle)
     }
 
     // Wrap around to end
-    for (int i = total - 1; i > startLine; --i) {
+    for (int i = total - 1; i > start_line; --i) {
         std::string line = wksp_->read_line(i);
         size_t pos       = line.rfind(needle);
         if (pos != std::string::npos) {

@@ -8,22 +8,22 @@ Macro::Macro()
 {
 }
 
-bool Macro::isPosition() const
+bool Macro::is_position() const
 {
     return type == POSITION;
 }
 
-bool Macro::isBuffer() const
+bool Macro::is_buffer() const
 {
     return type == BUFFER;
 }
 
-bool Macro::isBufferEmpty() const
+bool Macro::is_buffer_empty() const
 {
     return type == BUFFER && buffer_lines.empty();
 }
 
-void Macro::setPosition(int line, int col)
+void Macro::set_position(int line, int col)
 {
     type     = POSITION;
     position = std::make_pair(line, col);
@@ -33,8 +33,8 @@ void Macro::setPosition(int line, int col)
     is_rectangular                              = false;
 }
 
-void Macro::setBuffer(const std::vector<std::string> &lines, int s_line, int e_line, int s_col,
-                      int e_col, bool is_rect)
+void Macro::set_buffer(const std::vector<std::string> &lines, int s_line, int e_line, int s_col,
+                       int e_col, bool is_rect)
 {
     type           = BUFFER;
     buffer_lines   = lines;
@@ -45,12 +45,12 @@ void Macro::setBuffer(const std::vector<std::string> &lines, int s_line, int e_l
     is_rectangular = is_rect;
 }
 
-std::pair<int, int> Macro::getPosition() const
+std::pair<int, int> Macro::get_position() const
 {
     return type == POSITION ? position : std::make_pair(0, 0);
 }
 
-void Macro::getBufferBounds(int &s_line, int &e_line, int &s_col, int &e_col, bool &is_rect) const
+void Macro::get_buffer_bounds(int &s_line, int &e_line, int &s_col, int &e_col, bool &is_rect) const
 {
     if (type == BUFFER) {
         s_line  = this->start_line;
@@ -64,12 +64,12 @@ void Macro::getBufferBounds(int &s_line, int &e_line, int &s_col, int &e_col, bo
     }
 }
 
-const std::vector<std::string> &Macro::getBufferLines() const
+const std::vector<std::string> &Macro::get_buffer_lines() const
 {
     return buffer_lines;
 }
 
-bool Macro::isValid() const
+bool Macro::is_valid() const
 {
     if (type == POSITION) {
         return position.first >= 0 && position.second >= 0;
@@ -79,7 +79,7 @@ bool Macro::isValid() const
     return false;
 }
 
-Macro::BufferData Macro::getAllBufferData() const
+Macro::BufferData Macro::get_all_buffer_data() const
 {
     BufferData data;
     if (type == BUFFER) {

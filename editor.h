@@ -130,7 +130,7 @@ private:
     // Helpers
     int current_line_length() const;
     size_t get_actual_col() const; // Get actual column position in line (basecol + cursor_col)
-    void goto_line(int lineNumber);
+    void goto_line(int line_number);
     bool search_forward(const std::string &needle);
     bool search_next();
     bool search_backward(const std::string &needle);
@@ -178,8 +178,8 @@ private:
     int journal_read_key();
 
     // Clipboard operations
-    void picklines(int startLine, int count);
-    void paste(int afterLine, int atCol = 0);
+    void picklines(int start_line, int count);
+    void paste(int after_line, int at_col = 0);
     void pickspaces(int line, int col, int number, int nl);
     void closespaces(int line, int col, int number, int nl);
     void openspaces(int line, int col, int number, int nl);

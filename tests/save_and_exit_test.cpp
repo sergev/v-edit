@@ -18,32 +18,32 @@ TEST_F(TmuxDriver, SaveAndExitWritesFile)
     std::remove(filePath.c_str());
 
     // Launch editor with file path
-    createSession(sessionName, shellQuote(appPath + std::string(" ") + filePath));
-    TmuxDriver::sleepMs(250);
+    create_session(sessionName, shell_quote(appPath + std::string(" ") + filePath));
+    TmuxDriver::sleep_ms(250);
 
     // Type lines: "hello", newline, "world", newline, "!"
-    sendKeys(sessionName, "hello");
-    sendKeys(sessionName, "Enter");
-    sendKeys(sessionName, "Down");
-    sendKeys(sessionName, "Down");
-    sendKeys(sessionName, "world");
-    sendKeys(sessionName, "Enter");
-    sendKeys(sessionName, "!");
-    TmuxDriver::sleepMs(100);
+    send_keys(sessionName, "hello");
+    send_keys(sessionName, "Enter");
+    send_keys(sessionName, "Down");
+    send_keys(sessionName, "Down");
+    send_keys(sessionName, "world");
+    send_keys(sessionName, "Enter");
+    send_keys(sessionName, "!");
+    TmuxDriver::sleep_ms(100);
 
     // Save via F2
-    sendKeys(sessionName, "F2");
-    TmuxDriver::sleepMs(200);
+    send_keys(sessionName, "F2");
+    TmuxDriver::sleep_ms(200);
 
     // Exit via ^A, qa, Enter
-    sendKeys(sessionName, "C-a");
-    sendKeys(sessionName, "q");
-    sendKeys(sessionName, "a");
-    sendKeys(sessionName, "Enter");
-    TmuxDriver::sleepMs(600);
+    send_keys(sessionName, "C-a");
+    send_keys(sessionName, "q");
+    send_keys(sessionName, "a");
+    send_keys(sessionName, "Enter");
+    TmuxDriver::sleep_ms(600);
 
     // Verify file contents (allow a short delay for filesystem sync)
-    TmuxDriver::sleepMs(400);
+    TmuxDriver::sleep_ms(400);
     std::ifstream in(filePath.c_str());
     ASSERT_TRUE(in.good()) << "File was not created: " << filePath;
     std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -56,7 +56,7 @@ TEST_F(TmuxDriver, SaveAndExitWritesFile)
     std::remove(filePath.c_str());
 
     // Ensure tmux session is cleaned up in any case
-    killSession(sessionName);
+    kill_session(sessionName);
 }
 
 TEST_F(TmuxDriver, SaveCreatesBackupFileWithTildeSuffix)
@@ -77,28 +77,28 @@ TEST_F(TmuxDriver, SaveCreatesBackupFileWithTildeSuffix)
     std::remove(backupName.c_str());
 
     // Launch editor with existing file
-    createSession(sessionName, shellQuote(appPath + std::string(" ") + fileName));
-    TmuxDriver::sleepMs(250);
+    create_session(sessionName, shell_quote(appPath + std::string(" ") + fileName));
+    TmuxDriver::sleep_ms(250);
 
     // Make an edit - move to end and add a line
-    sendKeys(sessionName, "End");
-    sendKeys(sessionName, "Enter");
-    sendKeys(sessionName, "modified line");
-    TmuxDriver::sleepMs(100);
+    send_keys(sessionName, "End");
+    send_keys(sessionName, "Enter");
+    send_keys(sessionName, "modified line");
+    TmuxDriver::sleep_ms(100);
 
     // Save via F2 - this should create backup
-    sendKeys(sessionName, "F2");
-    TmuxDriver::sleepMs(200);
+    send_keys(sessionName, "F2");
+    TmuxDriver::sleep_ms(200);
 
     // Exit via ^A, qa, Enter
-    sendKeys(sessionName, "C-a");
-    sendKeys(sessionName, "q");
-    sendKeys(sessionName, "a");
-    sendKeys(sessionName, "Enter");
-    TmuxDriver::sleepMs(600);
+    send_keys(sessionName, "C-a");
+    send_keys(sessionName, "q");
+    send_keys(sessionName, "a");
+    send_keys(sessionName, "Enter");
+    TmuxDriver::sleep_ms(600);
 
     // Verify backup file was created with original content
-    TmuxDriver::sleepMs(400);
+    TmuxDriver::sleep_ms(400);
     std::ifstream backupFile(backupName.c_str());
     ASSERT_TRUE(backupFile.good()) << "Backup file was not created: " << backupName;
 
@@ -122,5 +122,5 @@ TEST_F(TmuxDriver, SaveCreatesBackupFileWithTildeSuffix)
     std::remove(backupName.c_str());
 
     // Ensure tmux session is cleaned up
-    killSession(sessionName);
+    kill_session(sessionName);
 }

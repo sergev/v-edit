@@ -25,7 +25,7 @@ public:
     void clear();
 
     // Copy operations - take content from source and store in clipboard
-    void copy_lines(const std::vector<std::string> &source, int startLine, int count);
+    void copy_lines(const std::vector<std::string> &source, int start_line, int count);
     void copy_rectangular_block(const std::vector<std::string> &source, int line, int col,
                                 int width, int height);
 
@@ -45,8 +45,8 @@ public:
                   const std::vector<std::string> &lines);
 
     // Paste operations - apply clipboard content to a target buffer
-    void paste_into_lines(std::vector<std::string> &target, int afterLine);
-    void paste_into_rectangular(std::vector<std::string> &target, int afterLine, int atCol);
+    void paste_into_lines(std::vector<std::string> &target, int after_line);
+    void paste_into_rectangular(std::vector<std::string> &target, int after_line, int at_col);
 
     // Serialization support
     void serialize(std::ostream &out) const;

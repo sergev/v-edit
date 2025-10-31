@@ -43,32 +43,32 @@ TEST_F(SessionRestoreTest, RestoresSessionAndPosition)
     const std::string app      = V_EDIT_BIN_PATH;
 
     // First session: edit file and move to line 2
-    createSession(session + "_1", shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session + "_1", shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Move down, then quit
-    sendKeys(session + "_1", "Down");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session + "_1", "Down");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session + "_1", "C-a");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session + "_1", "q");
-    TmuxDriver::sleepMs(200);
+    send_keys(session + "_1", "Down");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session + "_1", "Down");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session + "_1", "C-a");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session + "_1", "q");
+    TmuxDriver::sleep_ms(200);
 
-    killSession(session + "_1");
-    TmuxDriver::sleepMs(200);
+    kill_session(session + "_1");
+    TmuxDriver::sleep_ms(200);
 
     // Second session: no args - should restore
-    createSession(session + "_2", shellQuote(app));
-    TmuxDriver::sleepMs(300);
+    create_session(session + "_2", shell_quote(app));
+    TmuxDriver::sleep_ms(300);
 
     // Capture and verify position
-    std::string pane = capturePane(session + "_2", -20);
+    std::string pane = capture_pane(session + "_2", -20);
     EXPECT_FALSE(pane.empty());
 
     // Should show line 2 or 3 in status (depends on implementation)
     EXPECT_TRUE(pane.find("Line=") != std::string::npos);
 
-    killSession(session + "_2");
+    kill_session(session + "_2");
 }

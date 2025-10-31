@@ -21,32 +21,32 @@ TEST_F(TmuxDriver, HelpFileSystemOpensBuiltinHelp)
     f.close();
 
     // Start editor with the test file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Verify we're in the main file
-    std::string pane1 = capturePane(session, -10);
+    std::string pane1 = capture_pane(session, -10);
     EXPECT_TRUE(pane1.find("Main file content") != std::string::npos)
         << "Expected to find 'Main file content'. Pane content: " << pane1;
 
     // Switch to alternative workspace using ^N (should open help file)
-    sendKeys(session, "C-n");
-    TmuxDriver::sleepMs(500);
+    send_keys(session, "C-n");
+    TmuxDriver::sleep_ms(500);
 
     // Verify that help content is displayed
-    std::string pane2 = capturePane(session, -10);
+    std::string pane2 = capture_pane(session, -10);
     EXPECT_TRUE(pane2.find("V-EDIT - Minimal Text Editor") != std::string::npos)
         << "Expected to find help content. Pane content: " << pane2;
 
     // Switch back to main file using ^N
-    sendKeys(session, "C-n");
-    TmuxDriver::sleepMs(500);
+    send_keys(session, "C-n");
+    TmuxDriver::sleep_ms(500);
 
     // Verify we're back in the main file
-    std::string pane3 = capturePane(session, -10);
+    std::string pane3 = capture_pane(session, -10);
     EXPECT_TRUE(pane3.find("Main file content") != std::string::npos)
         << "Expected to find 'Main file content' after switching back. Pane content: " << pane3;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }

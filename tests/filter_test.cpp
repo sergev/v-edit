@@ -21,23 +21,23 @@ TEST_F(TmuxDriver, ExternalFilterSortsLines)
     f << "cherry\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Position cursor at first line and select 3 lines
-    sendKeys(session, "F4"); // Enter filter mode
-    TmuxDriver::sleepMs(200);
-    sendKeys(session, "3"); // Type "3"
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, " "); // Type space
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "sort"); // Type "sort"
-    TmuxDriver::sleepMs(200);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(500);
+    send_keys(session, "F4"); // Enter filter mode
+    TmuxDriver::sleep_ms(200);
+    send_keys(session, "3"); // Type "3"
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, " "); // Type space
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "sort"); // Type "sort"
+    TmuxDriver::sleep_ms(200);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(500);
 
     // Verify lines are sorted (check for sorted content)
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_FALSE(pane.empty());
 
     // The filter should have sorted the lines, so we should see the sorted content
@@ -45,6 +45,6 @@ TEST_F(TmuxDriver, ExternalFilterSortsLines)
     EXPECT_TRUE(pane.find("apple") != std::string::npos)
         << "Expected to find 'apple' after sorting. Pane content: " << pane;
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }

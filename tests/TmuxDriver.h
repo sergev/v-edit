@@ -11,26 +11,26 @@ public:
     TmuxDriver();
     ~TmuxDriver();
 
-    bool tmuxAvailable() const;
+    bool tmux_available() const;
 
 protected:
     void SetUp() override;
     void TearDown() override;
 
-    static void sleepMs(int millis);
-    static std::string shellQuote(const std::string &text);
+    static void sleep_ms(int millis);
+    static std::string shell_quote(const std::string &text);
 
-    void createSession(const std::string &sessionName, const std::string &command);
-    void sendKeys(const std::string &sessionName, const std::string &keys);
-    std::string capturePane(const std::string &sessionName, int start = -100);
-    std::string captureScreen(const std::string &sessionName);
-    void killSession(const std::string &sessionName);
+    void create_session(const std::string &sessionName, const std::string &command);
+    void send_keys(const std::string &sessionName, const std::string &keys);
+    std::string capture_pane(const std::string &sessionName, int start = -100);
+    std::string capture_screen(const std::string &sessionName);
+    void kill_session(const std::string &sessionName);
 
 private:
-    std::string serverName;
+    std::string server_name_;
     std::string qualify(const std::string &sessionName) const;
 
-    static std::string escapeSingleQuotes(const std::string &text);
-    int runSystem(const std::string &cmd) const;
-    std::string runAndCapture(const std::string &cmd) const;
+    static std::string escape_single_quotes(const std::string &text);
+    int run_system(const std::string &cmd) const;
+    std::string run_and_capture(const std::string &cmd) const;
 };

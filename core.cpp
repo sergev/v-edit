@@ -20,7 +20,7 @@ Editor::Editor()
 //
 // Get current user's name.
 //
-static std::string getUserName()
+static std::string get_user_name()
 {
     const char *u = getenv("USER");
     if (u)
@@ -32,7 +32,7 @@ static std::string getUserName()
 //
 // Generate TTY suffix for temporary file names.
 //
-static std::string ttySuffix()
+static std::string tty_suffix()
 {
     const char *tty = ttyname(0);
     if (!tty)
@@ -73,8 +73,8 @@ void Editor::startup(int restart)
     // Initialize core data model structures for future segment-based operations
     model_init();
 
-    const std::string user = getUserName();
-    const std::string suf  = ttySuffix();
+    const std::string user = get_user_name();
+    const std::string suf  = tty_suffix();
     tmpname_               = std::string("/tmp/ret") + suf + user;
     jname_                 = std::string("/tmp/rej") + suf + user;
 

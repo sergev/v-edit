@@ -84,11 +84,11 @@ void Editor::draw()
         draw_status(status_);
         status_ = "";
     } else {
-        std::string modeStr = insert_mode_ ? "INSERT" : "OVERWRITE";
-        std::string s       = std::string("Line=") +
+        std::string mode_str = insert_mode_ ? "INSERT" : "OVERWRITE";
+        std::string s        = std::string("Line=") +
                         std::to_string(wksp_->view.topline + cursor_line_ + 1) +
                         "    Col=" + std::to_string(wksp_->view.basecol + cursor_col_ + 1) +
-                        "    " + modeStr + "    \"" + filename_ + "\"";
+                        "    " + mode_str + "    \"" + filename_ + "\"";
         draw_status(s);
     }
 
@@ -109,25 +109,25 @@ void Editor::wksp_redraw()
     auto total = wksp_->total_line_count();
     for (int r = 0; r < nlines_ - 1; ++r) {
         mvhline(r, 0, ' ', ncols_);
-        std::string lineText;
+        std::string line_text;
         if (r + wksp_->view.topline < total) {
-            lineText = wksp_->read_line(r + wksp_->view.topline);
+            line_text = wksp_->read_line(r + wksp_->view.topline);
             // horizontal offset and continuation markers
             bool clipped   = false;
             bool truncated = false;
-            if (wksp_->view.basecol > 0 && (int)lineText.size() > wksp_->view.basecol) {
-                lineText.erase(0, (size_t)wksp_->view.basecol);
+            if (wksp_->view.basecol > 0 && (int)line_text.size() > wksp_->view.basecol) {
+                line_text.erase(0, (size_t)wksp_->view.basecol);
                 clipped = true;
-            } else if (wksp_->view.basecol > 0 && (int)lineText.size() <= wksp_->view.basecol) {
+            } else if (wksp_->view.basecol > 0 && (int)line_text.size() <= wksp_->view.basecol) {
                 // Beyond line content - show blank spaces (virtual column position)
-                lineText.clear();
+                line_text.clear();
                 clipped = true;
             }
-            if ((int)lineText.size() > ncols_ - 1) {
+            if ((int)line_text.size() > ncols_ - 1) {
                 truncated = true;
-                lineText.resize((size_t)(ncols_ - 1));
+                line_text.resize((size_t)(ncols_ - 1));
             }
-            mvaddnstr(r, 0, lineText.c_str(), ncols_ - 1);
+            mvaddnstr(r, 0, line_text.c_str(), ncols_ - 1);
             if (truncated) {
                 start_color(Color::TRUNCATION);
                 mvaddch(r, ncols_ - 2, '~');
@@ -159,15 +159,15 @@ void Editor::ensure_cursor_visible()
         cursor_line_ = nlines_ - 2;
 
     // Now adjust wksp_->topline so that the absolute line is visible
-    // Allow absLine to exceed total_line_count() for virtual positions
-    int absLine      = wksp_->view.topline + cursor_line_;
+    // Allow abs_line to exceed total_line_count() for virtual positions
+    int abs_line     = wksp_->view.topline + cursor_line_;
     int visible_rows = nlines_ - 1;
 
-    if (absLine < wksp_->view.topline) {
+    if (abs_line < wksp_->view.topline) {
         // Scroll up to show cursor
-        wksp_->view.topline = absLine;
-    } else if (absLine > wksp_->view.topline + (visible_rows - 1)) {
+        wksp_->view.topline = abs_line;
+    } else if (abs_line > wksp_->view.topline + (visible_rows - 1)) {
         // Scroll down to show cursor
-        wksp_->view.topline = absLine - (visible_rows - 1);
+        wksp_->view.topline = abs_line - (visible_rows - 1);
     }
 }

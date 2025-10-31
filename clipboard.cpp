@@ -49,16 +49,16 @@ void Clipboard::clear()
     m_is_rectangular_                               = false;
 }
 
-void Clipboard::copy_lines(const std::vector<std::string> &source, int startLine, int count)
+void Clipboard::copy_lines(const std::vector<std::string> &source, int start_line, int count)
 {
     clear();
     m_is_rectangular_ = false;
-    start_line_       = startLine;
-    end_line_         = startLine + count - 1;
+    start_line_       = start_line;
+    end_line_         = start_line + count - 1;
 
     for (int i = 0; i < count; ++i) {
-        if (startLine + i < (int)source.size()) {
-            lines_.push_back(source[startLine + i]);
+        if (start_line + i < (int)source.size()) {
+            lines_.push_back(source[start_line + i]);
         }
     }
 }
@@ -114,46 +114,46 @@ void Clipboard::set_data(bool rect, int s_line, int e_line, int s_col, int e_col
     lines_            = clipboard_lines_;
 }
 
-void Clipboard::paste_into_lines(std::vector<std::string> &target, int afterLine)
+void Clipboard::paste_into_lines(std::vector<std::string> &target, int after_line)
 {
     if (is_empty()) {
         return;
     }
 
     // Paste as lines_
-    target.insert(target.begin() + std::min((int)target.size(), afterLine + 1), lines_.begin(),
+    target.insert(target.begin() + std::min((int)target.size(), after_line + 1), lines_.begin(),
                   lines_.end());
 }
 
-void Clipboard::paste_into_rectangular(std::vector<std::string> &target, int afterLine, int atCol)
+void Clipboard::paste_into_rectangular(std::vector<std::string> &target, int after_line, int at_col)
 {
     if (is_empty()) {
         return;
     }
 
-    int startLine = afterLine + 1;
-    int numLines  = lines_.size();
-    int numCols   = end_col_ - start_col_ + 1;
+    int start_line = after_line + 1;
+    int num_lines  = lines_.size();
+    int num_cols   = end_col_ - start_col_ + 1;
 
     // Ensure we have enough lines_
-    while ((int)target.size() <= startLine + numLines - 1) {
+    while ((int)target.size() <= start_line + num_lines - 1) {
         target.push_back("");
     }
 
     // Insert the rectangular block
-    for (int i = 0; i < numLines; ++i) {
-        std::string &targetLine = target[startLine + i];
+    for (int i = 0; i < num_lines; ++i) {
+        std::string &target_line = target[start_line + i];
 
         // Expand line if necessary
-        if ((int)targetLine.size() < atCol + numCols) {
-            targetLine.resize(atCol + numCols, ' ');
+        if ((int)target_line.size() < at_col + num_cols) {
+            target_line.resize(at_col + num_cols, ' ');
         }
 
         // Copy the block content
         if (i < (int)lines_.size()) {
             const std::string &src = lines_[i];
-            for (int j = 0; j < numCols && j < (int)src.size(); ++j) {
-                targetLine[atCol + j] = src[j];
+            for (int j = 0; j < num_cols && j < (int)src.size(); ++j) {
+                target_line[at_col + j] = src[j];
             }
         }
     }

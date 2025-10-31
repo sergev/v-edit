@@ -9,15 +9,15 @@ TEST_F(TmuxDriver, PaneHasPrintableOutput)
     const std::string sessionName = testName;
     const std::string appPath     = V_EDIT_BIN_PATH; // provided via CMake
 
-    createSession(sessionName, shellQuote(appPath));
-    TmuxDriver::sleepMs(200);
+    create_session(sessionName, shell_quote(appPath));
+    TmuxDriver::sleep_ms(200);
 
-    const std::string pane = capturePane(sessionName, -200);
+    const std::string pane = capture_pane(sessionName, -200);
     ASSERT_FALSE(pane.empty());
 
     const bool hasPrintable =
         std::any_of(pane.begin(), pane.end(), [](unsigned char c) { return std::isprint(c) != 0; });
     EXPECT_TRUE(hasPrintable);
 
-    killSession(sessionName);
+    kill_session(sessionName);
 }

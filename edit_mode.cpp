@@ -30,48 +30,48 @@ void Editor::handle_key_edit(int ch)
     }
     if (ch == KEY_F(5)) {
         // Copy current line to clipboard_
-        int curLine = wksp_->view.topline + cursor_line_;
-        picklines(curLine, 1);
+        int cur_line = wksp_->view.topline + cursor_line_;
+        picklines(cur_line, 1);
         status_ = "Copied";
         return;
     }
     if (ch == KEY_F(6)) {
         // Paste clipboard_ at current position
         if (!clipboard_.is_empty()) {
-            int curLine = wksp_->view.topline + cursor_line_;
-            int curCol  = wksp_->view.basecol + cursor_col_;
-            paste(curLine, curCol);
+            int cur_line = wksp_->view.topline + cursor_line_;
+            int cur_col  = wksp_->view.basecol + cursor_col_;
+            paste(cur_line, cur_col);
         }
         return;
     }
     // ^D - Delete character at cursor
     if (ch == 4) { // Ctrl-D
-        int curLine = wksp_->view.topline + cursor_line_;
-        get_line(curLine);
+        int cur_line = wksp_->view.topline + cursor_line_;
+        get_line(cur_line);
         if (cursor_col_ < (int)current_line_.size()) {
             current_line_.erase((size_t)cursor_col_, 1);
             current_line_modified_ = true;
             put_line();
             ensure_cursor_visible();
-        } else if (curLine + 1 < wksp_->total_line_count()) {
+        } else if (cur_line + 1 < wksp_->total_line_count()) {
             // Join with next line
-            get_line(curLine + 1);
+            get_line(cur_line + 1);
             current_line_ += current_line_;
-            current_line_no_       = curLine;
+            current_line_no_       = cur_line;
             current_line_modified_ = true;
             put_line();
             // Delete next line
-            wksp_->delete_contents(curLine + 1, curLine + 1);
+            wksp_->delete_contents(cur_line + 1, cur_line + 1);
             ensure_cursor_visible();
         }
         return;
     }
     // ^Y - Delete current line
     if (ch == 25) { // Ctrl-Y
-        int curLine = wksp_->view.topline + cursor_line_;
-        if (curLine >= 0 && curLine < wksp_->total_line_count()) {
-            picklines(curLine, 1); // Copy to clipboard_ before deleting
-            wksp_->delete_contents(curLine, curLine);
+        int cur_line = wksp_->view.topline + cursor_line_;
+        if (cur_line >= 0 && cur_line < wksp_->total_line_count()) {
+            picklines(cur_line, 1); // Copy to clipboard_ before deleting
+            wksp_->delete_contents(cur_line, cur_line);
             auto total = wksp_->total_line_count();
             if (cursor_line_ >= total - 1) {
                 cursor_line_ = total - 2;
@@ -84,25 +84,25 @@ void Editor::handle_key_edit(int ch)
     }
     // ^C - Copy current line to clipboard_
     if (ch == 3) { // Ctrl-C
-        int curLine = wksp_->view.topline + cursor_line_;
-        picklines(curLine, 1);
+        int cur_line = wksp_->view.topline + cursor_line_;
+        picklines(cur_line, 1);
         status_ = "Copied line";
         return;
     }
     // ^V - Paste clipboard_ at current position
     if (ch == 22) { // Ctrl-V
         if (!clipboard_.is_empty()) {
-            int curLine = wksp_->view.topline + cursor_line_;
-            int curCol  = wksp_->view.basecol + cursor_col_;
-            paste(curLine, curCol);
+            int cur_line = wksp_->view.topline + cursor_line_;
+            int cur_col  = wksp_->view.basecol + cursor_col_;
+            paste(cur_line, cur_col);
         }
         return;
     }
     // ^O - Insert blank line
     if (ch == 15) { // Ctrl-O
-        int curLine = wksp_->view.topline + cursor_line_;
-        auto blank  = wksp_->create_blank_lines(1);
-        wksp_->insert_contents(blank, curLine + 1);
+        int cur_line = wksp_->view.topline + cursor_line_;
+        auto blank   = wksp_->create_blank_lines(1);
+        wksp_->insert_contents(blank, cur_line + 1);
         ensure_cursor_visible();
         return;
     }

@@ -23,51 +23,51 @@ TEST_F(TmuxDriver, RectangularBlockCopyPaste)
     f.close();
 
     // Start editor with the test file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Move cursor to position (line 0, column 8) - before "123"
     for (int i = 0; i < 8; ++i) {
-        sendKeys(session, "Right");
-        TmuxDriver::sleepMs(50);
+        send_keys(session, "Right");
+        TmuxDriver::sleep_ms(50);
     }
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Move cursor to define rectangular area (down 2 lines, right 3 characters)
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(50);
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(50);
-    sendKeys(session, "Right");
-    TmuxDriver::sleepMs(50);
-    sendKeys(session, "Right");
-    TmuxDriver::sleepMs(50);
-    sendKeys(session, "Right");
-    TmuxDriver::sleepMs(50);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(50);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(50);
+    send_keys(session, "Right");
+    TmuxDriver::sleep_ms(50);
+    send_keys(session, "Right");
+    TmuxDriver::sleep_ms(50);
+    send_keys(session, "Right");
+    TmuxDriver::sleep_ms(50);
 
     // Copy the rectangular block with ^C (this also terminates selection)
-    sendKeys(session, "C-c");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "C-c");
+    TmuxDriver::sleep_ms(200);
 
     // Move to a different location
     for (int i = 0; i < 10; ++i) {
-        sendKeys(session, "Right");
-        TmuxDriver::sleepMs(50);
+        send_keys(session, "Right");
+        TmuxDriver::sleep_ms(50);
     }
 
     // Paste the rectangular block (^V)
-    sendKeys(session, "C-v");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "C-v");
+    TmuxDriver::sleep_ms(200);
 
     // Exit and save
-    sendKeys(session, "C-a");
-    sendKeys(session, "q");
-    sendKeys(session, "a");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(600);
+    send_keys(session, "C-a");
+    send_keys(session, "q");
+    send_keys(session, "a");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(600);
 
     // Verify the file content
     std::ifstream in(testFile);
@@ -80,7 +80,7 @@ TEST_F(TmuxDriver, RectangularBlockCopyPaste)
 
     // Cleanup
     fs::remove(testFile);
-    killSession(session);
+    kill_session(session);
 }
 
 TEST_F(TmuxDriver, RectangularBlockDelete)
@@ -99,37 +99,37 @@ TEST_F(TmuxDriver, RectangularBlockDelete)
     f.close();
 
     // Start editor with the test file
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Move cursor to position (line 0, column 8)
     for (int i = 0; i < 8; ++i) {
-        sendKeys(session, "Right");
-        TmuxDriver::sleepMs(50);
+        send_keys(session, "Right");
+        TmuxDriver::sleep_ms(50);
     }
 
     // Enter command mode
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(200);
 
     // Move cursor to define rectangular area
-    sendKeys(session, "Down");
-    TmuxDriver::sleepMs(50);
-    sendKeys(session, "Right");
-    TmuxDriver::sleepMs(50);
-    sendKeys(session, "Right");
-    TmuxDriver::sleepMs(50);
+    send_keys(session, "Down");
+    TmuxDriver::sleep_ms(50);
+    send_keys(session, "Right");
+    TmuxDriver::sleep_ms(50);
+    send_keys(session, "Right");
+    TmuxDriver::sleep_ms(50);
 
     // Delete the rectangular block with ^Y (this also terminates selection)
-    sendKeys(session, "C-y");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "C-y");
+    TmuxDriver::sleep_ms(200);
 
     // Exit and save
-    sendKeys(session, "C-a");
-    sendKeys(session, "q");
-    sendKeys(session, "a");
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(600);
+    send_keys(session, "C-a");
+    send_keys(session, "q");
+    send_keys(session, "a");
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(600);
 
     // Verify the file content
     std::ifstream in(testFile);
@@ -142,5 +142,5 @@ TEST_F(TmuxDriver, RectangularBlockDelete)
 
     // Cleanup
     fs::remove(testFile);
-    killSession(session);
+    kill_session(session);
 }

@@ -19,31 +19,31 @@ TEST_F(TmuxDriver, VerticalScrollingShowsLaterLines)
     std::remove(fileName.c_str());
 
     // Launch editor with temp file in current directory (build/tests)
-    createSession(sessionName, shellQuote(appPath + std::string(" ") + fileName));
-    TmuxDriver::sleepMs(200);
+    create_session(sessionName, shell_quote(appPath + std::string(" ") + fileName));
+    TmuxDriver::sleep_ms(200);
 
     // Insert more lines than fit in 9-row content area (window is 10 rows incl. status)
     for (int i = 1; i <= 15; ++i) {
         char buf[8];
         std::snprintf(buf, sizeof(buf), "L%02d", i);
-        sendKeys(sessionName, buf);
+        send_keys(sessionName, buf);
         if (i < 15)
-            sendKeys(sessionName, "Enter");
-        TmuxDriver::sleepMs(10);
+            send_keys(sessionName, "Enter");
+        TmuxDriver::sleep_ms(10);
     }
 
-    TmuxDriver::sleepMs(400);
+    TmuxDriver::sleep_ms(400);
     // Force a redraw via command mode 'r' to ensure pane has content
-    sendKeys(sessionName, "F1");
-    TmuxDriver::sleepMs(150);
-    sendKeys(sessionName, "r");
-    TmuxDriver::sleepMs(100);
-    sendKeys(sessionName, "Enter");
-    TmuxDriver::sleepMs(200);
-    std::string paneAll = capturePane(sessionName, -500);
+    send_keys(sessionName, "F1");
+    TmuxDriver::sleep_ms(150);
+    send_keys(sessionName, "r");
+    TmuxDriver::sleep_ms(100);
+    send_keys(sessionName, "Enter");
+    TmuxDriver::sleep_ms(200);
+    std::string paneAll = capture_pane(sessionName, -500);
     if (paneAll.empty()) {
-        TmuxDriver::sleepMs(300);
-        paneAll = capturePane(sessionName, -500);
+        TmuxDriver::sleep_ms(300);
+        paneAll = capture_pane(sessionName, -500);
     }
     ASSERT_FALSE(paneAll.empty());
 
@@ -113,13 +113,13 @@ TEST_F(TmuxDriver, VerticalScrollingShowsLaterLines)
     }
 
     // Exit and cleanup
-    sendKeys(sessionName, "C-a");
-    sendKeys(sessionName, "q");
-    sendKeys(sessionName, "a");
-    sendKeys(sessionName, "Enter");
-    TmuxDriver::sleepMs(300);
+    send_keys(sessionName, "C-a");
+    send_keys(sessionName, "q");
+    send_keys(sessionName, "a");
+    send_keys(sessionName, "Enter");
+    TmuxDriver::sleep_ms(300);
     std::remove(fileName.c_str());
-    killSession(sessionName);
+    kill_session(sessionName);
 }
 
 TEST_F(TmuxDriver, PageDownScrollingAndVirtualPositions)
@@ -138,17 +138,17 @@ TEST_F(TmuxDriver, PageDownScrollingAndVirtualPositions)
     f.close();
 
     // Launch editor with the file
-    createSession(sessionName, shellQuote(appPath + std::string(" ") + fileName));
-    TmuxDriver::sleepMs(300);
+    create_session(sessionName, shell_quote(appPath + std::string(" ") + fileName));
+    TmuxDriver::sleep_ms(300);
 
     // Test 1: Page Down within the file should show later lines
     // Press Page Down a few times to scroll through the file
-    sendKeys(sessionName, "NPage");
-    TmuxDriver::sleepMs(200);
-    sendKeys(sessionName, "NPage");
-    TmuxDriver::sleepMs(200);
+    send_keys(sessionName, "NPage");
+    TmuxDriver::sleep_ms(200);
+    send_keys(sessionName, "NPage");
+    TmuxDriver::sleep_ms(200);
 
-    std::string pane1 = capturePane(sessionName, -10);
+    std::string pane1 = capture_pane(sessionName, -10);
     // Should see some lines from the middle/end of the file
     bool foundLaterLine = false;
     for (int i = 8; i < 20; i++) {
@@ -166,11 +166,11 @@ TEST_F(TmuxDriver, PageDownScrollingAndVirtualPositions)
     // With ~8 lines visible per page, we need about 20/8 = 2.5 pages to reach the end
     // Then a few more to go beyond
     for (int i = 0; i < 5; i++) {
-        sendKeys(sessionName, "NPage");
-        TmuxDriver::sleepMs(200);
+        send_keys(sessionName, "NPage");
+        TmuxDriver::sleep_ms(200);
     }
 
-    std::string pane2 = capturePane(sessionName, -10);
+    std::string pane2 = capture_pane(sessionName, -10);
 
     // Should see virtual lines (marked with ~) when beyond file end
     // Check if we're showing virtual lines
@@ -204,11 +204,11 @@ TEST_F(TmuxDriver, PageDownScrollingAndVirtualPositions)
     // Press Page Up multiple times to scroll back into the file content
     // We scrolled 7 pages total (2 initially + 5 more), so need to scroll back enough
     for (int i = 0; i < 6; i++) {
-        sendKeys(sessionName, "PPage");
-        TmuxDriver::sleepMs(200);
+        send_keys(sessionName, "PPage");
+        TmuxDriver::sleep_ms(200);
     }
 
-    std::string pane3 = capturePane(sessionName, -10);
+    std::string pane3 = capture_pane(sessionName, -10);
     // Should see actual content lines again
     bool foundContentLine = false;
     for (int i = 0; i < 20; i++) {
@@ -223,11 +223,11 @@ TEST_F(TmuxDriver, PageDownScrollingAndVirtualPositions)
                                   << pane3;
 
     // Exit and cleanup
-    sendKeys(sessionName, "C-a");
-    sendKeys(sessionName, "q");
-    sendKeys(sessionName, "a");
-    sendKeys(sessionName, "Enter");
-    TmuxDriver::sleepMs(300);
+    send_keys(sessionName, "C-a");
+    send_keys(sessionName, "q");
+    send_keys(sessionName, "a");
+    send_keys(sessionName, "Enter");
+    TmuxDriver::sleep_ms(300);
     std::remove(fileName.c_str());
-    killSession(sessionName);
+    kill_session(sessionName);
 }

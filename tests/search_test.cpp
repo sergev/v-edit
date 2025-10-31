@@ -21,23 +21,23 @@ TEST_F(TmuxDriver, SearchForwardFindsMatch)
     f << "banana cherry\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Search for "banana" using ^F (Ctrl-F enters search mode with /)
-    sendKeys(session, "C-f");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "banana");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "C-f");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "banana");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
     // Verify cursor moved to first match
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_FALSE(pane.empty());
     EXPECT_TRUE(pane.find("apple banana") != std::string::npos);
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -55,29 +55,29 @@ TEST_F(TmuxDriver, SearchNextFindsSecondMatch)
     f << "banana cherry\n";
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Search for "apple", then find next with 'n'
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "/apple");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "/apple");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
     // Find next
-    sendKeys(session, "F1");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "n");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F1");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "n");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_FALSE(pane.empty());
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }
 
@@ -95,21 +95,21 @@ TEST_F(TmuxDriver, GotoLineCommandWorks)
     }
     f.close();
 
-    createSession(session, shellQuote(app) + " " + shellQuote(testFile));
-    TmuxDriver::sleepMs(300);
+    create_session(session, shell_quote(app) + " " + shell_quote(testFile));
+    TmuxDriver::sleep_ms(300);
 
     // Goto line 3 using F8
-    sendKeys(session, "F8");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "3");
-    TmuxDriver::sleepMs(100);
-    sendKeys(session, "Enter");
-    TmuxDriver::sleepMs(200);
+    send_keys(session, "F8");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "3");
+    TmuxDriver::sleep_ms(100);
+    send_keys(session, "Enter");
+    TmuxDriver::sleep_ms(200);
 
     // Verify cursor at line 3
-    std::string pane = capturePane(session, -10);
+    std::string pane = capture_pane(session, -10);
     EXPECT_FALSE(pane.empty());
 
-    killSession(session);
+    kill_session(session);
     fs::remove(testFile);
 }

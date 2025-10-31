@@ -7,7 +7,13 @@
 - **Libraries**: ncurses, GoogleTest
 - **Platform**: macOS primary (AppleClang); portable C++17
 - **Main header**: `editor.h` — contains the `Editor` class definition
-- **Core sources**: `core.cpp`, `display.cpp`, `edit_mode.cpp`, `cmd_mode.cpp`, `file.cpp`, `files.cpp`, `clipboard.cpp`, `copy_paste.cpp`, `session.cpp`, `filter.cpp`, `segment.cpp`, `signal.cpp`, `macro.cpp`, `main.cpp`
+- **Core sources**: Layer-based organization:
+  - Presentation: `core.cpp`, `display.cpp`
+  - Input: `key_bindings.cpp`
+  - Business Logic: `ops.cpp`, `clipboard.cpp`, `buffer.cpp`
+  - Data: `file.cpp`, `workspace.cpp`, `segment.cpp`, `tempfile.cpp`
+  - Infrastructure: `session.cpp`, `help.cpp`
+  - Entry: `main.cpp`
 - **Test directory**: `tests/` — comprehensive test suite using GoogleTest
 
 ## Core Architecture Patterns

@@ -15,7 +15,7 @@ All tests live under `tests/` and are built into the single test binary `v_edit_
 - `tests/CMakeLists.txt`:
   - Fetches GoogleTest via CMake FetchContent
   - Builds `v_edit_tests` from sources in `tests/`
-  - Links `GTest::gtest_main` and `v_edit_lib`
+  - Links `GTest::gtest_main` and `v_edit`
   - Injects the path to the built app as `V_EDIT_BIN_PATH` (via compile definition)
   - Registers tests via `gtest_discover_tests`
 

@@ -8,7 +8,7 @@ This file captures comprehensive context and conventions for assisting on this r
 - **Name**: ve — minimal ncurses-based text editor (C++17)
 - **Binary**: `ve` (two letters, simple)
 - **Build system**: CMake (>= 3.15) with version 0.1.0
-- **Core sources**: `core.cpp`, `display.cpp`, `input.cpp`, `edit.cpp`, `file.cpp`, `files.cpp`, `clipboard.cpp`, `copy_paste.cpp`, `session.cpp`, `filter.cpp`, `segments.cpp`, `signal.cpp`, `macro.cpp`, `main.cpp`
+- **Core sources**: `core.cpp`, `display.cpp`, `key_bindings.cpp`, `ops.cpp`, `clipboard.cpp`, `buffer.cpp`, `file.cpp`, `workspace.cpp`, `segment.cpp`, `tempfile.cpp`, `session.cpp`, `help.cpp`, `main.cpp`
 - **Main header**: `editor.h` — contains the `Editor` class definition
 - **Libraries**: ncurses, CMakeFetchContent (GoogleTest)
 - **Platform**: macOS primary (AppleClang); portable C++17
@@ -167,9 +167,9 @@ bool current_line_modified_;      // Buffer needs writing back
 ### Segment Chain (large file model)
 ```cpp
 struct Segment {
-    unsigned line_count;                   // Number of lines in segment
-    int file_descriptor;                   // File containing data, or -1 for empty lines
-    long file_offset;                      // Offset in file where data begins
+    unsigned line_count;                      // Number of lines in segment
+    int file_descriptor;                      // File containing data, or -1 for empty lines
+    long file_offset;                         // Offset in file where data begins
     std::vector<unsigned short> line_lengths; // Byte length of each line (including \n)
 };
 ```
@@ -177,7 +177,7 @@ struct Segment {
 ### Enhanced Clipboard
 ```cpp
 class Clipboard {
-    std::vector<std::string> lines_;  // Content lines
+    std::vector<std::string> lines_; // Content lines
     Parameters params_;              // Bounds and type tracking
 
     void serialize(std::ostream&);   // Save/restore across sessions
@@ -203,12 +203,12 @@ std::unique_ptr<Workspace> alt_wksp_;  // Alternative workspace
 
 ### Macro System
 ```cpp
-std::map<char, Macro> macros_;  // char -> macro data
+std::map<char, Macro> macros_;            // char -> macro data
 class Macro {
     enum Type { POSITION, BUFFER } type_;
     std::pair<int,int> position_;         // line,col for POSITION
     std::vector<std::string> buffer_;     // lines for BUFFER
-    Parameters bounds_;                  // rectangular extents
+    Parameters bounds_;                   // rectangular extents
 };
 ```
 
@@ -220,16 +220,19 @@ class Macro {
 
 ### CMake Structure
 ```cmake
-v_edit_lib (static)
-    ↳ core.cpp display.cpp edit_mode.cpp cmd_mode.cpp file.cpp files.cpp
-      clipboard.cpp session.cpp filter.cpp segment.cpp signal.cpp macro.cpp
+v_edit (static library)
+    ↳ Presentation Layer: core.cpp, display.cpp
+    ↳ Input Layer: key_bindings.cpp
+    ↳ Business Logic Layer: ops.cpp, clipboard.cpp, buffer.cpp
+    ↳ Data Layer: file.cpp, workspace.cpp, segment.cpp, tempfile.cpp
+    ↳ Infrastructure: session.cpp, help.cpp
 
-ve (executable) ← v_edit_lib
+ve (executable) ← v_edit
 
-v_edit_tests ← v_edit_lib + GoogleTest + TmuxDriver
+v_edit_tests ← v_edit + GoogleTest + TmuxDriver
 ```
 
-- **Library**: `v_edit_lib` includes all editor logic except `main.cpp`
+- **Library**: `v_edit` includes all editor logic except `main.cpp`
 - **Executable**: `ve` links only main.cpp + library
 - **Warnings**: `-Wall -Werror -Wshadow` (varies by compiler)
 - **Install**: Both binary and library installed
@@ -284,13 +287,13 @@ current_line_modified_ = true;
 put_line();               // Write back to segment chain
 ```
 
-### Key Handling Flow
+### Key Handling Flow (key_bindings.cpp)
 ```
 handle_key()
-  ├─ cmd_mode_? → handle_key_cmd() ┌─ area_selection_mode_?
-  │                                ├─ rectangular operations (^C/^Y/^O)
-  │                                └─ parameter/movement processing
-  └─ handle_key_edit() ──────────────┼─ F-keys, ^X prefix, movement
+  ├─ cmd_mode_? → handle_cmd_mode() ┌─ area_selection_mode_?
+  │                                 ├─ rectangular operations (^C/^Y/^O)
+  │                                 └─ parameter/movement processing
+  └─ handle_edit_mode() ─────────────┼─ F-keys, ^X prefix, movement
                                      └─ character editing into current_line_
 ```
 
@@ -329,11 +332,14 @@ handle_key()
 - **Parameter system**: Enhanced command parsing with counts/bounds
 - **Serialization**: Persistent clipboard and macro state
 
-### File Organization
+### File Organization (Layer-Based Architecture)
+- **Presentation Layer**: `core.cpp` (main loop), `display.cpp` (UI rendering)
+- **Input Layer**: `key_bindings.cpp` (keyboard input handling for edit and command modes)
+- **Business Logic Layer**: `ops.cpp` (editing operations), `clipboard.cpp` (clipboard management), `buffer.cpp` (macro/buffer management)
+- **Data Layer**: `file.cpp` (file I/O and line buffer), `workspace.cpp` (workspace management), `segment.cpp` (segment chain), `tempfile.cpp` (temporary file handling)
+- **Infrastructure**: `session.cpp` (session persistence and signal handling), `help.cpp` (help system and external filters)
 - **Headers**: Classes, structures, constants in `.h` files
-- **Implementation**: Single-responsibility `.cpp` files
-- **Test files**: Comprehensive unit and integration tests
-- **Documentation**: Usage docs separate from AI context
+- **Test files**: Comprehensive unit and integration tests in `tests/`
 
 ### Debugging
 - Create focused unit tests to reproduce the issue

@@ -55,6 +55,15 @@ ve --version          # Show version
 - **Journal replay**: Use `ve -` to replay previous session keystrokes
 - **Save operations**: `F2`, `^A s`, `:w`, `^X ^C` (save and quit)
 
+## Source Organization
+
+The codebase follows a layer-based architecture:
+- **Presentation Layer**: UI rendering and main loop (`core.cpp`, `display.cpp`)
+- **Input Layer**: Keyboard input handling (`key_bindings.cpp`)
+- **Business Logic Layer**: Editing operations (`ops.cpp`), clipboard (`clipboard.cpp`), macros (`buffer.cpp`)
+- **Data Layer**: File I/O (`file.cpp`), workspace management (`workspace.cpp`), segments (`segment.cpp`), temp files (`tempfile.cpp`)
+- **Infrastructure**: Session management and signals (`session.cpp`), help and filters (`help.cpp`)
+
 ## Naming Conventions
 
 - Private class member variables use underscore suffix (e.g., `ncols_`, `cursor_line_`)

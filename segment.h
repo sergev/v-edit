@@ -33,6 +33,9 @@ public:
     // Constructor.
     Segment() = default;
 
+    Segment(int file_descriptor, unsigned line_count, long file_offset = 0,
+            std::vector<unsigned short> &&line_lengths = {});
+
     // Segment has contents when it comes from some file or contains only newlines.
 
     // Calculate total bytes represented by all line lengths in this segment.

@@ -1,6 +1,21 @@
 #include "segment.h"
 
 #include <iostream>
+#include <utility>
+
+//
+// Constructor with parameters.
+//
+Segment::Segment(int file_descriptor_, unsigned line_count_, long file_offset_,
+                 std::vector<unsigned short> &&line_lengths_)
+    : line_count(line_count_), file_descriptor(file_descriptor_), file_offset(file_offset_),
+      line_lengths(std::move(line_lengths_))
+{
+    if (file_descriptor < 0 && line_count > 0 && line_lengths.empty()) {
+        // Empty lines: allocate missing lengths.
+        line_lengths.resize(line_count, 1);
+    }
+}
 
 //
 // Calculate total bytes represented by all line lengths in this segment.

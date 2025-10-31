@@ -59,8 +59,8 @@ void Editor::startup(int restart)
     // Initialize colors if available
     if (has_colors()) {
         ::start_color();
-        init_pair(int(Color::STATUS), COLOR_BLACK, COLOR_CYAN);          // Status line color pair
-        init_pair(int(Color::POSITION), COLOR_YELLOW + 8, COLOR_RED);    // Cursor position color pair
+        init_pair(int(Color::STATUS), COLOR_BLACK, COLOR_CYAN);       // Status line color pair
+        init_pair(int(Color::POSITION), COLOR_YELLOW + 8, COLOR_RED); // Cursor position color pair
         init_pair(int(Color::TRUNCATION), COLOR_YELLOW + 8, COLOR_BLUE); // Truncation color pair
         init_pair(int(Color::EMPTY), COLOR_CYAN, COLOR_BLACK);           // Empty line color pair
     }

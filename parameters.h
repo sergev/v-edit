@@ -1,8 +1,8 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
-#include <string>
 #include <algorithm>
+#include <string>
 
 // Parameter types
 struct Parameters {

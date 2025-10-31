@@ -141,8 +141,8 @@ void Editor::handle_key_edit(int ch)
     if (ctrlx_state_ && (ch == 'f' || ch == 'F')) {
         int shift           = params_.count > 0 ? params_.count : ncols_ / 4;
         wksp_->view.basecol = wksp_->view.basecol + shift;
-        params_.count = 0;
-        ctrlx_state_ = false;
+        params_.count       = 0;
+        ctrlx_state_        = false;
         ensure_cursor_visible();
         return;
     }
@@ -153,7 +153,7 @@ void Editor::handle_key_edit(int ch)
         if (wksp_->view.basecol < 0)
             wksp_->view.basecol = 0;
         params_.count = 0;
-        ctrlx_state_ = false;
+        ctrlx_state_  = false;
         ensure_cursor_visible();
         return;
     }

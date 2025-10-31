@@ -131,11 +131,11 @@ void Editor::handle_key_cmd(int ch)
             area_selection_mode_ = true;
             int cur_col          = wksp_->view.basecol + cursor_col_;
             int cur_row          = wksp_->view.topline + cursor_line_;
-            params_.c0 = cur_col;
-            params_.r0 = cur_row;
-            params_.c1 = cur_col;
-            params_.r1 = cur_row;
-            status_ = "*** Area defined by cursor ***";
+            params_.c0           = cur_col;
+            params_.r0           = cur_row;
+            params_.c1           = cur_col;
+            params_.r1           = cur_row;
+            status_              = "*** Area defined by cursor ***";
         }
         handle_area_selection(ch);
         return;
@@ -154,8 +154,8 @@ void Editor::handle_key_cmd(int ch)
         cmd_mode_ = false;
         if (area_selection_mode_) {
             area_selection_mode_ = false;
-            params_.type = Parameters::PARAM_NONE;
-            status_ = "Cancelled";
+            params_.type         = Parameters::PARAM_NONE;
+            status_              = "Cancelled";
         }
         return;
     }
@@ -164,7 +164,7 @@ void Editor::handle_key_cmd(int ch)
         cmd_.clear();
         filter_mode_         = false;
         area_selection_mode_ = false;
-        params_.type = Parameters::PARAM_NONE;
+        params_.type         = Parameters::PARAM_NONE;
         return;
     } // ESC
     if (ch == '\n' || ch == KEY_ENTER) {
@@ -180,7 +180,7 @@ void Editor::handle_key_cmd(int ch)
             }
             if (i > 0) {
                 params_.count = std::atoi(cmd_.substr(0, i).c_str());
-                cmd_ = cmd_.substr(i);
+                cmd_          = cmd_.substr(i);
             }
         }
         if (!cmd_.empty()) {
@@ -382,8 +382,8 @@ void Editor::handle_key_cmd(int ch)
             int curLine = wksp_->view.topline + cursor_line_;
             int count   = params_.count > 0 ? params_.count : 1;
             picklines(curLine, count);
-            status_   = std::string("Copied ") + std::to_string(count) + " line(s)";
-            cmd_mode_ = false;
+            status_       = std::string("Copied ") + std::to_string(count) + " line(s)";
+            cmd_mode_     = false;
             params_.count = 0;
             cmd_.clear();
             return;
@@ -394,8 +394,8 @@ void Editor::handle_key_cmd(int ch)
             int curLine = wksp_->view.topline + cursor_line_;
             int count   = params_.count > 0 ? params_.count : 1;
             deletelines(curLine, count);
-            status_   = std::string("Deleted ") + std::to_string(count) + " line(s)";
-            cmd_mode_ = false;
+            status_       = std::string("Deleted ") + std::to_string(count) + " line(s)";
+            cmd_mode_     = false;
             params_.count = 0;
             cmd_.clear();
             return;
@@ -406,8 +406,8 @@ void Editor::handle_key_cmd(int ch)
             int curLine = wksp_->view.topline + cursor_line_;
             int count   = params_.count > 0 ? params_.count : 1;
             insertlines(curLine, count);
-            status_   = std::string("Inserted ") + std::to_string(count) + " line(s)";
-            cmd_mode_ = false;
+            status_       = std::string("Inserted ") + std::to_string(count) + " line(s)";
+            cmd_mode_     = false;
             params_.count = 0;
             cmd_.clear();
             return;

@@ -236,10 +236,10 @@ bool Editor::mdeftag(char tag_name)
 
     // Set up area between current cursor and tag
     params_.type = Parameters::PARAM_TAG_AREA;
-    params_.c0 = curCol;
-    params_.r0 = curLine;
-    params_.c1 = tagCol;
-    params_.r1 = tagLine;
+    params_.c0   = curCol;
+    params_.r0   = curLine;
+    params_.c1   = tagCol;
+    params_.r1   = tagLine;
 
     // Normalize bounds
     bool needs_reposition = false;
@@ -247,8 +247,8 @@ bool Editor::mdeftag(char tag_name)
 
     if (params_.type == Parameters::PARAM_TAG_AREA) {
         // Get original coordinates
-        int start_col = params_.c0;
-        int start_row = params_.r0;
+        int start_col            = params_.c0;
+        int start_row            = params_.r0;
         bool was_start_at_cursor = (curLine == start_row && curCol == start_col);
 
         params_.normalize_area();
@@ -256,7 +256,7 @@ bool Editor::mdeftag(char tag_name)
         // Check if coordinates were swapped
         int new_start_col = params_.c0;
         int new_start_row = params_.r0;
-        was_swaped = (new_start_row != curLine || new_start_col != curCol);
+        was_swaped        = (new_start_row != curLine || new_start_col != curCol);
 
         if (was_swaped) {
             needs_reposition = was_start_at_cursor;

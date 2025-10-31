@@ -218,12 +218,8 @@ void Workspace::load_file(int fd)
                 // EOF
                 if (lines_in_seg > 0) {
                     // Create final segment in list
-                    contents_.emplace_back();
-                    Segment &seg        = contents_.back();
-                    seg.line_count      = lines_in_seg;
-                    seg.file_descriptor = fd;
-                    seg.file_offset     = seg_seek;
-                    seg.line_lengths    = std::move(temp_seg.line_lengths);
+                    contents_.emplace_back(fd, lines_in_seg, seg_seek,
+                                           std::move(temp_seg.line_lengths));
                 }
                 break;
             }
@@ -275,12 +271,7 @@ void Workspace::load_file(int fd)
 
         // Create new segment if we've hit limits
         if (lines_in_seg >= 127 || temp_seg.line_lengths.size() >= 4000) {
-            contents_.emplace_back();
-            Segment &seg        = contents_.back();
-            seg.line_count      = lines_in_seg;
-            seg.file_descriptor = fd;
-            seg.file_offset     = seg_seek;
-            seg.line_lengths    = std::move(temp_seg.line_lengths);
+            contents_.emplace_back(fd, lines_in_seg, seg_seek, std::move(temp_seg.line_lengths));
 
             lines_in_seg = 0;
         }
@@ -302,30 +293,14 @@ std::list<Segment> Workspace::create_blank_lines(int n)
     while (n > 0) {
         int lines_in_seg = (n > 127) ? 127 : n;
 
-        Segment seg;
-        seg.line_count      = lines_in_seg;
-        seg.file_descriptor = -1; // Empty lines not from file
-        seg.file_offset     = 0;
-
-        // Add line length data: each empty line has length 1 (just newline)
-        seg.line_lengths.resize(lines_in_seg);
-        for (int i = 0; i < lines_in_seg; ++i) {
-            seg.line_lengths[i] = 1;
-        }
-
-        segments.push_back(seg);
+        segments.push_back(Segment(-1, lines_in_seg));
         n -= lines_in_seg;
     }
-
-    // Note: no tail/sentinel segment used
-
     return segments;
 }
 
 //
 // Read line content from segment chain at specified index.
-// Enhanced version using iterator instead of Segment* pointer for safer access and modern C++
-// practices.
 //
 std::string Workspace::read_line(int line_no)
 {
@@ -521,17 +496,16 @@ int Workspace::breaksegm(int line_no)
         }
     }
 
-    // Create new segment in place
-    auto new_it             = contents_.insert(insert_pos, Segment());
-    Segment &new_seg        = *new_it;
-    new_seg.line_count      = cursegm_->line_count - rel_line;
-    new_seg.file_descriptor = cursegm_->file_descriptor;
-    new_seg.file_offset     = cursegm_->file_offset + offs;
-
-    // Copy remaining sizes from split point to end
+    // Build line_lengths vector for new segment
+    std::vector<unsigned short> new_lengths;
     for (size_t i = rel_line; i < cursegm_->line_count; ++i) {
-        new_seg.line_lengths.push_back(cursegm_->line_lengths[i]);
+        new_lengths.push_back(cursegm_->line_lengths[i]);
     }
+
+    // Create new segment in place
+    auto new_it = contents_.insert(
+        insert_pos, Segment(cursegm_->file_descriptor, cursegm_->line_count - rel_line,
+                            cursegm_->file_offset + offs, std::move(new_lengths)));
 
     // Truncate original sizes - keep only first rel_line data
     cursegm_->line_lengths.resize(rel_line);

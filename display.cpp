@@ -113,7 +113,7 @@ void Editor::wksp_redraw()
         if (r + wksp_->view.topline < total) {
             lineText = wksp_->read_line(r + wksp_->view.topline);
             // horizontal offset and continuation markers
-            bool clipped = false;
+            bool clipped   = false;
             bool truncated = false;
             if (wksp_->view.basecol > 0 && (int)lineText.size() > wksp_->view.basecol) {
                 lineText.erase(0, (size_t)wksp_->view.basecol);

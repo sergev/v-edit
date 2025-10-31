@@ -1,4 +1,5 @@
 #include <getopt.h>
+
 #include <cstring>
 #include <iostream>
 
@@ -31,14 +32,12 @@ static void print_usage(const char *progname)
 int main(int argc, char *argv[])
 {
     // Define long options
-    static struct option long_options[] = {
-        { "help", no_argument, 0, 'h' },
-        { "version", no_argument, 0, 'v' },
-        { "replay", no_argument, 0, 'r' },
-        { 0, 0, 0, 0 }
-    };
+    static struct option long_options[] = { { "help", no_argument, 0, 'h' },
+                                            { "version", no_argument, 0, 'v' },
+                                            { "replay", no_argument, 0, 'r' },
+                                            { 0, 0, 0, 0 } };
 
-    int restart = 0;
+    int restart      = 0;
     bool replay_flag = false;
 
     // Parse options
@@ -73,9 +72,9 @@ int main(int argc, char *argv[])
 
     // Adjust argc and argv to point to remaining non-option arguments
     // Shift so argv[1] contains filename if present
-    int new_argc = argc - optind + 1;
+    int new_argc    = argc - optind + 1;
     char **new_argv = argv + optind - 1;
-    new_argv[0] = argv[0]; // Keep program name
+    new_argv[0]     = argv[0]; // Keep program name
 
     Editor editor;
     return editor.run(restart, new_argc, new_argv);

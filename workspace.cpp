@@ -495,6 +495,22 @@ void Workspace::split_segment(int rel_line)
 }
 
 //
+// Helper for insert_contents: determine insertion point after split
+//
+Segment::iterator Workspace::determine_insertion_point(int br, int at, int total_before)
+{
+    // Default behavior: insert BEFORE cursegm_
+    auto insert_pos = cursegm_;
+
+    // Special case: inserting at end (at >= total_before) and split signaled EOF
+    if (br == 1 && at >= total_before) {
+        insert_pos = contents_.end();
+    }
+
+    return insert_pos;
+}
+
+//
 // Merge adjacent segments.
 // Tries to merge current segment with previous if they're adjacent.
 // Returns true if merge occurred, false otherwise.
@@ -527,6 +543,80 @@ bool Workspace::merge()
 }
 
 //
+// Helper for delete_contents: handle fast-path deletion of last line
+//
+bool Workspace::delete_last_line_fastpath()
+{
+    // Find last segment that has lines
+    if (contents_.empty())
+        return false;
+
+    auto it = contents_.end();
+    --it;
+
+    // Walk back if trailing empty segments (shouldn't exist normally)
+    while (it != contents_.begin() && it->line_count == 0) {
+        --it;
+    }
+
+    if (it->line_count > 0) {
+        // Remove last line metadata
+        if (!it->line_lengths.empty())
+            it->line_lengths.pop_back();
+        if (it->line_count > 0)
+            it->line_count -= 1;
+        if (it->line_count == 0) {
+            contents_.erase(it);
+        }
+        return true;
+    }
+    return false;
+}
+
+//
+// Helper for delete_contents: determine delete range endpoints
+//
+bool Workspace::determine_delete_range(int from, int to, Segment::iterator &start_it,
+                                       Segment::iterator &end_it)
+{
+    // Split AFTER the last line to delete (to+1) so we can delete up to and including 'to'
+    int total  = total_line_count();
+    int result = split(to + 1);
+    end_it     = contents_.end();
+
+    if (result == 0) {
+        end_it = cursegm_;
+    } else {
+        // If we asked to break exactly at EOF (to+1 == total), treat end as contents_.end()
+        // Only abort if the requested end is strictly within current contents and we failed
+        if (to + 1 < total) {
+            return false;
+        }
+    }
+
+    result = split(from);
+    if (result != 0) {
+        return false;
+    }
+
+    start_it = cursegm_;
+    return true;
+}
+
+//
+// Helper for delete_contents: update workspace position after deletion
+//
+void Workspace::update_position_after_deletion(Segment::iterator after_delete_it)
+{
+    if (!contents_.empty()) {
+        cursegm_ =
+            (after_delete_it != contents_.end()) ? after_delete_it : std::prev(contents_.end());
+    } else {
+        cursegm_ = contents_.end();
+    }
+}
+
+//
 // Insert segments into workspace before given line (based on insert from prototype).
 //
 void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
@@ -549,12 +639,7 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     int br = split(at);
 
     // Determine correct insertion position
-    // Default behavior: insert BEFORE cursegm_
-    auto insert_pos = cursegm_;
-    // Special case: inserting at end (at >= total_before) and split signaled EOF
-    if (br == 1 && at >= total_before) {
-        insert_pos = contents_.end();
-    }
+    auto insert_pos = determine_insertion_point(br, at, total_before);
 
     // Remember the position before splicing so we can find the first inserted segment
     auto before_size = std::distance(contents_.begin(), insert_pos);
@@ -562,12 +647,8 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     contents_.splice(insert_pos, contents_to_insert);
 
     // Update workspace position to FIRST inserted segment (not last)
-    // After splicing, the first inserted segment is at the position where insert_pos was
     cursegm_ = contents_.begin();
     std::advance(cursegm_, before_size);
-
-    // NOTE: We do NOT update position.line here.
-    // The workspace position is managed by the editor, not by insert_contents.
 
     file_state.writable = true; // Mark as edited
 }
@@ -578,8 +659,7 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
 //
 void Workspace::delete_contents(int from, int to)
 {
-    // Convert to use list operations - simplified version
-    // Original implementation used pointer operations, but we need to use list erase
+    // Validate input parameters
     if (contents_.empty() || from > to)
         return;
 
@@ -597,70 +677,31 @@ void Workspace::delete_contents(int from, int to)
 
     // Fast-path: deleting only the very last line in the file
     if (from == to && to == total - 1) {
-        // Find last segment that has lines
-        if (!contents_.empty()) {
-            auto it = contents_.end();
-            --it;
-            // Walk back if trailing empty segments (shouldn't exist normally)
-            while (it != contents_.begin() && it->line_count == 0) {
-                --it;
-            }
-            if (it->line_count > 0) {
-                // Remove last line metadata
-                if (!it->line_lengths.empty())
-                    it->line_lengths.pop_back();
-                if (it->line_count > 0)
-                    it->line_count -= 1;
-                if (it->line_count == 0) {
-                    contents_.erase(it);
-                }
-                file_state.writable = true;
-                return;
-            }
-        }
-    }
-
-    // Use split for positioning (it uses list operations internally now)
-    // Split AFTER the last line to delete (to+1) so we can delete up to and including 'to'
-    int result = split(to + 1);
-    // Determine end iterator for erase range
-    auto end_delete_it = contents_.end();
-    if (result == 0) {
-        end_delete_it = cursegm_;
-    } else {
-        // If we asked to break exactly at EOF (to+1 == total), treat end as contents_.end()
-        // Only abort if the requested end is strictly within current contents and we failed
-        if (to + 1 < total) {
+        if (delete_last_line_fastpath()) {
+            file_state.writable = true;
             return;
         }
     }
 
-    result = split(from);
-    if (result != 0) {
+    // Determine delete range endpoints
+    Segment::iterator start_it, end_it;
+    if (!determine_delete_range(from, to, start_it, end_it)) {
         return;
     }
 
-    auto start_delete_it = cursegm_;
-    auto after_delete_it = end_delete_it;
-
     // Erase the range from the list
-    if (start_delete_it == after_delete_it) {
+    if (start_it == end_it) {
         // Special-case: deleting the final region where end == start (e.g., at EOF)
-        if (start_delete_it != contents_.end()) {
-            auto next_it = std::next(start_delete_it);
-            contents_.erase(start_delete_it, next_it);
+        if (start_it != contents_.end()) {
+            auto next_it = std::next(start_it);
+            contents_.erase(start_it, next_it);
         }
     } else {
-        contents_.erase(start_delete_it, after_delete_it);
+        contents_.erase(start_it, end_it);
     }
 
     // Update workspace position
-    if (!contents_.empty()) {
-        cursegm_ =
-            (after_delete_it != contents_.end()) ? after_delete_it : std::prev(contents_.end());
-    } else {
-        cursegm_ = contents_.end();
-    }
+    update_position_after_deletion(end_it);
 
     file_state.writable = true; // Mark as edited
 }

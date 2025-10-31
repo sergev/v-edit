@@ -156,6 +156,19 @@ private:
     // Helper for split: split segment at relative line position
     void split_segment(int rel_line);
 
+    // Helper for insert_contents: determine insertion point after split
+    Segment::iterator determine_insertion_point(int br, int at, int total_before);
+
+    // Helper for delete_contents: handle fast-path deletion of last line
+    bool delete_last_line_fastpath();
+
+    // Helper for delete_contents: determine delete range endpoints
+    bool determine_delete_range(int from, int to, Segment::iterator &start_it,
+                                Segment::iterator &end_it);
+
+    // Helper for delete_contents: update workspace position after deletion
+    void update_position_after_deletion(Segment::iterator after_delete_it);
+
     std::list<Segment> contents_; // list of segments
     Segment::iterator cursegm_;   // current segment iterator (points into contents_)
     Tempfile &tempfile_;          // reference to temp file manager

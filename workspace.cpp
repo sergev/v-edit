@@ -304,12 +304,12 @@ std::list<Segment> Workspace::create_blank_lines(int n)
 //
 std::string Workspace::read_line(int line_no)
 {
-    // First, position to the correct segment for this line
+    // Position to the correct segment for this line
     if (change_current_line(line_no) != 0) {
         return ""; // Line beyond end of file
     }
 
-    // Validate iterator is valid and points to a segment
+    // Validate segment is accessible
     if (cursegm_ == contents_.end()) {
         return "";
     }
@@ -317,36 +317,8 @@ std::string Workspace::read_line(int line_no)
     // Calculate relative line position within the current segment
     int rel_line = line_no - current_segment_base_line();
 
-    // Bounds checking: ensure rel_line is within segment bounds
-    if (rel_line < 0 || rel_line >= static_cast<int>(cursegm_->line_lengths.size())) {
-        return ""; // Line index out of bounds for this segment
-    }
-
-    // Calculate file offset by accumulating line lengths
-    // Note: cursegm_->file_offset points to the START of the first line in the segment
-    // We need to skip 'rel_line' lines to get to the line we want
-    long seek_pos = cursegm_->file_offset;
-    for (int i = 0; i < rel_line; ++i) {
-        seek_pos += cursegm_->line_lengths[i];
-    }
-
-    // Get line length for the requested line
-    int line_len = cursegm_->line_lengths[rel_line];
-    if (line_len <= 0) {
-        return "";
-    }
-
-    // Handle empty lines (just newline) - return empty string without newline
-    if (line_len == 1 || cursegm_->file_descriptor < 0) {
-        return "";
-    }
-
-    // Read line from file using iterator's segment data
-    std::string result(line_len - 1, '\0'); // exclude newline
-    if (result.size() > 0 && lseek(cursegm_->file_descriptor, seek_pos, SEEK_SET) >= 0) {
-        read(cursegm_->file_descriptor, &result[0], result.size());
-    }
-    return result;
+    // Delegate to segment to read the line content
+    return cursegm_->read_line_content(rel_line);
 }
 
 //

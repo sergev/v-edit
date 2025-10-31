@@ -1,5 +1,7 @@
 #include "segment.h"
 
+#include <unistd.h>
+
 #include <iostream>
 #include <utility>
 
@@ -28,6 +30,52 @@ long Segment::total_byte_count() const
         total_bytes += line_lengths[i];
     }
     return total_bytes;
+}
+
+//
+// Calculate the file offset for a given relative line index within this segment.
+// Returns the offset where the specified line begins in the file.
+//
+long Segment::calculate_line_offset(int rel_line) const
+{
+    long seek_pos = file_offset;
+    for (int i = 0; i < rel_line; ++i) {
+        seek_pos += line_lengths[i];
+    }
+    return seek_pos;
+}
+
+//
+// Read line content from file at the specified relative line index.
+// Returns empty string for empty lines, blank segments, or read errors.
+//
+std::string Segment::read_line_content(int rel_line) const
+{
+    // Validate relative line is within bounds
+    if (rel_line < 0 || rel_line >= static_cast<int>(line_lengths.size())) {
+        return "";
+    }
+
+    // Get line length
+    int line_len = line_lengths[rel_line];
+    if (line_len <= 0) {
+        return "";
+    }
+
+    // Handle empty lines and blank segments
+    if (line_len == 1 || file_descriptor < 0) {
+        return "";
+    }
+
+    // Calculate file offset for this line
+    long seek_pos = calculate_line_offset(rel_line);
+
+    // Read line content from file (excluding newline)
+    std::string result(line_len - 1, '\0');
+    if (result.size() > 0 && lseek(file_descriptor, seek_pos, SEEK_SET) >= 0) {
+        read(file_descriptor, &result[0], result.size());
+    }
+    return result;
 }
 
 //

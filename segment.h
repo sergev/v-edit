@@ -41,6 +41,14 @@ public:
     // Calculate total bytes represented by all line lengths in this segment.
     long total_byte_count() const;
 
+    // Calculate the file offset for a given relative line index within this segment.
+    // Returns the offset where the specified line begins in the file.
+    long calculate_line_offset(int rel_line) const;
+
+    // Read line content from file at the specified relative line index.
+    // Returns empty string for empty lines, blank segments, or read errors.
+    std::string read_line_content(int rel_line) const;
+
     // Debug routine: print all fields in consistent format as single line.
     void debug_print(std::ostream &out) const;
 

@@ -15,9 +15,9 @@ make -C build install  # Optional
 ```bash
 ve                    # Restore last session or create new empty file
 ve [file]             # Open file
-ve -R                 # Replay keystrokes from journal
-ve --help             # Show help
-ve --version          # Show version
+ve -r, --replay       # Replay keystrokes from journal
+ve -h, --help         # Show help
+ve -v, --version      # Show version
 ```
 
 ## Core Features
@@ -46,7 +46,7 @@ ve --version          # Show version
 ### File Management
 - **Multiple files**: `F3` to switch workspaces, `o<filename>` to open file in current workspace
 - **Session persistence**: Auto-save state (`~/.ve/session`) and keystroke journals (`/tmp/rej{tty}{user}`)
-- **Journal replay**: Use `ve -` to replay previous session keystrokes
+- **Journal replay**: Use `ve -r` or `ve --replay` to replay previous session keystrokes
 - **Save operations**: `F2`, `^A s`, `^X ^C` (save and quit)
 
 ## Source Organization
@@ -65,6 +65,7 @@ The codebase follows a layer-based architecture:
 
 ## Documentation
 
+- **[User Manual](docs/Manual.md)** — Comprehensive user guide
 - **[Commands Reference](docs/Commands.md)** — Complete command documentation
 - **[Rectangular Blocks](docs/Rectangular_Blocks.md)** — Block operations guide
 - **[Testing](docs/Testing.md)** — Build and test information

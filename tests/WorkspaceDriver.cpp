@@ -2,9 +2,9 @@
 
 void WorkspaceDriver::SetUp()
 {
+    // Create temp file that workspace will use for on-demand line loading
     tempfile = std::make_unique<Tempfile>();
     wksp     = std::make_unique<Workspace>(*tempfile);
-    // Open temp file for workspace use
     tempfile->open_temp_file();
 }
 

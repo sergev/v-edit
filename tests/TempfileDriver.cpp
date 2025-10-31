@@ -2,6 +2,7 @@
 
 void TempfileDriver::SetUp()
 {
+    // Create temp file instance without opening
     tempfile = std::make_unique<Tempfile>();
 }
 

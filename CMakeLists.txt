@@ -23,27 +23,24 @@ set(CE_SOURCES
     # Presentation Layer
     core.cpp
     display.cpp
-    
+
     # Input Layer
     key_bindings.cpp
-    
+
     # Business Logic Layer
-    editor_operations.cpp
-    clipboard_manager.cpp
-    buffer_manager.cpp
-    
+    ops.cpp
+    clipboard.cpp
+    buffer.cpp
+
     # Data Layer
-    file_io.cpp
-    line_buffer.cpp
+    file.cpp
     workspace.cpp
     segment.cpp
     tempfile.cpp
-    
+
     # Infrastructure
     session.cpp
-    filter.cpp
-    workspace_help.cpp
-    signal.cpp
+    help.cpp
 )
 
 set(CE_MAIN

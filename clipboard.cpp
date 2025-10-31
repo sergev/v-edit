@@ -1,6 +1,7 @@
+#include "clipboard.h"
+
 #include <iostream>
 
-#include "clipboard.h"
 #include "editor.h"
 
 // ============================================================================

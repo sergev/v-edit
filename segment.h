@@ -49,6 +49,10 @@ public:
     // Returns empty string for empty lines, blank segments, or read errors.
     std::string read_line_content(int rel_line) const;
 
+    // Write segment content to output file descriptor.
+    // Returns true on success, false on error (seek or write failure).
+    bool write_content(int out_fd) const;
+
     // Debug routine: print all fields in consistent format as single line.
     void debug_print(std::ostream &out) const;
 

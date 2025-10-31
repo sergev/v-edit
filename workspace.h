@@ -143,6 +143,10 @@ public:
     void debug_print(std::ostream &out) const;
 
 private:
+    // Helper for load_file: parse a single line from buffered input
+    // Returns line length including newline, or 0 on EOF
+    int parse_line_from_buffer(char *read_buf, int &buf_count, int &buf_next, int fd);
+
     std::list<Segment> contents_; // list of segments
     Segment::iterator cursegm_;   // current segment iterator (points into contents_)
     Tempfile &tempfile_;          // reference to temp file manager

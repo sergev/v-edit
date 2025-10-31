@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 #include <cstring>
-#include <fstream>
 #include <iostream>
 
 #include "tempfile.h"
@@ -226,38 +225,7 @@ void Workspace::load_file(int fd)
         }
 
         // Process line - handle lines that span buffer boundaries
-        int line_len       = 0;
-        bool line_complete = false;
-
-        while (!line_complete) {
-            char *line_start = read_buf + buf_next;
-            char *line_end   = line_start;
-
-            // Find line end
-            while (buf_next < buf_count && *line_end != '\n') {
-                ++line_end, ++buf_next;
-            }
-
-            line_len += (line_end - line_start);
-
-            if (buf_next < buf_count) {
-                // Found newline in current buffer
-                line_len += 1; // include newline
-                ++buf_next;    // skip '\n'
-                line_complete = true;
-            } else {
-                // No newline found - line continues in next buffer
-                // More data to read - reload buffer
-                buf_next  = 0;
-                buf_count = read(fd, read_buf, sizeof(read_buf));
-                if (buf_count <= 0) {
-                    // EOF - treat incomplete line as complete
-                    line_len += 1; // add trailing newline
-                    line_complete = true;
-                }
-                // If buffer was successfully read, continue loop to process next buffer
-            }
-        }
+        int line_len = parse_line_from_buffer(read_buf, buf_count, buf_next, fd);
 
         // Store line length in segment data
         if (lines_in_seg == 0) {
@@ -280,6 +248,48 @@ void Workspace::load_file(int fd)
     // Position to start of contents
     cursegm_      = contents_.empty() ? contents_.end() : contents_.begin();
     position.line = 0;
+}
+
+//
+// Helper for load_file: parse a single line from buffered input.
+// Returns line length including newline, or 0 on EOF.
+//
+int Workspace::parse_line_from_buffer(char *read_buf, int &buf_count, int &buf_next, int fd)
+{
+    int line_len       = 0;
+    bool line_complete = false;
+
+    while (!line_complete) {
+        char *line_start = read_buf + buf_next;
+        char *line_end   = line_start;
+
+        // Find line end
+        while (buf_next < buf_count && *line_end != '\n') {
+            ++line_end, ++buf_next;
+        }
+
+        line_len += (line_end - line_start);
+
+        if (buf_next < buf_count) {
+            // Found newline in current buffer
+            line_len += 1; // include newline
+            ++buf_next;    // skip '\n'
+            line_complete = true;
+        } else {
+            // No newline found - line continues in next buffer
+            // More data to read - reload buffer
+            buf_next  = 0;
+            buf_count = read(fd, read_buf, 8192);
+            if (buf_count <= 0) {
+                // EOF - treat incomplete line as complete
+                line_len += 1; // add trailing newline
+                line_complete = true;
+            }
+            // If buffer was successfully read, continue loop to process next buffer
+        }
+    }
+
+    return line_len;
 }
 
 //
@@ -339,8 +349,6 @@ bool Workspace::write_file(const std::string &path)
     if (out_fd < 0)
         return false;
 
-    char buffer[8192];
-
     // Find the last non-blank segment (to skip trailing blank lines)
     auto last_nonblank = contents_.end();
     for (auto it = contents_.begin(); it != contents_.end(); ++it) {
@@ -363,30 +371,8 @@ bool Workspace::write_file(const std::string &path)
             }
         }
 
-        // Calculate total bytes for this segment
-        long total_bytes = seg.total_byte_count();
-
-        if (seg.file_descriptor > 0) {
-            // Read from source file and write to output
-            if (lseek(seg.file_descriptor, seg.file_offset, SEEK_SET) < 0) {
-                // Failed to seek - file may have been unlinked
-                // Skip this segment and continue
-                continue;
-            }
-            while (total_bytes > 0) {
-                int to_read = (total_bytes < (long)sizeof(buffer)) ? total_bytes : sizeof(buffer);
-                int nread   = read(seg.file_descriptor, buffer, to_read);
-                if (nread <= 0)
-                    break;
-
-                write(out_fd, buffer, nread);
-                total_bytes -= nread;
-            }
-        } else {
-            // Empty lines.
-            std::string newlines(total_bytes, '\n');
-            write(out_fd, newlines.data(), newlines.size());
-        }
+        // Delegate to segment to write its content
+        seg.write_content(out_fd);
     }
 
     close(out_fd);

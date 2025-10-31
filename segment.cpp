@@ -79,6 +79,41 @@ std::string Segment::read_line_content(int rel_line) const
 }
 
 //
+// Write segment content to output file descriptor.
+// Returns true on success, false on error (seek or write failure).
+//
+bool Segment::write_content(int out_fd) const
+{
+    // Calculate total bytes for this segment
+    long total_bytes = total_byte_count();
+
+    if (file_descriptor > 0) {
+        // Read from source file and write to output
+        if (lseek(file_descriptor, file_offset, SEEK_SET) < 0) {
+            // Failed to seek - file may have been unlinked
+            return false;
+        }
+
+        char buffer[8192];
+        while (total_bytes > 0) {
+            int to_read = (total_bytes < (long)sizeof(buffer)) ? total_bytes : sizeof(buffer);
+            int nread   = read(file_descriptor, buffer, to_read);
+            if (nread <= 0) {
+                break;
+            }
+
+            write(out_fd, buffer, nread);
+            total_bytes -= nread;
+        }
+    } else {
+        // Empty lines - write newlines
+        std::string newlines(total_bytes, '\n');
+        write(out_fd, newlines.data(), newlines.size());
+    }
+    return true;
+}
+
+//
 // Debug routine: print all fields in consistent format as single line.
 //
 void Segment::debug_print(std::ostream &out) const

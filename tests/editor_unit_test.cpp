@@ -4,37 +4,9 @@
 
 #include <fstream>
 
-#include "editor.h"
+#include "EditorDriver.h"
 
-// Test fixture for Editor::put_line()
-class EditorTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        editor = std::make_unique<Editor>();
-
-        // Manually initialize editor state needed for tests
-        editor->wksp_     = std::make_unique<Workspace>(editor->tempfile_);
-        editor->alt_wksp_ = std::make_unique<Workspace>(editor->tempfile_);
-
-        // Open shared temp file
-        editor->tempfile_.open_temp_file();
-    }
-
-    void TearDown() override { editor.reset(); }
-
-    std::unique_ptr<Editor> editor;
-
-    // Initialize with a few blank lines so put_line() can update them.
-    // put_line() only updates existing lines, doesn't create new ones.
-    void CreateBlankLines(unsigned num_lines)
-    {
-        auto blank = Workspace::create_blank_lines(num_lines);
-        editor->wksp_->insert_contents(blank, 0);
-    }
-};
-
-TEST_F(EditorTest, PutLineCreatesSegments)
+TEST_F(EditorDriver, EditorPutLineCreatesSegments)
 {
     // Initially workspace has 5 blank lines
     CreateBlankLines(5);
@@ -55,7 +27,7 @@ TEST_F(EditorTest, PutLineCreatesSegments)
     EXPECT_EQ("First line", read_line);
 }
 
-TEST_F(EditorTest, PutLineMultipleLines)
+TEST_F(EditorDriver, EditorPutLineMultipleLines)
 {
     CreateBlankLines(5);
 
@@ -86,7 +58,7 @@ TEST_F(EditorTest, PutLineMultipleLines)
     EXPECT_EQ(editor->wksp_->read_line(2), "Line 3");
 }
 
-TEST_F(EditorTest, PutLineUpdatesExistingSegments)
+TEST_F(EditorDriver, EditorPutLineUpdatesExistingSegments)
 {
     CreateBlankLines(5);
 
@@ -135,7 +107,7 @@ TEST_F(EditorTest, PutLineUpdatesExistingSegments)
     EXPECT_EQ(editor->wksp_->read_line(2), "Original line 3");
 }
 
-TEST_F(EditorTest, PutLineSegmentsPreserveContent)
+TEST_F(EditorDriver, EditorPutLineSegmentsPreserveContent)
 {
     CreateBlankLines(5);
 
@@ -177,7 +149,7 @@ TEST_F(EditorTest, PutLineSegmentsPreserveContent)
     EXPECT_EQ(total_lines, num_lines);
 }
 
-TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
+TEST_F(EditorDriver, EditorPutLineCreatesFirstLineFromEmptyWorkspace)
 {
     // Initially workspace is empty
     EXPECT_EQ(editor->wksp_->total_line_count(), 0);
@@ -199,7 +171,7 @@ TEST_F(EditorTest, PutLineCreatesFirstLineFromEmptyWorkspace)
     EXPECT_EQ("First line", read_line);
 }
 
-TEST_F(EditorTest, PutLineExtendsFileBeyondEnd)
+TEST_F(EditorDriver, EditorPutLineExtendsFileBeyondEnd)
 {
     // Add first line
     editor->current_line_          = "Line 1";
@@ -224,7 +196,7 @@ TEST_F(EditorTest, PutLineExtendsFileBeyondEnd)
     EXPECT_EQ(editor->wksp_->read_line(2), "Line 3");
 }
 
-TEST_F(EditorTest, PutLineCreatesMultipleLinesSequentially)
+TEST_F(EditorDriver, EditorPutLineCreatesMultipleLinesSequentially)
 {
     // Add multiple lines sequentially
     for (int i = 0; i < 5; ++i) {
@@ -244,7 +216,7 @@ TEST_F(EditorTest, PutLineCreatesMultipleLinesSequentially)
     }
 }
 
-TEST_F(EditorTest, PutLineUpdatesExistingLine)
+TEST_F(EditorDriver, EditorPutLineUpdatesExistingLine)
 {
     // Create first line
     editor->current_line_          = "Original";
@@ -264,7 +236,7 @@ TEST_F(EditorTest, PutLineUpdatesExistingLine)
     EXPECT_EQ(editor->wksp_->read_line(0), "Updated");
 }
 
-TEST_F(EditorTest, PutLineWithGapsCreatesBlankLines)
+TEST_F(EditorDriver, EditorPutLineWithGapsCreatesBlankLines)
 {
     // Add line 0
     editor->current_line_          = "Start";
@@ -288,7 +260,7 @@ TEST_F(EditorTest, PutLineWithGapsCreatesBlankLines)
     }
 }
 
-TEST_F(EditorTest, PutLineSegmentChainIntegrity)
+TEST_F(EditorDriver, EditorPutLineSegmentChainIntegrity)
 {
     // Add several lines
     for (int i = 0; i < 10; ++i) {
@@ -325,7 +297,7 @@ TEST_F(EditorTest, PutLineSegmentChainIntegrity)
 }
 
 // Unit tests for Workspace::position() method
-TEST_F(EditorTest, PositionValidLine)
+TEST_F(EditorDriver, EditorPositionValidLine)
 {
     // Create workspace with 5 lines
     CreateBlankLines(5);
@@ -335,7 +307,7 @@ TEST_F(EditorTest, PositionValidLine)
     EXPECT_EQ(editor->wksp_->position.line, 2);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentFirstLine)
+TEST_F(EditorDriver, EditorSetCurrentSegmentFirstLine)
 {
     CreateBlankLines(5);
 
@@ -345,7 +317,7 @@ TEST_F(EditorTest, SetCurrentSegmentFirstLine)
     EXPECT_EQ(editor->wksp_->cursegm(), editor->wksp_->get_contents().begin());
 }
 
-TEST_F(EditorTest, SetCurrentSegmentLastLine)
+TEST_F(EditorDriver, EditorSetCurrentSegmentLastLine)
 {
     CreateBlankLines(5);
 
@@ -354,7 +326,7 @@ TEST_F(EditorTest, SetCurrentSegmentLastLine)
     EXPECT_EQ(editor->wksp_->position.line, 4);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentMidFile)
+TEST_F(EditorDriver, EditorSetCurrentSegmentMidFile)
 {
     CreateBlankLines(100);
 
@@ -363,7 +335,7 @@ TEST_F(EditorTest, SetCurrentSegmentMidFile)
     EXPECT_EQ(editor->wksp_->position.line, 50);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentNegativeLineThrows)
+TEST_F(EditorDriver, EditorSetCurrentSegmentNegativeLineThrows)
 {
     CreateBlankLines(5);
 
@@ -371,7 +343,7 @@ TEST_F(EditorTest, SetCurrentSegmentNegativeLineThrows)
     EXPECT_THROW(editor->wksp_->change_current_line(-1), std::runtime_error);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentBeyondEndReturnsOne)
+TEST_F(EditorDriver, EditorSetCurrentSegmentBeyondEndReturnsOne)
 {
     CreateBlankLines(5);
 
@@ -379,7 +351,7 @@ TEST_F(EditorTest, SetCurrentSegmentBeyondEndReturnsOne)
     EXPECT_EQ(editor->wksp_->change_current_line(10), 1);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentBeyondEndByOne)
+TEST_F(EditorDriver, EditorSetCurrentSegmentBeyondEndByOne)
 {
     CreateBlankLines(5);
 
@@ -387,7 +359,7 @@ TEST_F(EditorTest, SetCurrentSegmentBeyondEndByOne)
     EXPECT_EQ(editor->wksp_->change_current_line(5), 1);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentEmptyWorkspaceReturnsOne)
+TEST_F(EditorDriver, EditorSetCurrentSegmentEmptyWorkspaceReturnsOne)
 {
     // Empty workspace (no content)
     EXPECT_EQ(editor->wksp_->total_line_count(), 0);
@@ -397,7 +369,7 @@ TEST_F(EditorTest, SetCurrentSegmentEmptyWorkspaceReturnsOne)
     EXPECT_EQ(editor->wksp_->change_current_line(1), 1);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentUpdatesCursegm)
+TEST_F(EditorDriver, EditorSetCurrentSegmentUpdatesCursegm)
 {
     CreateBlankLines(20);
 
@@ -417,7 +389,7 @@ TEST_F(EditorTest, SetCurrentSegmentUpdatesCursegm)
     EXPECT_EQ(editor->wksp_->position.line, 5);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentUpdatesSegmline)
+TEST_F(EditorDriver, EditorSetCurrentSegmentUpdatesSegmline)
 {
     CreateBlankLines(20);
 
@@ -438,7 +410,7 @@ TEST_F(EditorTest, SetCurrentSegmentUpdatesSegmline)
     EXPECT_LE(segmline15, 15);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentBackwardMovement)
+TEST_F(EditorDriver, EditorSetCurrentSegmentBackwardMovement)
 {
     CreateBlankLines(20);
 
@@ -454,7 +426,7 @@ TEST_F(EditorTest, SetCurrentSegmentBackwardMovement)
     EXPECT_EQ(editor->wksp_->current_segment_base_line(), 0);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentForwardMovement)
+TEST_F(EditorDriver, EditorSetCurrentSegmentForwardMovement)
 {
     CreateBlankLines(20);
 
@@ -467,7 +439,7 @@ TEST_F(EditorTest, SetCurrentSegmentForwardMovement)
     EXPECT_EQ(editor->wksp_->position.line, 19);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentBoundaryAtZero)
+TEST_F(EditorDriver, EditorSetCurrentSegmentBoundaryAtZero)
 {
     CreateBlankLines(10);
 
@@ -480,7 +452,7 @@ TEST_F(EditorTest, SetCurrentSegmentBoundaryAtZero)
     EXPECT_EQ(editor->wksp_->position.line, 1);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentBoundaryAtEnd)
+TEST_F(EditorDriver, EditorSetCurrentSegmentBoundaryAtEnd)
 {
     CreateBlankLines(10);
 
@@ -492,7 +464,7 @@ TEST_F(EditorTest, SetCurrentSegmentBoundaryAtEnd)
     EXPECT_EQ(editor->wksp_->change_current_line(10), 1);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentLargeFile)
+TEST_F(EditorDriver, EditorSetCurrentSegmentLargeFile)
 {
     CreateBlankLines(1000);
 
@@ -505,7 +477,7 @@ TEST_F(EditorTest, SetCurrentSegmentLargeFile)
     EXPECT_EQ(editor->wksp_->change_current_line(1000), 1);
 }
 
-TEST_F(EditorTest, SetCurrentSegmentConsistency)
+TEST_F(EditorDriver, EditorSetCurrentSegmentConsistency)
 {
     CreateBlankLines(50);
 
@@ -516,7 +488,7 @@ TEST_F(EditorTest, SetCurrentSegmentConsistency)
     }
 }
 
-TEST_F(EditorTest, SetCurrentSegmentSequenceForward)
+TEST_F(EditorDriver, EditorSetCurrentSegmentSequenceForward)
 {
     CreateBlankLines(30);
 
@@ -527,7 +499,7 @@ TEST_F(EditorTest, SetCurrentSegmentSequenceForward)
     }
 }
 
-TEST_F(EditorTest, SetCurrentSegmentSequenceBackward)
+TEST_F(EditorDriver, EditorSetCurrentSegmentSequenceBackward)
 {
     CreateBlankLines(30);
 
@@ -538,7 +510,7 @@ TEST_F(EditorTest, SetCurrentSegmentSequenceBackward)
     }
 }
 
-TEST_F(EditorTest, SetCurrentSegmentRandomAccess)
+TEST_F(EditorDriver, EditorSetCurrentSegmentRandomAccess)
 {
     CreateBlankLines(50);
 
@@ -550,7 +522,7 @@ TEST_F(EditorTest, SetCurrentSegmentRandomAccess)
     }
 }
 
-TEST_F(EditorTest, PutLineMultipleSequentialLines)
+TEST_F(EditorDriver, EditorPutLineMultipleSequentialLines)
 {
     // Reproduce the tmux crash scenario without tmux
     // This simulates typing "L01", Enter, "L02", Enter, "L03", etc.
@@ -597,7 +569,7 @@ TEST_F(EditorTest, PutLineMultipleSequentialLines)
     }
 }
 
-TEST_F(EditorTest, DebugPutLineGaps)
+TEST_F(EditorDriver, EditorDebugPutLineGaps)
 {
     std::cout << "\n=== Test: Put line at 0 ===\n";
     // Add first line

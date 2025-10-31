@@ -5,41 +5,10 @@
 #include <filesystem>
 #include <fstream>
 
-#include "editor.h"
+#include "EditorDriver.h"
 #include "segment.h"
 
-namespace fs = std::filesystem;
-
-// Declare SegmentTest fixture
-class SegmentTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        editor = std::make_unique<Editor>();
-        // Manually initialize editor state needed for tests
-        editor->wksp_     = std::make_unique<Workspace>(editor->tempfile_);
-        editor->alt_wksp_ = std::make_unique<Workspace>(editor->tempfile_);
-    }
-
-    void TearDown() override { editor.reset(); }
-
-    std::unique_ptr<Editor> editor;
-
-    std::string createTestFile(const std::string &content)
-    {
-        const std::string testName =
-            ::testing::UnitTest::GetInstance()->current_test_info()->name();
-        const std::string filename = testName + ".txt";
-        std::ofstream f(filename);
-        f << content;
-        f.close();
-        return filename;
-    }
-
-    void cleanupTestFile(const std::string &filename) { fs::remove(filename); }
-};
-
-TEST_F(SegmentTest, LoadFileToSegments)
+TEST_F(EditorDriver, SegmentLoadFileToSegments)
 {
     std::string filename = createTestFile("Line 1\nLine 2\nLine 3\n");
 
@@ -51,7 +20,7 @@ TEST_F(SegmentTest, LoadFileToSegments)
     cleanupTestFile(filename);
 }
 
-TEST_F(SegmentTest, ReadLineFromSegment)
+TEST_F(EditorDriver, SegmentReadLineFromSegment)
 {
     std::string filename = createTestFile("First line\nSecond line\nThird line\n");
 
@@ -78,7 +47,7 @@ TEST_F(SegmentTest, ReadLineFromSegment)
     cleanupTestFile(filename);
 }
 
-TEST_F(SegmentTest, HandleEmptyFile)
+TEST_F(EditorDriver, SegmentHandleEmptyFile)
 {
     std::string filename = createTestFile("");
 
@@ -91,7 +60,7 @@ TEST_F(SegmentTest, HandleEmptyFile)
     cleanupTestFile(filename);
 }
 
-TEST_F(SegmentTest, HandleLargeFile)
+TEST_F(EditorDriver, SegmentHandleLargeFile)
 {
     // Create a file with 1000 lines
     std::string content;
@@ -121,7 +90,7 @@ TEST_F(SegmentTest, HandleLargeFile)
     cleanupTestFile(filename);
 }
 
-TEST_F(SegmentTest, HandleVeryLongLines)
+TEST_F(EditorDriver, SegmentHandleVeryLongLines)
 {
     // Create a file with very long lines
     std::string longLine;
@@ -147,7 +116,7 @@ TEST_F(SegmentTest, HandleVeryLongLines)
     cleanupTestFile(filename);
 }
 
-TEST_F(SegmentTest, WriteSegmentsToFile)
+TEST_F(EditorDriver, SegmentWriteSegmentsToFile)
 {
     std::string filename = createTestFile("Original content\n");
 
@@ -168,7 +137,7 @@ TEST_F(SegmentTest, WriteSegmentsToFile)
     cleanupTestFile(outputFile);
 }
 
-TEST_F(SegmentTest, SegmentChainFromVariableLines)
+TEST_F(EditorDriver, SegmentSegmentChainFromVariableLines)
 {
     // Create a file with lines of different sizes to test segment boundaries
     // Lines should cross buffer boundaries to test the buffering logic

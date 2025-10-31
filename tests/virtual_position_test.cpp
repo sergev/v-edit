@@ -1,55 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "editor.h"
-
-// Test fixture for virtual position typing
-class VirtualPositionTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        editor = std::make_unique<Editor>();
-
-        // Initialize editor state
-        editor->wksp_     = std::make_unique<Workspace>(editor->tempfile_);
-        editor->alt_wksp_ = std::make_unique<Workspace>(editor->tempfile_);
-
-        // Open shared temp file
-        editor->tempfile_.open_temp_file();
-
-        // Initialize view state
-        editor->wksp_->view.basecol = 0;
-        editor->wksp_->view.topline = 0;
-        editor->cursor_col_         = 0;
-        editor->cursor_line_        = 0;
-        editor->ncols_              = 80;
-        editor->nlines_             = 24;
-        editor->insert_mode_        = true; // Use insert mode
-    }
-
-    void TearDown() override { editor.reset(); }
-
-    // Helper: Create a line with content
-    void CreateLine(int line_no, const std::string &content)
-    {
-        // Ensure enough blank lines exist
-        int current_count = editor->wksp_->total_line_count();
-        if (line_no >= current_count) {
-            auto blank = Workspace::create_blank_lines(line_no - current_count + 1);
-            editor->wksp_->insert_contents(blank, current_count);
-        }
-
-        // Set the content
-        editor->current_line_          = content;
-        editor->current_line_no_       = line_no;
-        editor->current_line_modified_ = true;
-        editor->put_line();
-    }
-
-    std::unique_ptr<Editor> editor;
-};
+#include "EditorDriver.h"
 
 // Test typing beyond line contents (virtual column position)
-TEST_F(VirtualPositionTest, TypeBeyondLineContents)
+TEST_F(EditorDriver, VirtualPositionTypeBeyondLineContents)
 {
     // Create a line with some content
     CreateLine(0, "Hello");
@@ -80,7 +34,7 @@ TEST_F(VirtualPositionTest, TypeBeyondLineContents)
 }
 
 // Test typing beyond file end (virtual line position)
-TEST_F(VirtualPositionTest, TypeBeyondFileEnd)
+TEST_F(EditorDriver, VirtualPositionTypeBeyondFileEnd)
 {
     // Create a file with one line
     CreateLine(0, "First line");
@@ -116,7 +70,7 @@ TEST_F(VirtualPositionTest, TypeBeyondFileEnd)
 }
 
 // Test typing at virtual column position beyond line end with horizontal scroll
-TEST_F(VirtualPositionTest, TypeBeyondLineContentsWithScroll)
+TEST_F(EditorDriver, VirtualPositionTypeBeyondLineContentsWithScroll)
 {
     // Create a long line
     std::string long_line = "This is a longer line with some content";

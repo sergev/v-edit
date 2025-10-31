@@ -1,58 +1,12 @@
 #include <gtest/gtest.h>
 
-#include "editor.h"
-
-// Test fixture for editing operations with horizontal scroll (basecol > 0)
-class HorizontalTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        editor = std::make_unique<Editor>();
-
-        // Initialize editor state
-        editor->wksp_     = std::make_unique<Workspace>(editor->tempfile_);
-        editor->alt_wksp_ = std::make_unique<Workspace>(editor->tempfile_);
-
-        // Open shared temp file
-        editor->tempfile_.open_temp_file();
-
-        // Initialize view state with horizontal scroll
-        editor->wksp_->view.basecol = 10; // Scrolled right by 10 columns
-        editor->wksp_->view.topline = 0;
-        editor->cursor_col_         = 0;
-        editor->cursor_line_        = 0;
-        editor->ncols_              = 80;
-        editor->nlines_             = 24;
-    }
-
-    void TearDown() override { editor.reset(); }
-
-    // Helper: Create a line with content
-    void CreateLine(int line_no, const std::string &content)
-    {
-        int current_count = editor->wksp_->total_line_count();
-        if (line_no >= current_count) {
-            auto blank = Workspace::create_blank_lines(line_no - current_count + 1);
-            editor->wksp_->insert_contents(blank, current_count);
-        }
-
-        editor->current_line_          = content;
-        editor->current_line_no_       = line_no;
-        editor->current_line_modified_ = true;
-        editor->put_line();
-    }
-
-    // Helper: Get actual column position
-    size_t GetActualCol() const { return editor->get_actual_col(); }
-
-    std::unique_ptr<Editor> editor;
-};
+#include "EditorDriver.h"
 
 // ============================================================================
 // BACKSPACE Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalTest, BackspaceWithScroll)
+TEST_F(EditorDriver, HorizontalBackspaceWithScroll)
 {
     // Create line: "0123456789ABCDEFGHIJ"
     CreateLine(0, "0123456789ABCDEFGHIJ");
@@ -73,7 +27,7 @@ TEST_F(HorizontalTest, BackspaceWithScroll)
     EXPECT_EQ(editor->cursor_col_, 4);
 }
 
-TEST_F(HorizontalTest, BackspaceMultiplePositions)
+TEST_F(EditorDriver, HorizontalBackspaceMultiplePositions)
 {
     CreateLine(0, "The quick brown fox jumps over the lazy dog");
 
@@ -101,7 +55,7 @@ TEST_F(HorizontalTest, BackspaceMultiplePositions)
 // DELETE Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalTest, DeleteWithScroll)
+TEST_F(EditorDriver, HorizontalDeleteWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
 
@@ -120,7 +74,7 @@ TEST_F(HorizontalTest, DeleteWithScroll)
     EXPECT_EQ(editor->cursor_col_, 5); // Cursor position unchanged
 }
 
-TEST_F(HorizontalTest, DeleteAtVariousScrollPositions)
+TEST_F(EditorDriver, HorizontalDeleteAtVariousScrollPositions)
 {
     CreateLine(0, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
@@ -141,7 +95,7 @@ TEST_F(HorizontalTest, DeleteAtVariousScrollPositions)
 // ENTER/Newline Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalTest, EnterWithScroll)
+TEST_F(EditorDriver, HorizontalEnterWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
 
@@ -168,7 +122,7 @@ TEST_F(HorizontalTest, EnterWithScroll)
     EXPECT_EQ(tail, "FGHIJ");
 }
 
-TEST_F(HorizontalTest, EnterWithLargeScroll)
+TEST_F(EditorDriver, HorizontalEnterWithLargeScroll)
 {
     CreateLine(0, "This is a very long line that requires horizontal scrolling to see");
 
@@ -198,7 +152,7 @@ TEST_F(HorizontalTest, EnterWithLargeScroll)
 // TAB Operation Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalTest, TabWithScroll)
+TEST_F(EditorDriver, HorizontalTabWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
 
@@ -216,7 +170,7 @@ TEST_F(HorizontalTest, TabWithScroll)
     EXPECT_EQ(editor->cursor_col_, 9);
 }
 
-TEST_F(HorizontalTest, TabAtScrollBoundary)
+TEST_F(EditorDriver, HorizontalTabAtScrollBoundary)
 {
     CreateLine(0, "AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH");
 
@@ -239,7 +193,7 @@ TEST_F(HorizontalTest, TabAtScrollBoundary)
 // Character Insertion Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalTest, InsertCharacterWithScroll)
+TEST_F(EditorDriver, HorizontalInsertCharacterWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
 
@@ -258,7 +212,7 @@ TEST_F(HorizontalTest, InsertCharacterWithScroll)
     EXPECT_EQ(editor->cursor_col_, 6);
 }
 
-TEST_F(HorizontalTest, InsertMultipleCharactersWithScroll)
+TEST_F(EditorDriver, HorizontalInsertMultipleCharactersWithScroll)
 {
     CreateLine(0, "StartEnd");
 
@@ -282,7 +236,7 @@ TEST_F(HorizontalTest, InsertMultipleCharactersWithScroll)
 // Character Overwrite Tests (basecol > 0)
 // ============================================================================
 
-TEST_F(HorizontalTest, OverwriteWithScroll)
+TEST_F(EditorDriver, HorizontalOverwriteWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
 
@@ -300,7 +254,7 @@ TEST_F(HorizontalTest, OverwriteWithScroll)
     EXPECT_EQ(editor->cursor_col_, 6);
 }
 
-TEST_F(HorizontalTest, OverwriteMultipleWithScroll)
+TEST_F(EditorDriver, HorizontalOverwriteMultipleWithScroll)
 {
     CreateLine(0, "The quick brown fox");
 
@@ -324,7 +278,7 @@ TEST_F(HorizontalTest, OverwriteMultipleWithScroll)
 // Edge Cases with Horizontal Scroll
 // ============================================================================
 
-TEST_F(HorizontalTest, EditingAtMaxScroll)
+TEST_F(EditorDriver, HorizontalEditingAtMaxScroll)
 {
     // Create a 100-character line
     std::string long_line(100, 'X');
@@ -343,7 +297,7 @@ TEST_F(HorizontalTest, EditingAtMaxScroll)
     EXPECT_EQ(editor->wksp_->read_line(0).length(), 99);
 }
 
-TEST_F(HorizontalTest, ActualColCalculationVariousScrolls)
+TEST_F(EditorDriver, HorizontalActualColCalculationVariousScrolls)
 {
     CreateLine(0, "Test line for verification");
 
@@ -367,7 +321,7 @@ TEST_F(HorizontalTest, ActualColCalculationVariousScrolls)
     }
 }
 
-TEST_F(HorizontalTest, ComplexEditingSequenceWithScroll)
+TEST_F(EditorDriver, HorizontalComplexEditingSequenceWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJKLMNOP");
 
@@ -395,7 +349,7 @@ TEST_F(HorizontalTest, ComplexEditingSequenceWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(0), "0123456789ABCDEFGHIJKLMNOP");
 }
 
-TEST_F(HorizontalTest, VerifyBugFixScenario)
+TEST_F(EditorDriver, HorizontalVerifyBugFixScenario)
 {
     // This test specifically verifies the bug that was fixed:
     // Without the fix, editing at cursor_col=6 with basecol=6
@@ -428,7 +382,7 @@ TEST_F(HorizontalTest, VerifyBugFixScenario)
 // Cursor Beyond Line End Tests
 // ============================================================================
 
-TEST_F(HorizontalTest, CursorBeyondLineEndNoScroll)
+TEST_F(EditorDriver, HorizontalCursorBeyondLineEndNoScroll)
 {
     CreateLine(0, "Short");
 
@@ -449,7 +403,7 @@ TEST_F(HorizontalTest, CursorBeyondLineEndNoScroll)
     EXPECT_EQ(actual_col, 10);
 }
 
-TEST_F(HorizontalTest, CursorBeyondLineEndWithScroll)
+TEST_F(EditorDriver, HorizontalCursorBeyondLineEndWithScroll)
 {
     CreateLine(0, "Short");
 
@@ -466,7 +420,7 @@ TEST_F(HorizontalTest, CursorBeyondLineEndWithScroll)
     EXPECT_FALSE(actual_col < editor->wksp_->read_line(0).size());
 }
 
-TEST_F(HorizontalTest, BackspaceBeyondLineEndWithScroll)
+TEST_F(EditorDriver, HorizontalBackspaceBeyondLineEndWithScroll)
 {
     CreateLine(0, "Test");
 
@@ -489,7 +443,7 @@ TEST_F(HorizontalTest, BackspaceBeyondLineEndWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(0), "Test");
 }
 
-TEST_F(HorizontalTest, DeleteBeyondLineEndWithScroll)
+TEST_F(EditorDriver, HorizontalDeleteBeyondLineEndWithScroll)
 {
     CreateLine(0, "Test");
     CreateLine(1, "Next");
@@ -508,7 +462,7 @@ TEST_F(HorizontalTest, DeleteBeyondLineEndWithScroll)
     // In real code, this would trigger line joining with next line
 }
 
-TEST_F(HorizontalTest, InsertBeyondLineEndWithScroll)
+TEST_F(EditorDriver, HorizontalInsertBeyondLineEndWithScroll)
 {
     CreateLine(0, "Hi");
 
@@ -531,7 +485,7 @@ TEST_F(HorizontalTest, InsertBeyondLineEndWithScroll)
 // Line Joining Operations with Scroll
 // ============================================================================
 
-TEST_F(HorizontalTest, BackspaceJoinLinesNoScroll)
+TEST_F(EditorDriver, HorizontalBackspaceJoinLinesNoScroll)
 {
     CreateLine(0, "First");
     CreateLine(1, "Second");
@@ -547,7 +501,7 @@ TEST_F(HorizontalTest, BackspaceJoinLinesNoScroll)
     // In actual implementation, would join "First" + "Second" = "FirstSecond"
 }
 
-TEST_F(HorizontalTest, BackspaceJoinLinesWithScroll)
+TEST_F(EditorDriver, HorizontalBackspaceJoinLinesWithScroll)
 {
     CreateLine(0, "First line");
     CreateLine(1, "Second line");
@@ -567,7 +521,7 @@ TEST_F(HorizontalTest, BackspaceJoinLinesWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(1), "Secod line");
 }
 
-TEST_F(HorizontalTest, BackspaceJoinLinesAtTrueStart)
+TEST_F(EditorDriver, HorizontalBackspaceJoinLinesAtTrueStart)
 {
     CreateLine(0, "First line");
     CreateLine(1, "Second line");
@@ -587,7 +541,7 @@ TEST_F(HorizontalTest, BackspaceJoinLinesAtTrueStart)
     EXPECT_EQ(editor->wksp_->read_line(0), "First lineSecond line");
 }
 
-TEST_F(HorizontalTest, DeleteJoinLinesAtEndNoScroll)
+TEST_F(EditorDriver, HorizontalDeleteJoinLinesAtEndNoScroll)
 {
     CreateLine(0, "First");
     CreateLine(1, "Second");
@@ -606,7 +560,7 @@ TEST_F(HorizontalTest, DeleteJoinLinesAtEndNoScroll)
     EXPECT_EQ(editor->wksp_->total_line_count(), 1);
 }
 
-TEST_F(HorizontalTest, DeleteJoinLinesAtEndWithScroll)
+TEST_F(EditorDriver, HorizontalDeleteJoinLinesAtEndWithScroll)
 {
     CreateLine(0, "First");
     CreateLine(1, "Second");
@@ -625,7 +579,7 @@ TEST_F(HorizontalTest, DeleteJoinLinesAtEndWithScroll)
     EXPECT_FALSE(actual_col < editor->wksp_->read_line(0).size());
 }
 
-TEST_F(HorizontalTest, DeleteNotAtEndWithScroll)
+TEST_F(EditorDriver, HorizontalDeleteNotAtEndWithScroll)
 {
     CreateLine(0, "Testing");
     CreateLine(1, "Second");
@@ -649,7 +603,7 @@ TEST_F(HorizontalTest, DeleteNotAtEndWithScroll)
     EXPECT_EQ(editor->wksp_->read_line(0), "Testig");
 }
 
-TEST_F(HorizontalTest, LineJoiningEdgeCaseScrolled)
+TEST_F(EditorDriver, HorizontalLineJoiningEdgeCaseScrolled)
 {
     CreateLine(0, "Line1");
     CreateLine(1, "Line2");

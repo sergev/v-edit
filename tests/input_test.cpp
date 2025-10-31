@@ -1,58 +1,13 @@
 #include <gtest/gtest.h>
 #include <ncurses.h>
 
-#include "editor.h"
-
-// Test fixture for key handling integration tests
-// Tests the complete flow: key press -> handle_key_edit() -> result
-class InputTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        editor = std::make_unique<Editor>();
-
-        // Initialize editor state
-        editor->wksp_     = std::make_unique<Workspace>(editor->tempfile_);
-        editor->alt_wksp_ = std::make_unique<Workspace>(editor->tempfile_);
-
-        // Open shared temp file
-        editor->tempfile_.open_temp_file();
-
-        // Initialize view state
-        editor->wksp_->view.basecol = 0;
-        editor->wksp_->view.topline = 0;
-        editor->cursor_col_         = 0;
-        editor->cursor_line_        = 0;
-        editor->ncols_              = 80;
-        editor->nlines_             = 24;
-        editor->insert_mode_        = true; // Default to insert mode
-    }
-
-    void TearDown() override { editor.reset(); }
-
-    // Helper: Create a line with content
-    void CreateLine(int line_no, const std::string &content)
-    {
-        int current_count = editor->wksp_->total_line_count();
-        if (line_no >= current_count) {
-            auto blank = Workspace::create_blank_lines(line_no - current_count + 1);
-            editor->wksp_->insert_contents(blank, current_count);
-        }
-
-        editor->current_line_          = content;
-        editor->current_line_no_       = line_no;
-        editor->current_line_modified_ = true;
-        editor->put_line();
-    }
-
-    std::unique_ptr<Editor> editor;
-};
+#include "EditorDriver.h"
 
 // ============================================================================
 // BACKSPACE Key Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, BackspaceKeyMiddleOfLine)
+TEST_F(EditorDriver, InputBackspaceKeyMiddleOfLine)
 {
     CreateLine(0, "Hello World");
     editor->cursor_line_        = 0;
@@ -70,7 +25,7 @@ TEST_F(InputTest, BackspaceKeyMiddleOfLine)
     EXPECT_EQ(editor->cursor_col_, 5);
 }
 
-TEST_F(InputTest, BackspaceKeyWithScroll)
+TEST_F(EditorDriver, InputBackspaceKeyWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
     editor->cursor_line_        = 0;
@@ -88,7 +43,7 @@ TEST_F(InputTest, BackspaceKeyWithScroll)
     EXPECT_EQ(editor->cursor_col_, 4);
 }
 
-TEST_F(InputTest, BackspaceKey127)
+TEST_F(EditorDriver, InputBackspaceKey127)
 {
     // Test with ASCII 127 (alternative backspace code)
     CreateLine(0, "Test");
@@ -106,7 +61,7 @@ TEST_F(InputTest, BackspaceKey127)
 // DELETE Key Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, DeleteKeyMiddleOfLine)
+TEST_F(EditorDriver, InputDeleteKeyMiddleOfLine)
 {
     CreateLine(0, "Hello World");
     editor->cursor_line_ = 0;
@@ -120,7 +75,7 @@ TEST_F(InputTest, DeleteKeyMiddleOfLine)
     EXPECT_EQ(editor->cursor_col_, 5); // Cursor doesn't move
 }
 
-TEST_F(InputTest, DeleteKeyWithScroll)
+TEST_F(EditorDriver, InputDeleteKeyWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
     editor->cursor_line_        = 0;
@@ -140,7 +95,7 @@ TEST_F(InputTest, DeleteKeyWithScroll)
 // ENTER Key Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, EnterKeyMiddleOfLine)
+TEST_F(EditorDriver, InputEnterKeyMiddleOfLine)
 {
     CreateLine(0, "HelloWorld");
     editor->cursor_line_ = 0;
@@ -158,7 +113,7 @@ TEST_F(InputTest, EnterKeyMiddleOfLine)
     EXPECT_EQ(editor->cursor_col_, 0);
 }
 
-TEST_F(InputTest, EnterKeyWithScroll)
+TEST_F(EditorDriver, InputEnterKeyWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
     editor->cursor_line_        = 0;
@@ -177,7 +132,7 @@ TEST_F(InputTest, EnterKeyWithScroll)
 // TAB Key Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, TabKeyInsertion)
+TEST_F(EditorDriver, InputTabKeyInsertion)
 {
     CreateLine(0, "Hello");
     editor->cursor_line_ = 0;
@@ -191,7 +146,7 @@ TEST_F(InputTest, TabKeyInsertion)
     EXPECT_EQ(editor->cursor_col_, 4);
 }
 
-TEST_F(InputTest, TabKeyWithScroll)
+TEST_F(EditorDriver, InputTabKeyWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
     editor->cursor_line_        = 0;
@@ -210,7 +165,7 @@ TEST_F(InputTest, TabKeyWithScroll)
 // Character Insertion Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, CharacterInsertionKey)
+TEST_F(EditorDriver, InputCharacterInsertionKey)
 {
     CreateLine(0, "Helo");
     editor->cursor_line_ = 0;
@@ -225,7 +180,7 @@ TEST_F(InputTest, CharacterInsertionKey)
     EXPECT_EQ(editor->cursor_col_, 3);
 }
 
-TEST_F(InputTest, MultipleCharacterInsertion)
+TEST_F(EditorDriver, InputMultipleCharacterInsertion)
 {
     CreateLine(0, "");
     editor->cursor_line_ = 0;
@@ -243,7 +198,7 @@ TEST_F(InputTest, MultipleCharacterInsertion)
     EXPECT_EQ(editor->cursor_col_, 4);
 }
 
-TEST_F(InputTest, CharacterInsertionWithScroll)
+TEST_F(EditorDriver, InputCharacterInsertionWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
     editor->cursor_line_        = 0;
@@ -259,7 +214,7 @@ TEST_F(InputTest, CharacterInsertionWithScroll)
     EXPECT_EQ(editor->cursor_col_, 6);
 }
 
-TEST_F(InputTest, CharacterInsertionFooLineCount)
+TEST_F(EditorDriver, InputCharacterInsertionFooLineCount)
 {
     editor->wksp_->debug_print(std::cout);
     EXPECT_EQ(editor->wksp_->total_line_count(), 0);
@@ -283,7 +238,7 @@ TEST_F(InputTest, CharacterInsertionFooLineCount)
     EXPECT_EQ(editor->wksp_->read_line(0), "foo");
 }
 
-TEST_F(InputTest, CharacterInsertionFooBarQuz)
+TEST_F(EditorDriver, InputCharacterInsertionFooBarQuz)
 {
     editor->wksp_->debug_print(std::cout);
     EXPECT_EQ(editor->wksp_->total_line_count(), 0);
@@ -345,7 +300,7 @@ TEST_F(InputTest, CharacterInsertionFooBarQuz)
 // Character Overwrite Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, CharacterOverwriteKey)
+TEST_F(EditorDriver, InputCharacterOverwriteKey)
 {
     CreateLine(0, "Hxllo");
     editor->cursor_line_ = 0;
@@ -360,7 +315,7 @@ TEST_F(InputTest, CharacterOverwriteKey)
     EXPECT_EQ(editor->cursor_col_, 2);
 }
 
-TEST_F(InputTest, CharacterOverwriteWithScroll)
+TEST_F(EditorDriver, InputCharacterOverwriteWithScroll)
 {
     CreateLine(0, "0123456789ABCDEFGHIJ");
     editor->cursor_line_        = 0;
@@ -380,7 +335,7 @@ TEST_F(InputTest, CharacterOverwriteWithScroll)
 // Mode Switching Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, InsertVsOverwriteMode)
+TEST_F(EditorDriver, InputInsertVsOverwriteMode)
 {
     CreateLine(0, "Test");
 
@@ -408,7 +363,7 @@ TEST_F(InputTest, InsertVsOverwriteMode)
 // Complex Sequence Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, ComplexEditingSequence)
+TEST_F(EditorDriver, InputComplexEditingSequence)
 {
     CreateLine(0, "Hello");
     editor->cursor_line_ = 0;
@@ -435,7 +390,7 @@ TEST_F(InputTest, ComplexEditingSequence)
     EXPECT_EQ(editor->cursor_col_, 9);
 }
 
-TEST_F(InputTest, EditingWithScrollingSequence)
+TEST_F(EditorDriver, InputEditingWithScrollingSequence)
 {
     CreateLine(0, "The quick brown fox");
     editor->cursor_line_        = 0;
@@ -458,7 +413,7 @@ TEST_F(InputTest, EditingWithScrollingSequence)
 // Edge Case Integration Tests
 // ============================================================================
 
-TEST_F(InputTest, PrintableCharacterRange)
+TEST_F(EditorDriver, InputPrintableCharacterRange)
 {
     CreateLine(0, "");
     editor->cursor_line_ = 0;
@@ -474,7 +429,7 @@ TEST_F(InputTest, PrintableCharacterRange)
     EXPECT_EQ(editor->wksp_->read_line(0), " A~");
 }
 
-TEST_F(InputTest, NonPrintableCharactersIgnored)
+TEST_F(EditorDriver, InputNonPrintableCharactersIgnored)
 {
     CreateLine(0, "Test");
     editor->cursor_line_ = 0;
@@ -492,7 +447,7 @@ TEST_F(InputTest, NonPrintableCharactersIgnored)
     // The key point is that characters >= 32 and < 127 are handled
 }
 
-TEST_F(InputTest, EmptyLineEditing)
+TEST_F(EditorDriver, InputEmptyLineEditing)
 {
     CreateLine(0, "");
     editor->cursor_line_ = 0;
@@ -513,7 +468,7 @@ TEST_F(InputTest, EmptyLineEditing)
     EXPECT_EQ(editor->cursor_col_, 0);
 }
 
-TEST_F(InputTest, VeryLongLineEditing)
+TEST_F(EditorDriver, InputVeryLongLineEditing)
 {
     // Create a 100-character line
     std::string long_line(100, 'X');

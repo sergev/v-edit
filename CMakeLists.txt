@@ -19,6 +19,23 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Generate compile_commands.json for LSP and code navigation tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Code coverage support
+option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
+
+if(ENABLE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        set(COVERAGE_FLAGS "-fprofile-arcs -ftest-coverage --coverage")
+        set(COVERAGE_LINK_FLAGS "--coverage")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(COVERAGE_FLAGS "-fprofile-instr-generate -fcoverage-mapping")
+        set(COVERAGE_LINK_FLAGS "-fprofile-instr-generate -fcoverage-mapping")
+    endif()
+
+    message(STATUS "Code coverage enabled: ${COVERAGE_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COVERAGE_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${COVERAGE_LINK_FLAGS}")
+endif()
+
 set(CE_SOURCES
     # Presentation Layer
     core.cpp

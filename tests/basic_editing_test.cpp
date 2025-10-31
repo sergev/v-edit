@@ -1,63 +1,12 @@
 #include <gtest/gtest.h>
 
-#include "editor.h"
-
-// Test fixture for basic editing operations with basecol = 0
-class BasicEditingTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        editor = std::make_unique<Editor>();
-
-        // Initialize editor state
-        editor->wksp_     = std::make_unique<Workspace>(editor->tempfile_);
-        editor->alt_wksp_ = std::make_unique<Workspace>(editor->tempfile_);
-
-        // Open shared temp file
-        editor->tempfile_.open_temp_file();
-
-        // Initialize view state (no horizontal scroll)
-        editor->wksp_->view.basecol = 0;
-        editor->wksp_->view.topline = 0;
-        editor->cursor_col_         = 0;
-        editor->cursor_line_        = 0;
-        editor->ncols_              = 80;
-        editor->nlines_             = 24;
-    }
-
-    void TearDown() override { editor.reset(); }
-
-    // Helper: Create a line with content
-    void CreateLine(int line_no, const std::string &content)
-    {
-        // Ensure enough blank lines exist
-        int current_count = editor->wksp_->total_line_count();
-        if (line_no >= current_count) {
-            auto blank = Workspace::create_blank_lines(line_no - current_count + 1);
-            editor->wksp_->insert_contents(blank, current_count);
-        }
-
-        // Set the content
-        editor->current_line_          = content;
-        editor->current_line_no_       = line_no;
-        editor->current_line_modified_ = true;
-        editor->put_line();
-    }
-
-    // Helper: Load a line into current_line_ buffer
-    void LoadLine(int line_no) { editor->get_line(line_no); }
-
-    // Helper: Get actual column position
-    size_t GetActualCol() const { return editor->get_actual_col(); }
-
-    std::unique_ptr<Editor> editor;
-};
+#include "EditorDriver.h"
 
 // ============================================================================
 // BACKSPACE Operation Tests (basecol = 0)
 // ============================================================================
 
-TEST_F(BasicEditingTest, BackspaceMiddleOfLine)
+TEST_F(EditorDriver, BasicEditingBackspaceMiddleOfLine)
 {
     // Create a line: "Hello World"
     CreateLine(0, "Hello World");
@@ -78,7 +27,7 @@ TEST_F(BasicEditingTest, BackspaceMiddleOfLine)
     EXPECT_EQ(editor->cursor_col_, 5);
 }
 
-TEST_F(BasicEditingTest, BackspaceStartOfLine)
+TEST_F(EditorDriver, BasicEditingBackspaceStartOfLine)
 {
     CreateLine(0, "First");
     CreateLine(1, "Second");
@@ -100,7 +49,7 @@ TEST_F(BasicEditingTest, BackspaceStartOfLine)
     // Here we just verify actual_col is correct
 }
 
-TEST_F(BasicEditingTest, BackspaceEndOfLine)
+TEST_F(EditorDriver, BasicEditingBackspaceEndOfLine)
 {
     CreateLine(0, "Test");
     LoadLine(0);
@@ -122,7 +71,7 @@ TEST_F(BasicEditingTest, BackspaceEndOfLine)
 // DELETE Operation Tests (basecol = 0)
 // ============================================================================
 
-TEST_F(BasicEditingTest, DeleteMiddleOfLine)
+TEST_F(EditorDriver, BasicEditingDeleteMiddleOfLine)
 {
     CreateLine(0, "Hello World");
     LoadLine(0);
@@ -141,7 +90,7 @@ TEST_F(BasicEditingTest, DeleteMiddleOfLine)
     EXPECT_EQ(editor->cursor_col_, 5); // Cursor position unchanged
 }
 
-TEST_F(BasicEditingTest, DeleteAtEndOfLine)
+TEST_F(EditorDriver, BasicEditingDeleteAtEndOfLine)
 {
     CreateLine(0, "Test");
     LoadLine(0);
@@ -158,7 +107,7 @@ TEST_F(BasicEditingTest, DeleteAtEndOfLine)
     // In actual code, this would trigger line joining
 }
 
-TEST_F(BasicEditingTest, DeleteFirstCharacter)
+TEST_F(EditorDriver, BasicEditingDeleteFirstCharacter)
 {
     CreateLine(0, "Hello");
     LoadLine(0);
@@ -180,7 +129,7 @@ TEST_F(BasicEditingTest, DeleteFirstCharacter)
 // ENTER/Newline Operation Tests (basecol = 0)
 // ============================================================================
 
-TEST_F(BasicEditingTest, EnterMiddleOfLine)
+TEST_F(EditorDriver, BasicEditingEnterMiddleOfLine)
 {
     CreateLine(0, "Hello World");
     LoadLine(0);
@@ -208,7 +157,7 @@ TEST_F(BasicEditingTest, EnterMiddleOfLine)
     EXPECT_EQ(tail, " World");
 }
 
-TEST_F(BasicEditingTest, EnterAtStartOfLine)
+TEST_F(EditorDriver, BasicEditingEnterAtStartOfLine)
 {
     CreateLine(0, "Hello");
     LoadLine(0);
@@ -235,7 +184,7 @@ TEST_F(BasicEditingTest, EnterAtStartOfLine)
     EXPECT_EQ(tail, "Hello");
 }
 
-TEST_F(BasicEditingTest, EnterAtEndOfLine)
+TEST_F(EditorDriver, BasicEditingEnterAtEndOfLine)
 {
     CreateLine(0, "Hello");
     LoadLine(0);
@@ -266,7 +215,7 @@ TEST_F(BasicEditingTest, EnterAtEndOfLine)
 // TAB Operation Tests (basecol = 0)
 // ============================================================================
 
-TEST_F(BasicEditingTest, TabAtStart)
+TEST_F(EditorDriver, BasicEditingTabAtStart)
 {
     CreateLine(0, "Hello");
     LoadLine(0);
@@ -284,7 +233,7 @@ TEST_F(BasicEditingTest, TabAtStart)
     EXPECT_EQ(editor->cursor_col_, 4);
 }
 
-TEST_F(BasicEditingTest, TabMiddleOfLine)
+TEST_F(EditorDriver, BasicEditingTabMiddleOfLine)
 {
     CreateLine(0, "Hello World");
     LoadLine(0);
@@ -302,7 +251,7 @@ TEST_F(BasicEditingTest, TabMiddleOfLine)
     EXPECT_EQ(editor->cursor_col_, 9);
 }
 
-TEST_F(BasicEditingTest, TabAtEnd)
+TEST_F(EditorDriver, BasicEditingTabAtEnd)
 {
     CreateLine(0, "Hello");
     LoadLine(0);
@@ -324,7 +273,7 @@ TEST_F(BasicEditingTest, TabAtEnd)
 // Character Insertion Tests (basecol = 0)
 // ============================================================================
 
-TEST_F(BasicEditingTest, InsertCharacterAtStart)
+TEST_F(EditorDriver, BasicEditingInsertCharacterAtStart)
 {
     CreateLine(0, "ello");
     LoadLine(0);
@@ -343,7 +292,7 @@ TEST_F(BasicEditingTest, InsertCharacterAtStart)
     EXPECT_EQ(editor->cursor_col_, 1);
 }
 
-TEST_F(BasicEditingTest, InsertCharacterMiddle)
+TEST_F(EditorDriver, BasicEditingInsertCharacterMiddle)
 {
     CreateLine(0, "Helo");
     LoadLine(0);
@@ -362,7 +311,7 @@ TEST_F(BasicEditingTest, InsertCharacterMiddle)
     EXPECT_EQ(editor->cursor_col_, 3);
 }
 
-TEST_F(BasicEditingTest, InsertCharacterAtEnd)
+TEST_F(EditorDriver, BasicEditingInsertCharacterAtEnd)
 {
     CreateLine(0, "Hell");
     LoadLine(0);
@@ -385,7 +334,7 @@ TEST_F(BasicEditingTest, InsertCharacterAtEnd)
 // Character Overwrite Tests (basecol = 0)
 // ============================================================================
 
-TEST_F(BasicEditingTest, OverwriteCharacterMiddle)
+TEST_F(EditorDriver, BasicEditingOverwriteCharacterMiddle)
 {
     CreateLine(0, "Hxllo");
     LoadLine(0);
@@ -404,7 +353,7 @@ TEST_F(BasicEditingTest, OverwriteCharacterMiddle)
     EXPECT_EQ(editor->cursor_col_, 2);
 }
 
-TEST_F(BasicEditingTest, OverwriteAtEnd)
+TEST_F(EditorDriver, BasicEditingOverwriteAtEnd)
 {
     CreateLine(0, "Hell");
     LoadLine(0);
@@ -423,7 +372,7 @@ TEST_F(BasicEditingTest, OverwriteAtEnd)
     EXPECT_EQ(editor->cursor_col_, 5);
 }
 
-TEST_F(BasicEditingTest, OverwriteFirstCharacter)
+TEST_F(EditorDriver, BasicEditingOverwriteFirstCharacter)
 {
     CreateLine(0, "xello");
     LoadLine(0);
@@ -446,7 +395,7 @@ TEST_F(BasicEditingTest, OverwriteFirstCharacter)
 // Edge Cases and Complex Scenarios
 // ============================================================================
 
-TEST_F(BasicEditingTest, MultipleOperationsSequence)
+TEST_F(EditorDriver, BasicEditingMultipleOperationsSequence)
 {
     // Start with empty line
     CreateLine(0, "");
@@ -473,7 +422,7 @@ TEST_F(BasicEditingTest, MultipleOperationsSequence)
     EXPECT_EQ(editor->cursor_col_, 3);
 }
 
-TEST_F(BasicEditingTest, EmptyLineOperations)
+TEST_F(EditorDriver, BasicEditingEmptyLineOperations)
 {
     CreateLine(0, "");
     LoadLine(0);
@@ -493,7 +442,7 @@ TEST_F(BasicEditingTest, EmptyLineOperations)
     EXPECT_EQ(editor->cursor_col_, 1);
 }
 
-TEST_F(BasicEditingTest, LongLineEditing)
+TEST_F(EditorDriver, BasicEditingLongLineEditing)
 {
     // Create a long line
     std::string long_line(100, 'x');
@@ -514,7 +463,7 @@ TEST_F(BasicEditingTest, LongLineEditing)
     EXPECT_EQ(editor->cursor_col_, 50);
 }
 
-TEST_F(BasicEditingTest, ActualColMatchesCursorColWhenBasecolZero)
+TEST_F(EditorDriver, BasicEditingActualColMatchesCursorColWhenBasecolZero)
 {
     CreateLine(0, "Hello World");
     LoadLine(0);

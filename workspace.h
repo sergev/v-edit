@@ -169,6 +169,9 @@ private:
     // Helper for delete_contents: update workspace position after deletion
     void update_position_after_deletion(Segment::iterator after_delete_it);
 
+    // Helper for put_line: isolate a single line into its own segment
+    void isolate_line(int line_no);
+
     std::list<Segment> contents_; // list of segments
     Segment::iterator cursegm_;   // current segment iterator (points into contents_)
     Tempfile &tempfile_;          // reference to temp file manager

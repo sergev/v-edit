@@ -617,6 +617,19 @@ void Workspace::update_position_after_deletion(Segment::iterator after_delete_it
 }
 
 //
+// Helper for put_line: isolate a single line into its own segment
+//
+void Workspace::isolate_line(int line_no)
+{
+    // Ensure cursegm_ starts exactly at line_no
+    split(line_no);
+    if (cursegm_->line_count > 1) {
+        split(line_no + 1);
+        --cursegm_;
+    }
+}
+
+//
 // Insert segments into workspace before given line (based on insert from prototype).
 //
 void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
@@ -814,15 +827,14 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     if (temp_segments.empty()) {
         return; // Failed to persist line content
     }
-    auto new_seg_it = temp_segments.begin(); // for overwrite path below
+    auto new_seg_it = temp_segments.begin();
 
     // Append beyond EOF (also covers empty workspace via total==0)
     int total = total_line_count();
     if (line_no >= total) {
         // Create blanks as needed
-        int current_total = total_line_count();
-        if (line_no > current_total) {
-            auto blanks = create_blank_lines(line_no - current_total);
+        if (line_no > total) {
+            auto blanks = create_blank_lines(line_no - total);
             contents_.splice(contents_.end(), blanks);
         }
         contents_.splice(contents_.end(), temp_segments);
@@ -834,15 +846,10 @@ void Workspace::put_line(int line_no, const std::string &line_content)
     }
 
     // Overwrite existing line: isolate target line into its own segment, then replace
-    // Ensure cursegm_ starts exactly at line_no
-    split(line_no);
-    if (cursegm_->line_count > 1) {
-        split(line_no + 1);
-        --cursegm_;
-    }
-
+    isolate_line(line_no);
     *cursegm_ = std::move(*new_seg_it);
     merge();
+
     position.line       = line_no;
     file_state.modified = true;
 }

@@ -23,11 +23,13 @@ set(CE_SOURCES
     core.cpp
     display.cpp
     file_io.cpp
+    line_buffer.cpp
     cmd_mode.cpp
     edit_mode.cpp
     text_operations.cpp
     clipboard.cpp
-    clipboard_macro.cpp
+    clipboard_operations.cpp
+    editor_macros.cpp
     session.cpp
     filter.cpp
     workspace_help.cpp

@@ -22,15 +22,15 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CE_SOURCES
     core.cpp
     display.cpp
-    file.cpp
+    file_io.cpp
     cmd_mode.cpp
     edit_mode.cpp
-    edit.cpp
+    text_operations.cpp
     clipboard.cpp
-    copy_paste.cpp
+    clipboard_macro.cpp
     session.cpp
     filter.cpp
-    files.cpp
+    workspace_help.cpp
     signal.cpp
     segment.cpp
     tempfile.cpp

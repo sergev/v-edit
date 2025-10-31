@@ -10,18 +10,12 @@ make -C build
 make -C build install  # Optional
 ```
 
-## Development
-
-**⚠️ MANDATORY: All development in this project MUST follow Test-Driven Development (TDD). Write tests first, then implement.**
-
-See [Testing.md](docs/Testing.md) for test execution details.
-
 ## Usage
 
 ```bash
 ve                    # Restore last session or create new empty file
 ve [file]             # Open file
-ve -                  # Replay keystrokes from journal
+ve -R                 # Replay keystrokes from journal
 ve --help             # Show help
 ve --version          # Show version
 ```
@@ -42,7 +36,7 @@ ve --version          # Show version
 
 ### Advanced Operations
 - **Search**: Forward (`/text` or `^F`), backward (`?text` or `^B`), next/prev match (`n`/`N`)
-- **Navigation**: Goto line (`g<number>` or `:<number>` or just `<number>`)
+- **Navigation**: Goto line (`g<number>`)
 - **Rectangular blocks**: Select area with cursor in command mode, copy (`^C`), delete (`^Y`), insert spaces (`^O`)
 - **Macros**: Position markers (`>x`, `$x`) and named text buffers (`^C>name`, `^V$name`)
 - **External filters**: `F4` to run shell commands on selected lines

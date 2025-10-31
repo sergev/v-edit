@@ -826,25 +826,6 @@ void Editor::execute_command(const std::string &cmd)
         } else {
             status_ = std::string("Macro '") + remaining_cmd[1] + "' not found";
         }
-    } else if (remaining_cmd.size() >= 1 && remaining_cmd[0] == ':') {
-        // Colon commands: :w, :q, :wq, :<number>
-        if (remaining_cmd == ":w") {
-            save_file();
-        } else if (remaining_cmd == ":q") {
-            quit_flag_ = true;
-            status_    = "Exiting";
-        } else if (remaining_cmd == ":wq") {
-            save_file();
-            quit_flag_ = true;
-            status_    = "Saved and exiting";
-        } else if (remaining_cmd.size() > 1 && remaining_cmd[0] == ':') {
-            // :<number> - goto line
-            int ln = std::atoi(remaining_cmd.c_str() + 1);
-            if (ln >= 1) {
-                goto_line(ln - 1);
-                status_ = std::string("Goto line ") + std::to_string(ln);
-            }
-        }
     } else if (remaining_cmd.size() >= 1 && remaining_cmd[0] >= '0' && remaining_cmd[0] <= '9') {
         // Direct line number - goto line
         int ln = std::atoi(remaining_cmd.c_str());

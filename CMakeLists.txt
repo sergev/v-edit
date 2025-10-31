@@ -78,5 +78,8 @@ endif()
 
 install(TARGETS ve RUNTIME DESTINATION bin ARCHIVE DESTINATION lib)
 
+# Install man page
+install(FILES docs/ve.1 DESTINATION share/man/man1)
+
 # --- Tests ---
 add_subdirectory(tests)

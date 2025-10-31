@@ -20,29 +20,29 @@ In command mode, you enter a line-based command and terminate it with Enter. Com
 - **Example**: `otest.txt`
 
 #### Save File
-- **Command**: `s` or `:w`
+- **Command**: `s`
 - **Description**: Save current file to disk
 - **Example**: `s`
 
 #### Save As
-- **Command**: `s<filename>` or `:w <filename>`
+- **Command**: `s<filename>`
 - **Description**: Save current file with a different name
 - **Example**: `sbackup.txt`
 
 #### Quit Without Save
-- **Command**: `qa` or `:q`
+- **Command**: `qa` o
 - **Description**: Exit editor without saving
 - **Example**: `qa`
 
 #### Quit With Save
-- **Command**: `:wq`
+- **Command**: `q`
 - **Description**: Save and exit
-- **Example**: `:wq`
+- **Example**: `q`
 
 ### Navigation
 
 #### Goto Line
-- **Command**: `g<number>` or `:<number>`
+- **Command**: `g<number>` or
 - **Description**: Jump to specified line number
 - **Example**: `g42` (goto line 42)
 
@@ -61,7 +61,7 @@ In command mode, you enter a line-based command and terminate it with Enter. Com
 #### Copy (Line/Block)
 - **Command**: `^C` (with area selection)
 - **Description**: Copy selected text to clipboard
-- **Usage**: 
+- **Usage**:
   - With cursor movement: Defines area
   - Without movement: Copies current line
 
@@ -73,14 +73,14 @@ In command mode, you enter a line-based command and terminate it with Enter. Com
 #### Delete Line/Block
 - **Command**: `^Y` (with area selection)
 - **Description**: Delete selected text
-- **Usage**: 
+- **Usage**:
   - With cursor movement: Defines area
   - Without movement: Deletes current line
 
 #### Insert Blank Line/Spaces
 - **Command**: `^O` (with area selection)
 - **Description**: Insert blank line or rectangular block of spaces
-- **Usage**: 
+- **Usage**:
   - Line: Just `^O`
   - Block: With cursor movement to define area
 
@@ -195,7 +195,7 @@ Commands entered with Enter:
 
 #### Quit
 - **Command**: `q`
-- **Description**: Exit (same as `qa`)
+- **Description**: Exit with save (same as `q`)
 - **Example**: `q`
 
 #### Abort

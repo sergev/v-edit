@@ -1,0 +1,353 @@
+.\" Copyright (c) 2024
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted.
+.Dd $Mdocdate: December 2024 $
+.Dt VE 1
+.Os
+.Sh NAME
+.Nm ve
+.Nd minimal ncurses-based text editor
+.Sh SYNOPSIS
+.Nm
+.Op Fl h | Fl -help
+.Op Fl v | Fl -version
+.Op Fl r | Fl -replay
+.Op Ar file
+.Sh DESCRIPTION
+.Nm
+is a lightweight terminal-based text editor with support for multiple files,
+rectangular block operations, dual workspaces, external filters, and session
+persistence.
+.Pp
+The editor supports two primary editing modes:
+.Bl -bullet
+.It
+Insert mode (default) - characters are inserted at the cursor position
+.It
+Overwrite mode - characters replace existing text
+.El
+.Pp
+All keystrokes during normal operation are recorded in a journal file for
+replay and debugging purposes.
+.Sh OPTIONS
+.Bl -tag -width Ds
+.It Fl h , Fl -help
+Display help message and exit.
+.It Fl v , Fl -version
+Display version information and exit.
+.It Fl r , Fl -replay
+Replay the last session from the journal file.
+.It Fl -
+Equivalent to
+.Fl r ;
+replay keystrokes from the journal.
+.El
+.Pp
+If invoked without arguments,
+.Nm
+attempts to restore the last editing session, including cursor position and
+open files.
+.Sh EDITING MODES
+.Nm
+supports two primary editing modes:
+.Bl -tag -width "overwrite mode"
+.It "insert mode"
+The default mode. Characters typed are inserted at the cursor position,
+shifting existing text to the right.
+.It "overwrite mode"
+Characters typed replace existing text at the cursor position.
+Toggle with
+.Ic ^X i
+in command mode.
+.El
+.Sh COMMAND MODE
+Enter command mode by pressing
+.Ic ^A
+or
+.Ic F1 .
+The status line displays "Cmd:" and accepts line-based commands terminated
+with Enter.
+.Pp
+Basic commands:
+.Bl -tag -width "quit without save"
+.It Ic o Ar filename
+Open a file in the current workspace.
+.It Ic s
+Save the current file.
+.It Ic s Ar filename
+Save the current file with a different name.
+.It Ic q
+Save and quit.
+.It Ic qa
+Quit without saving.
+.It Ic g Ns Ar number
+Go to the specified line number.
+.It Ic / Ns Ar text
+Search forward for text.
+.It Ic ? Ns Ar text
+Search backward for text.
+.It Ic n
+Find next match (after a search).
+.It Ic N
+Find previous match (after a search).
+.El
+.Sh AREA SELECTION MODE
+Area selection mode allows defining rectangular regions of text for block
+operations.
+.Pp
+To define an area:
+.Bl -enum
+.It
+Move the cursor to the top-left corner of the desired region.
+.It
+Press
+.Ic ^A
+or
+.Ic F1
+to enter command mode.
+.It
+Use arrow keys to move the cursor to the bottom-right corner.
+The status line shows "*** Area defined by cursor ***".
+.It
+Press
+.Ic ^C
+to copy,
+.Ic ^Y
+to delete, or
+.Ic ^O
+to insert spaces in the selected area.
+.El
+.Pp
+Press
+.Ic ESC ,
+.Ic ^A ,
+or
+.Ic F1
+again to cancel area selection.
+.Sh BASIC EDITING
+Navigation and text input keys work in edit mode:
+.Bl -tag -width "Page Up/Down"
+.It "Arrow keys"
+Move cursor one character or line.
+.It "Home/End"
+Move cursor to beginning or end of line.
+.It "Page Up/Down"
+Scroll up or down one screen.
+.It "Enter"
+Split the current line at the cursor.
+.It "Tab"
+Insert 4 spaces.
+.It "Backspace"
+Delete character before cursor.
+.It "Delete"
+Delete character under cursor (also
+.Ic ^D ) .
+.It "Printable characters"
+Insert or replace text depending on current mode.
+.El
+.Sh SAVE OPERATIONS
+Multiple ways to save files:
+.Bl -tag -width "^A s"
+.It Ic F2
+Save current file immediately.
+.It Ic ^A s
+Save from command mode.
+.It Ic ^X ^C
+Save and quit.
+.El
+.Sh QUOTE NEXT
+Press
+.Ic ^P
+to quote the next character. The following character is inserted literally,
+even if it would normally have a special meaning (e.g., control characters).
+Useful for inserting literal control sequences.
+.Sh LINE OPERATIONS
+Line operations work on entire lines:
+.Bl -tag -width "^C (copy)"
+.It Ic ^C
+Copy current line to clipboard.
+.It Ic F5
+Same as
+.Ic ^C .
+.It Ic ^V
+Paste clipboard contents at cursor position.
+.It Ic F6
+Same as
+.Ic ^V .
+.It Ic ^Y
+Delete current line.
+.It Ic ^O
+Insert blank line below cursor.
+.El
+.Pp
+In command mode, these operations can be combined with numeric prefixes or
+area selection to operate on multiple lines or rectangular blocks.
+.Sh ADVANCED OPERATIONS
+.Ss Search
+Search operations work in command mode:
+.Bl -tag -width "/text"
+.It Ic / Ns Ar text
+Search forward from current position.
+.It Ic ^F
+Same as forward search (also works in edit mode).
+.It Ic ? Ns Ar text
+Search backward from current position.
+.It Ic ^B
+Same as backward search (also works in edit mode).
+.It Ic n
+Find next occurrence (after a search).
+.It Ic N
+Find previous occurrence (after a search).
+.El
+.Ss Goto Line
+Navigate to a specific line number:
+.Bl -tag -width "g<number>"
+.It Ic g Ns Ar number
+Go to line number in command mode.
+.It Ic : Ns Ar number
+Alternative syntax for goto line.
+.It Ic F8
+Opens goto line dialog.
+.El
+.Sh RECTANGULAR BLOCKS OF TEXT
+Rectangular block operations work on column-aligned regions across multiple
+lines, independent of line length.
+.Pp
+Operations:
+.Bl -tag -width "^O (insert spaces)"
+.It Ic ^C
+Copy rectangular block to clipboard (in command mode with area selection).
+.It Ic ^V
+Paste rectangular block at cursor position.
+.It Ic ^Y
+Delete rectangular block (in command mode with area selection).
+.It Ic ^O
+Insert rectangular block of spaces (in command mode with area selection).
+.El
+.Pp
+When pasting a rectangular block, text is inserted column-by-column on each
+affected line, shifting existing text to the right.
+.Sh EXTERNAL FILTERS
+Run shell commands on selected lines:
+.Bl -enum
+.It
+Define an area using area selection mode, or select lines.
+.It
+Press
+.Ic F4
+to enter filter command mode.
+.It
+Type
+.Ic | Ns Ar command
+and press Enter (e.g.,
+.Ic |sort
+to sort selected lines).
+.It
+The selected text is piped to the command and replaced with the output.
+.El
+.Sh DUAL WORKSPACES AND HELP FILE
+.Nm
+maintains two independent workspaces that can be switched between:
+.Bl -tag -width "F3"
+.It Ic ^N
+Switch to alternative workspace (opens help file on first use).
+.It Ic F3
+Switch between primary and alternative workspaces.
+.El
+.Pp
+Both workspaces maintain independent state including:
+.Bl -bullet
+.It
+Cursor position
+.It
+Viewport position
+.It
+Open files
+.It
+Editing mode
+.El
+.Pp
+The alternative workspace is typically used for:
+.Bl -bullet
+.It
+Viewing the help file
+.It
+Editing a second file simultaneously
+.It
+Comparing different parts of the same file
+.El
+.Sh SESSION PERSISTENCE AND REPLAY
+.Nm
+automatically saves session state on exit to
+.Pa ~/.ve/session ,
+including:
+.Bl -bullet
+.It
+Last open filename
+.It
+Cursor position
+.It
+Viewport position
+.It
+Editing mode
+.It
+Command mode state
+.It
+Search history
+.It
+Macros and named buffers
+.It
+Clipboard contents
+.El
+.Pp
+Keystrokes are recorded in journal files located at
+.Pa /tmp/rej{tty}{user} .
+These journals can be used to:
+.Bl -bullet
+.It
+Replay sessions for debugging
+.It
+Restore lost work
+.It
+Debug editor behavior
+.El
+.Pp
+To replay a session:
+.Bl -enum
+.It
+Use
+.Nm Fl r
+or
+.Nm Fl -
+to replay from the journal.
+.It
+The editor will execute the recorded keystrokes automatically.
+.El
+.Pp
+Session state is restored automatically when
+.Nm
+is invoked without arguments.
+.Sh FILES
+.Bl -tag -width "/tmp/rej{tty}{user}" -compact
+.It Pa ~/.ve/session
+Saved session state
+.It Pa /tmp/rej{tty}{user}
+Keystroke journal files
+.It Pa /tmp/ret{tty}{user}
+Temporary session state
+.El
+.Sh SEE ALSO
+.Pp
+The editor includes built-in help accessible via
+.Ic ^N
+or
+.Ic F3 ,
+which provides detailed information about commands and features.
+.Sh AUTHORS
+.Nm
+was developed as a minimal ncurses-based text editor.
+.Sh BUGS
+Report bugs via the project's issue tracker.
+.Sh VERSION
+.Nm
+version 0.1.0

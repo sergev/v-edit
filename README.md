@@ -53,7 +53,7 @@ ve --version          # Show version
 - **Multiple files**: `F3` to switch workspaces, `o<filename>` to open file in current workspace
 - **Session persistence**: Auto-save state (`~/.ve/session`) and keystroke journals (`/tmp/rej{tty}{user}`)
 - **Journal replay**: Use `ve -` to replay previous session keystrokes
-- **Save operations**: `F2`, `^A s`, `:w`, `^X ^C` (save and quit)
+- **Save operations**: `F2`, `^A s`, `^X ^C` (save and quit)
 
 ## Source Organization
 

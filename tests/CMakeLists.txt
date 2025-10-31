@@ -31,7 +31,6 @@ set(TEST_SOURCES
     rectangular_block_test.cpp
     help_file_test.cpp
     signal_handling_test.cpp
-    segment_test.cpp
     segment_unit_test.cpp
     workspace_unit_test.cpp
     tempfile_unit_test.cpp

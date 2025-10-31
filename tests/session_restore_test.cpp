@@ -7,40 +7,17 @@
 
 namespace fs = std::filesystem;
 
-class SessionRestoreTest : public TmuxDriver {
-protected:
-    std::string testFile;
-    std::string sessionFile;
-
-    void SetUp() override
-    {
-        TmuxDriver::SetUp();
-        const std::string testName =
-            ::testing::UnitTest::GetInstance()->current_test_info()->name();
-        testFile    = testName + "_test.txt";
-        sessionFile = "restitty-v-edit-" + testName + "_session";
-
-        // Create initial file
-        std::ofstream f(testFile);
-        f << "Line 1\nLine 2\nLine 3\n";
-        f.close();
-    }
-
-    void TearDown() override
-    {
-        if (fs::exists(testFile))
-            fs::remove(testFile);
-        if (fs::exists(sessionFile))
-            fs::remove(sessionFile);
-        TmuxDriver::TearDown();
-    }
-};
-
-TEST_F(SessionRestoreTest, RestoresSessionAndPosition)
+TEST_F(TmuxDriver, RestoresSessionAndPosition)
 {
     const std::string testName = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+    const std::string testFile = testName + "_test.txt";
     const std::string session  = testName;
     const std::string app      = V_EDIT_BIN_PATH;
+
+    // Create initial file
+    std::ofstream f(testFile);
+    f << "Line 1\nLine 2\nLine 3\n";
+    f.close();
 
     // First session: edit file and move to line 2
     create_session(session + "_1", shell_quote(app) + " " + shell_quote(testFile));
@@ -71,4 +48,8 @@ TEST_F(SessionRestoreTest, RestoresSessionAndPosition)
     EXPECT_TRUE(pane.find("Line=") != std::string::npos);
 
     kill_session(session + "_2");
+
+    // Cleanup
+    if (fs::exists(testFile))
+        fs::remove(testFile);
 }

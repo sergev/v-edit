@@ -4,20 +4,10 @@
 
 #include <fstream>
 
-#include "tempfile.h"
-
-// Tempfile test fixture
-class TempfileTest : public ::testing::Test {
-protected:
-    void SetUp() override { tempfile = std::make_unique<Tempfile>(); }
-
-    void TearDown() override { tempfile.reset(); }
-
-    std::unique_ptr<Tempfile> tempfile;
-};
+#include "TempfileDriver.h"
 
 // Test open_temp_file
-TEST_F(TempfileTest, OpenTempFile)
+TEST_F(TempfileDriver, OpenTempFile)
 {
     bool result = tempfile->open_temp_file();
     EXPECT_TRUE(result);
@@ -25,7 +15,7 @@ TEST_F(TempfileTest, OpenTempFile)
 }
 
 // Test close_temp_file
-TEST_F(TempfileTest, CloseTempFile)
+TEST_F(TempfileDriver, CloseTempFile)
 {
     tempfile->open_temp_file();
     EXPECT_GE(tempfile->fd(), 0);
@@ -35,7 +25,7 @@ TEST_F(TempfileTest, CloseTempFile)
 }
 
 // Test write_line_to_temp with basic string
-TEST_F(TempfileTest, WriteLineToTempBasic)
+TEST_F(TempfileDriver, WriteLineToTempBasic)
 {
     auto segments = tempfile->write_line_to_temp("Hello World");
 
@@ -51,7 +41,7 @@ TEST_F(TempfileTest, WriteLineToTempBasic)
 }
 
 // Test write_line_to_temp with string already ending with newline
-TEST_F(TempfileTest, WriteLineToTempWithNewline)
+TEST_F(TempfileDriver, WriteLineToTempWithNewline)
 {
     auto segments = tempfile->write_line_to_temp("Already has newline\n");
 
@@ -65,7 +55,7 @@ TEST_F(TempfileTest, WriteLineToTempWithNewline)
 }
 
 // Test write_line_to_temp with empty string
-TEST_F(TempfileTest, WriteLineToTempEmptyString)
+TEST_F(TempfileDriver, WriteLineToTempEmptyString)
 {
     auto segments = tempfile->write_line_to_temp("");
 
@@ -78,7 +68,7 @@ TEST_F(TempfileTest, WriteLineToTempEmptyString)
 }
 
 // Test multiple writes
-TEST_F(TempfileTest, WriteLineToTempMultiple)
+TEST_F(TempfileDriver, WriteLineToTempMultiple)
 {
     auto seg1 = tempfile->write_line_to_temp("First line");
     auto seg2 = tempfile->write_line_to_temp("Second line");
@@ -102,7 +92,7 @@ TEST_F(TempfileTest, WriteLineToTempMultiple)
 }
 
 // Test that write opens temp file automatically if needed
-TEST_F(TempfileTest, WriteLineToTempOpensFile)
+TEST_F(TempfileDriver, WriteLineToTempOpensFile)
 {
     EXPECT_EQ(tempfile->fd(), -1); // Initially not open
 
@@ -116,7 +106,7 @@ TEST_F(TempfileTest, WriteLineToTempOpensFile)
 }
 
 // Test reading back the written data
-TEST_F(TempfileTest, WriteLineToTempVerifyContent)
+TEST_F(TempfileDriver, WriteLineToTempVerifyContent)
 {
     std::string test_content = "Test content for verification";
     auto segments            = tempfile->write_line_to_temp(test_content);
@@ -135,7 +125,7 @@ TEST_F(TempfileTest, WriteLineToTempVerifyContent)
 }
 
 // Test write_line_to_temp with long line
-TEST_F(TempfileTest, WriteLineToTempLongLine)
+TEST_F(TempfileDriver, WriteLineToTempLongLine)
 {
     std::string long_line(1000, 'A'); // 1000 'A' characters
     auto segments = tempfile->write_line_to_temp(long_line);
@@ -157,7 +147,7 @@ TEST_F(TempfileTest, WriteLineToTempLongLine)
 }
 
 // Test write_lines_to_temp for comparison
-TEST_F(TempfileTest, WriteLineToTempVsWriteLines)
+TEST_F(TempfileDriver, WriteLineToTempVsWriteLines)
 {
     std::vector<std::string> lines = { "Single line" };
 
@@ -176,7 +166,7 @@ TEST_F(TempfileTest, WriteLineToTempVsWriteLines)
 }
 
 // Test position tracking with multiple calls
-TEST_F(TempfileTest, WriteLineToTempPositionTracking)
+TEST_F(TempfileDriver, WriteLineToTempPositionTracking)
 {
     // Start fresh
     tempfile->close_temp_file();
@@ -207,7 +197,7 @@ TEST_F(TempfileTest, WriteLineToTempPositionTracking)
 }
 
 // Test write_lines_to_temp with basic strings
-TEST_F(TempfileTest, WriteLinesToTempBasic)
+TEST_F(TempfileDriver, WriteLinesToTempBasic)
 {
     std::vector<std::string> lines = { "First line", "Second line", "Third line" };
 
@@ -227,7 +217,7 @@ TEST_F(TempfileTest, WriteLinesToTempBasic)
 }
 
 // Test write_lines_to_temp with strings already ending with newlines
-TEST_F(TempfileTest, WriteLinesToTempWithNewlines)
+TEST_F(TempfileDriver, WriteLinesToTempWithNewlines)
 {
     std::vector<std::string> lines = { "Line with newline\n", "Another line" };
 
@@ -244,7 +234,7 @@ TEST_F(TempfileTest, WriteLinesToTempWithNewlines)
 }
 
 // Test write_lines_to_temp with empty string in vector
-TEST_F(TempfileTest, WriteLinesToTempEmptyStringInVector)
+TEST_F(TempfileDriver, WriteLinesToTempEmptyStringInVector)
 {
     std::vector<std::string> lines = { "", "Non-empty" };
 
@@ -260,7 +250,7 @@ TEST_F(TempfileTest, WriteLinesToTempEmptyStringInVector)
 }
 
 // Test write_lines_to_temp with empty vector
-TEST_F(TempfileTest, WriteLinesToTempEmptyVector)
+TEST_F(TempfileDriver, WriteLinesToTempEmptyVector)
 {
     std::vector<std::string> lines = {};
 
@@ -270,7 +260,7 @@ TEST_F(TempfileTest, WriteLinesToTempEmptyVector)
 }
 
 // Test write_lines_to_temp multiple calls
-TEST_F(TempfileTest, WriteLinesToTempMultiple)
+TEST_F(TempfileDriver, WriteLinesToTempMultiple)
 {
     std::vector<std::string> lines1 = { "First", "Second" };
     std::vector<std::string> lines2 = { "Third", "Fourth", "Fifth" };
@@ -299,7 +289,7 @@ TEST_F(TempfileTest, WriteLinesToTempMultiple)
 }
 
 // Test that write_lines_to_temp opens temp file automatically if needed
-TEST_F(TempfileTest, WriteLinesToTempOpensFile)
+TEST_F(TempfileDriver, WriteLinesToTempOpensFile)
 {
     EXPECT_EQ(tempfile->fd(), -1); // Initially not open
 
@@ -314,7 +304,7 @@ TEST_F(TempfileTest, WriteLinesToTempOpensFile)
 }
 
 // Test reading back the written data from write_lines_to_temp
-TEST_F(TempfileTest, WriteLinesToTempVerifyContent)
+TEST_F(TempfileDriver, WriteLinesToTempVerifyContent)
 {
     std::vector<std::string> lines = { "Line one", "Line two", "Line three" };
     auto segments                  = tempfile->write_lines_to_temp(lines);
@@ -339,7 +329,7 @@ TEST_F(TempfileTest, WriteLinesToTempVerifyContent)
 }
 
 // Test write_lines_to_temp with mixed lines (some with newlines, some without)
-TEST_F(TempfileTest, WriteLinesToTempMixedNewlines)
+TEST_F(TempfileDriver, WriteLinesToTempMixedNewlines)
 {
     std::vector<std::string> lines = { "Normal line", "Line with newline\n", "", "Another normal" };
 
@@ -357,7 +347,7 @@ TEST_F(TempfileTest, WriteLinesToTempMixedNewlines)
 }
 
 // Test write_lines_to_temp with many lines
-TEST_F(TempfileTest, WriteLinesToTempManyLines)
+TEST_F(TempfileDriver, WriteLinesToTempManyLines)
 {
     std::vector<std::string> lines;
     for (int i = 0; i < 100; ++i) {
@@ -381,7 +371,7 @@ TEST_F(TempfileTest, WriteLinesToTempManyLines)
 }
 
 // Test position tracking with mixed write_lines_to_temp and write_line_to_temp calls
-TEST_F(TempfileTest, WriteLinesToTempPositionTracking)
+TEST_F(TempfileDriver, WriteLinesToTempPositionTracking)
 {
     // Start fresh
     tempfile->close_temp_file();

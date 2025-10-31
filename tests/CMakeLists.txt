@@ -42,6 +42,8 @@ set(TEST_SOURCES
     input_test.cpp
     virtual_position_test.cpp
     EditorDriver.cpp
+    WorkspaceDriver.cpp
+    TempfileDriver.cpp
     TmuxDriver.cpp
 )
 

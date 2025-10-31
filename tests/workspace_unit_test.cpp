@@ -3,43 +3,12 @@
 
 #include <fstream>
 
-#include "tempfile.h"
-#include "workspace.h"
-
-// Simplified workspace test fixture
-class WorkspaceTest : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        tempfile = std::make_unique<Tempfile>();
-        wksp     = std::make_unique<Workspace>(*tempfile);
-        // Open temp file for workspace use
-        tempfile->open_temp_file();
-    }
-
-    void TearDown() override
-    {
-        wksp.reset();
-        tempfile.reset();
-    }
-
-    std::unique_ptr<Tempfile> tempfile;
-    std::unique_ptr<Workspace> wksp;
-
-    int OpenFile(const std::string &path)
-    {
-        int fd = open(path.c_str(), O_RDONLY);
-        if (fd < 0) {
-            throw std::runtime_error("Cannot open file: " + path);
-        }
-        return fd;
-    }
-};
+#include "WorkspaceDriver.h"
 
 //
 // Test create_blank_lines - static functions
 //
-TEST_F(WorkspaceTest, CreateBlankLines)
+TEST_F(WorkspaceDriver, CreateBlankLines)
 {
     std::list<Segment> seg_list = Workspace::create_blank_lines(5);
 
@@ -48,7 +17,7 @@ TEST_F(WorkspaceTest, CreateBlankLines)
     EXPECT_EQ(seg_list.front().file_descriptor, -1);
 }
 
-TEST_F(WorkspaceTest, CreateBlankLinesLarge)
+TEST_F(WorkspaceDriver, CreateBlankLinesLarge)
 {
     // Test with > 127 lines to verify segment splitting
     std::list<Segment> seg_list = Workspace::create_blank_lines(200);
@@ -65,7 +34,7 @@ TEST_F(WorkspaceTest, CreateBlankLinesLarge)
 //
 // Test workspace operations with file I/O
 //
-TEST_F(WorkspaceTest, LoadAndBreakSegment)
+TEST_F(WorkspaceDriver, LoadAndBreakSegment)
 {
     // Create test file on disk first
     std::string content  = "Line 0\nLine 1\nLine 2\nLine 3\nLine 4\n";
@@ -90,7 +59,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     std::remove(filename.c_str());
 }
 
-TEST_F(WorkspaceTest, BuildAndReadLines)
+TEST_F(WorkspaceDriver, BuildAndReadLines)
 {
     std::vector<std::string> lines = { "First line", "Second line", "Third line" };
     wksp->load_text(lines);
@@ -104,7 +73,7 @@ TEST_F(WorkspaceTest, BuildAndReadLines)
     EXPECT_EQ(wksp->read_line(2), "Third line");
 }
 
-TEST_F(WorkspaceTest, InsertBlankLines)
+TEST_F(WorkspaceDriver, InsertBlankLines)
 {
     // Create test file
     std::string content  = "Line 0\nLine 1\nLine 2\n";
@@ -129,7 +98,7 @@ TEST_F(WorkspaceTest, InsertBlankLines)
     std::remove(filename.c_str());
 }
 
-TEST_F(WorkspaceTest, DeleteLines)
+TEST_F(WorkspaceDriver, DeleteLines)
 {
     // Create test file
     std::string content  = "Line 0\nLine 1\nLine 2\nLine 3\n";
@@ -154,7 +123,7 @@ TEST_F(WorkspaceTest, DeleteLines)
 //
 // Test view management
 //
-TEST_F(WorkspaceTest, ScrollVertical)
+TEST_F(WorkspaceDriver, ScrollVertical)
 {
     // Insert empty lines.
     auto blank_lines = Workspace::create_blank_lines(100);
@@ -167,7 +136,7 @@ TEST_F(WorkspaceTest, ScrollVertical)
     EXPECT_EQ(wksp->view.topline, 10);
 }
 
-TEST_F(WorkspaceTest, GotoLine)
+TEST_F(WorkspaceDriver, GotoLine)
 {
     // Insert empty lines.
     auto blank_lines = Workspace::create_blank_lines(100);
@@ -185,7 +154,7 @@ TEST_F(WorkspaceTest, GotoLine)
 //
 // Test segment merging
 //
-TEST_F(WorkspaceTest, CatSegmentMerge)
+TEST_F(WorkspaceDriver, CatSegmentMerge)
 {
     // Create test file with multiple lines
     std::string content  = "Line 0\nLine 1\nLine 2\nLine 3\n";
@@ -216,7 +185,7 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
 //
 // Test basic file operations and view management
 //
-TEST_F(WorkspaceTest, SaveAndLoadCycle)
+TEST_F(WorkspaceDriver, SaveAndLoadCycle)
 {
     // Create test content and save to file
     std::string content = "Test line 1\nTest line 2\nTest line 3\n";
@@ -237,7 +206,7 @@ TEST_F(WorkspaceTest, SaveAndLoadCycle)
     std::remove(out_filename.c_str());
 }
 
-TEST_F(WorkspaceTest, ScrollAndGotoOperations)
+TEST_F(WorkspaceDriver, ScrollAndGotoOperations)
 {
     // Insert empty lines.
     auto blank_lines = Workspace::create_blank_lines(100);
@@ -255,7 +224,7 @@ TEST_F(WorkspaceTest, ScrollAndGotoOperations)
     EXPECT_GE(wksp->view.topline, 15); // Should center around line 25
 }
 
-TEST_F(WorkspaceTest, ToplineUpdateAfterEdit)
+TEST_F(WorkspaceDriver, ToplineUpdateAfterEdit)
 {
     // Insert empty lines.
     auto blank_lines = Workspace::create_blank_lines(100);
@@ -271,7 +240,7 @@ TEST_F(WorkspaceTest, ToplineUpdateAfterEdit)
     EXPECT_LE(wksp->view.topline, 52);
 }
 
-TEST_F(WorkspaceTest, ModifiedStateTests)
+TEST_F(WorkspaceDriver, ModifiedStateTests)
 {
     // Test modification tracking
     EXPECT_FALSE(wksp->file_state.modified);
@@ -281,7 +250,7 @@ TEST_F(WorkspaceTest, ModifiedStateTests)
     EXPECT_FALSE(wksp->file_state.modified);
 }
 
-TEST_F(WorkspaceTest, BackupDoneStateTests)
+TEST_F(WorkspaceDriver, BackupDoneStateTests)
 {
     // Test backup completion tracking
     EXPECT_FALSE(wksp->file_state.backup_done);
@@ -291,14 +260,14 @@ TEST_F(WorkspaceTest, BackupDoneStateTests)
     EXPECT_FALSE(wksp->file_state.backup_done);
 }
 
-TEST_F(WorkspaceTest, ChainAccessorsEmpty)
+TEST_F(WorkspaceDriver, ChainAccessorsEmpty)
 {
     // Empty workspace has no segments and cursegm() is end()
     EXPECT_EQ(wksp->cursegm(), wksp->get_contents().end());
     EXPECT_EQ(wksp->total_line_count(), 0);
 }
 
-TEST_F(WorkspaceTest, BuildFromText)
+TEST_F(WorkspaceDriver, BuildFromText)
 {
     // Test building segments from multi-line text
     std::string text = "Line one\nLine two\nLine three\nLast line";
@@ -313,7 +282,7 @@ TEST_F(WorkspaceTest, BuildFromText)
     EXPECT_EQ(wksp->read_line(3), "Last line");
 }
 
-TEST_F(WorkspaceTest, ResetWorkspace)
+TEST_F(WorkspaceDriver, ResetWorkspace)
 {
     // Add some segments
     wksp->load_text(std::vector<std::string>{ "test", "content" });
@@ -330,7 +299,7 @@ TEST_F(WorkspaceTest, ResetWorkspace)
     EXPECT_EQ(wksp->file_state.writable, 0);
 }
 
-TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
+TEST_F(WorkspaceDriver, SetCurrentSegmentNavigation)
 {
     // Create test content with multiple lines
     std::vector<std::string> lines = { "Line 0", "Line 1", "Line 2", "Line 3", "Line 4", "Line 5" };
@@ -347,7 +316,7 @@ TEST_F(WorkspaceTest, SetCurrentSegmentNavigation)
     EXPECT_EQ(result, 1); // Should return 1 (beyond end)
 }
 
-TEST_F(WorkspaceTest, BreakSegmentVariations)
+TEST_F(WorkspaceDriver, BreakSegmentVariations)
 {
     std::vector<std::string> lines = { "Line 0", "Line 1", "Line 2", "Line 3", "Line 4" };
     wksp->load_text(lines);
@@ -377,7 +346,7 @@ TEST_F(WorkspaceTest, BreakSegmentVariations)
     EXPECT_EQ(wksp->total_line_count(), 8);
 }
 
-TEST_F(WorkspaceTest, SegmentCatOperations)
+TEST_F(WorkspaceDriver, SegmentCatOperations)
 {
     std::vector<std::string> lines = { "A", "B", "C", "D", "E" };
     wksp->load_text(lines);
@@ -397,7 +366,7 @@ TEST_F(WorkspaceTest, SegmentCatOperations)
     EXPECT_FALSE(merged); // Can't merge first segment
 }
 
-TEST_F(WorkspaceTest, SegmentDeleteOperations)
+TEST_F(WorkspaceDriver, SegmentDeleteOperations)
 {
     std::vector<std::string> lines = { "A", "B", "C", "D", "E" };
     wksp->load_text(lines);
@@ -415,7 +384,7 @@ TEST_F(WorkspaceTest, SegmentDeleteOperations)
     wksp->delete_contents(10, 15); // Should handle gracefully
 }
 
-TEST_F(WorkspaceTest, ViewManagementComprehensive)
+TEST_F(WorkspaceDriver, ViewManagementComprehensive)
 {
     // Insert empty lines.
     auto blank_lines = Workspace::create_blank_lines(100);
@@ -445,7 +414,7 @@ TEST_F(WorkspaceTest, ViewManagementComprehensive)
     EXPECT_LE(wksp->view.topline, 50);
 }
 
-TEST_F(WorkspaceTest, ComplexEditWorkflow)
+TEST_F(WorkspaceDriver, ComplexEditWorkflow)
 {
     // Complex sequence: load -> insert -> break -> merge -> save
 

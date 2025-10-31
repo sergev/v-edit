@@ -79,7 +79,7 @@ TEST_F(WorkspaceTest, LoadAndBreakSegment)
     EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Break at line 2
-    int result = wksp->breaksegm(2);
+    int result = wksp->split(2);
     EXPECT_EQ(result, 0);
 
     // Verify segmentation worked
@@ -197,14 +197,14 @@ TEST_F(WorkspaceTest, CatSegmentMerge)
     wksp->load_file(OpenFile(filename));
 
     // Break at line 2 to create two segments
-    int result = wksp->breaksegm(2);
+    int result = wksp->split(2);
     EXPECT_EQ(result, 0);
 
     // Position to second segment (line 2)
     wksp->change_current_line(2);
 
     // Try to merge with previous segment
-    bool merged = wksp->catsegm();
+    bool merged = wksp->merge();
 
     // Merge result depends on segment structure, but no crash should occur
     EXPECT_GE(wksp->total_line_count(), 0);
@@ -356,14 +356,14 @@ TEST_F(WorkspaceTest, BreakSegmentVariations)
 
     // Break at line 0 (should be no-op)
     std::cout << "--- Break at line 0, no-op\n";
-    int result = wksp->breaksegm(0);
+    int result = wksp->split(0);
     wksp->debug_print(std::cout);
     EXPECT_EQ(result, 0);
     EXPECT_EQ(wksp->total_line_count(), 5);
 
     // Break at line 3
     std::cout << "--- Break at line 3\n";
-    result = wksp->breaksegm(3);
+    result = wksp->split(3);
     wksp->debug_print(std::cout);
     EXPECT_EQ(result, 0);
     EXPECT_EQ(wksp->position.line, 3);
@@ -371,7 +371,7 @@ TEST_F(WorkspaceTest, BreakSegmentVariations)
 
     // Break beyond end (should create blank lines)
     std::cout << "--- Break beyond end, create blank lines\n";
-    result = wksp->breaksegm(8);
+    result = wksp->split(8);
     wksp->debug_print(std::cout);
     EXPECT_EQ(result, 1); // Should extend file
     EXPECT_EQ(wksp->total_line_count(), 8);
@@ -383,17 +383,17 @@ TEST_F(WorkspaceTest, SegmentCatOperations)
     wksp->load_text(lines);
 
     // Break to create segments to merge
-    wksp->breaksegm(2);
+    wksp->split(2);
     wksp->change_current_line(2);
 
     // Test merge conditions - may or may not succeed depending on implementation
-    bool merged = wksp->catsegm();
+    bool merged = wksp->merge();
     // Just verify no crash - merge success depends on segment positioning
     EXPECT_TRUE(true); // No segmentation fault
 
     // Test merge on first segment (shouldn't work)
     wksp->change_current_line(0);
-    merged = wksp->catsegm();
+    merged = wksp->merge();
     EXPECT_FALSE(merged); // Can't merge first segment
 }
 
@@ -460,16 +460,16 @@ TEST_F(WorkspaceTest, ComplexEditWorkflow)
     EXPECT_EQ(wksp->total_line_count(), 6);
 
     // Break at various points
-    wksp->breaksegm(2);
+    wksp->split(2);
     wksp->change_current_line(4);
-    wksp->breaksegm(4);
+    wksp->split(4);
 
     // Try some merges (may or may not succeed)
     wksp->change_current_line(2);
-    wksp->catsegm(); // Try to merge - result depends on implementation
+    wksp->merge(); // Try to merge - result depends on implementation
 
     wksp->change_current_line(4);
-    wksp->catsegm(); // Try another merge
+    wksp->merge(); // Try another merge
 
     // Final state verification
     EXPECT_GE(wksp->total_line_count(), 3); // Should have at least original lines

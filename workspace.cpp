@@ -380,54 +380,22 @@ bool Workspace::write_file(const std::string &path)
 }
 
 //
-// Split segment at given line number (based on breaksegm from prototype).
+// Split segment at given line number.
 // When the needed line is beyond the end of file, creates empty segments
 // with blank lines.
 // Returns 0 on success, 1 if blank lines were appended.
 //
-int Workspace::breaksegm(int line_no)
+int Workspace::split(int line_no)
 {
+    // Handle empty workspace case
     if (contents_.empty()) {
-        if (line_no < 0)
-            throw std::runtime_error("breaksegm: negative line number");
-
-        // Create blank lines up to, but not including, line_no
-        // (so total_line_count() becomes line_no)
-        if (line_no > 0) {
-            contents_ = create_blank_lines(line_no);
-        }
-        // Position logically at requested line (may be just past end)
-        cursegm_      = contents_.end();
-        position.line = line_no;
-        return 1;
+        return split_empty_workspace(line_no);
     }
 
     // Position workspace to the target line
     if (change_current_line(line_no)) {
-        //
-        // Line is beyond end of file - create blank lines to extend it.
-        //
-
-        // Calculate how many blank lines to create.
-        int current_total   = total_line_count();
-        int num_blank_lines = line_no - current_total;
-        if (num_blank_lines < 0)
-            throw std::runtime_error("breaksegm: bad num_blank_lines");
-        if (num_blank_lines == 0) {
-            return 1; // Already at the right position
-        }
-
-        // Get iterator to first blank segment before splicing (since splice will move them)
-        auto blank_segments  = create_blank_lines(num_blank_lines);
-        auto first_blank_seg = blank_segments.begin();
-
-        // Insert blank lines at the end of file.
-        contents_.splice(contents_.end(), blank_segments);
-        cursegm_ = first_blank_seg;
-
-        // Position workspace logically at requested line (may be just past end)
-        position.line = line_no;
-        return 1; // Signal that we created lines
+        // Line is beyond end of file - extend it with blank lines
+        return split_beyond_end(line_no);
     }
 
     // Now we're at the segment containing line_no
@@ -435,18 +403,71 @@ int Workspace::breaksegm(int line_no)
     if (rel_line == 0) {
         return 0; // Already at the right position
     }
-    if (rel_line >= cursegm_->line_count) {
-        throw std::runtime_error("breaksegm: inconsistent rel_line after change_current_line()");
+
+    // Split the segment at the relative line position
+    split_segment(rel_line);
+    return 0;
+}
+
+//
+// Helper for split: handle empty workspace case
+//
+int Workspace::split_empty_workspace(int line_no)
+{
+    if (line_no < 0)
+        throw std::runtime_error("split: negative line number");
+
+    // Create blank lines up to, but not including, line_no
+    // (so total_line_count() becomes line_no)
+    if (line_no > 0) {
+        contents_ = create_blank_lines(line_no);
+    }
+    // Position logically at requested line (may be just past end)
+    cursegm_      = contents_.end();
+    position.line = line_no;
+    return 1;
+}
+
+//
+// Helper for split: extend file beyond end with blank lines
+//
+int Workspace::split_beyond_end(int line_no)
+{
+    // Calculate how many blank lines to create
+    int current_total   = total_line_count();
+    int num_blank_lines = line_no - current_total;
+    if (num_blank_lines < 0)
+        throw std::runtime_error("split: bad num_blank_lines");
+    if (num_blank_lines == 0) {
+        return 1; // Already at the right position
     }
 
-    //
-    // Either normal file segment or blank lines.
-    //
+    // Get iterator to first blank segment before splicing (since splice will move them)
+    auto blank_segments  = create_blank_lines(num_blank_lines);
+    auto first_blank_seg = blank_segments.begin();
+
+    // Insert blank lines at the end of file
+    contents_.splice(contents_.end(), blank_segments);
+    cursegm_ = first_blank_seg;
+
+    // Position workspace logically at requested line (may be just past end)
+    position.line = line_no;
+    return 1; // Signal that we created lines
+}
+
+//
+// Helper for split: split segment at relative line position
+//
+void Workspace::split_segment(int rel_line)
+{
+    if (rel_line >= static_cast<int>(cursegm_->line_count)) {
+        throw std::runtime_error("split: inconsistent rel_line after change_current_line()");
+    }
 
     // Find where to insert the new segment (after current segment)
     auto insert_pos = std::next(cursegm_);
 
-    // Walk through the first rel_line lines to calculate offset.
+    // Walk through the first rel_line lines to calculate offset
     long offs = 0;
     if (cursegm_->file_descriptor > 0) {
         for (int i = 0; i < rel_line; ++i) {
@@ -471,15 +492,14 @@ int Workspace::breaksegm(int line_no)
 
     // Update workspace position
     cursegm_ = new_it;
-    return 0;
 }
 
 //
-// Merge adjacent segments (based on catsegm from prototype).
+// Merge adjacent segments.
 // Tries to merge current segment with previous if they're adjacent.
 // Returns true if merge occurred, false otherwise.
 //
-bool Workspace::catsegm()
+bool Workspace::merge()
 {
     if (cursegm_ == contents_.begin() || cursegm_ == contents_.end())
         return false;
@@ -487,37 +507,21 @@ bool Workspace::catsegm()
     auto curr_it = cursegm_;
     auto prev_it = std::prev(curr_it);
 
-    Segment &curr = *curr_it;
     Segment &prev = *prev_it;
+    Segment &curr = *curr_it;
 
-    // Check if segments can be merged
-    // They must be from the same file (not tail segments), have same file descriptor,
-    // and together have < 127 lines
-    // IMPORTANT: Do not merge if file descriptors are different (e.g., temp file vs original file)
-    if (prev.file_descriptor > 0 && prev.file_descriptor == curr.file_descriptor &&
-        (prev.line_count + curr.line_count) < 127) {
-        // Calculate if they're adjacent
-        long prev_bytes = prev.total_byte_count();
-        if (curr.file_offset == prev.file_offset + prev_bytes) {
-            // Segments are adjacent - merge them
-            // Combine data into previous segment
-            for (unsigned short byte : curr.line_lengths)
-                prev.line_lengths.push_back(byte);
-            prev.line_count += curr.line_count;
+    // Check if segments can be merged and are adjacent
+    if (prev.can_merge_with(curr) && prev.is_adjacent_to(curr)) {
+        // Merge current segment into previous
+        prev.merge_with(curr);
 
-            // Erase current segment from list
-            contents_.erase(curr_it);
-            cursegm_ = prev_it;
+        // Erase current segment from list
+        contents_.erase(curr_it);
+        cursegm_ = prev_it;
 
-            // After merging, cursegm_ points to the merged segment.
-            // Ensure our positioning is still valid after the merge.
-            // The current line should still be valid, so re-position to it.
-
-            // Re-position properly using change_current_line logic
-            change_current_line(position.line);
-
-            return true;
-        }
+        // Re-position properly using change_current_line logic
+        change_current_line(position.line);
+        return true;
     }
     return false;
 }
@@ -542,12 +546,12 @@ void Workspace::insert_contents(std::list<Segment> &contents_to_insert, int at)
     int total_before = total_line_count();
 
     // Split at insertion point
-    int br = breaksegm(at);
+    int br = split(at);
 
     // Determine correct insertion position
     // Default behavior: insert BEFORE cursegm_
     auto insert_pos = cursegm_;
-    // Special case: inserting at end (at >= total_before) and breaksegm signaled EOF
+    // Special case: inserting at end (at >= total_before) and split signaled EOF
     if (br == 1 && at >= total_before) {
         insert_pos = contents_.end();
     }
@@ -616,9 +620,9 @@ void Workspace::delete_contents(int from, int to)
         }
     }
 
-    // Use breaksegm for positioning (it uses list operations internally now)
-    // Break AFTER the last line to delete (to+1) so we can delete up to and including 'to'
-    int result = breaksegm(to + 1);
+    // Use split for positioning (it uses list operations internally now)
+    // Split AFTER the last line to delete (to+1) so we can delete up to and including 'to'
+    int result = split(to + 1);
     // Determine end iterator for erase range
     auto end_delete_it = contents_.end();
     if (result == 0) {
@@ -631,7 +635,7 @@ void Workspace::delete_contents(int from, int to)
         }
     }
 
-    result = breaksegm(from);
+    result = split(from);
     if (result != 0) {
         return;
     }
@@ -790,14 +794,14 @@ void Workspace::put_line(int line_no, const std::string &line_content)
 
     // Overwrite existing line: isolate target line into its own segment, then replace
     // Ensure cursegm_ starts exactly at line_no
-    breaksegm(line_no);
+    split(line_no);
     if (cursegm_->line_count > 1) {
-        breaksegm(line_no + 1);
+        split(line_no + 1);
         --cursegm_;
     }
 
     *cursegm_ = std::move(*new_seg_it);
-    catsegm();
+    merge();
     position.line       = line_no;
     file_state.modified = true;
 }

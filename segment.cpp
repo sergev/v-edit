@@ -114,6 +114,37 @@ bool Segment::write_content(int out_fd) const
 }
 
 //
+// Check if this segment can be merged with another segment.
+//
+bool Segment::can_merge_with(const Segment &other) const
+{
+    // Segments must be from the same file, and together have < 127 lines
+    return file_descriptor > 0 && file_descriptor == other.file_descriptor &&
+           (line_count + other.line_count) < 127;
+}
+
+//
+// Check if this segment is adjacent to another segment.
+//
+bool Segment::is_adjacent_to(const Segment &other) const
+{
+    long prev_bytes = total_byte_count();
+    return other.file_offset == file_offset + prev_bytes;
+}
+
+//
+// Merge another segment into this segment.
+//
+void Segment::merge_with(const Segment &other)
+{
+    // Combine data into this segment
+    for (unsigned short byte : other.line_lengths) {
+        line_lengths.push_back(byte);
+    }
+    line_count += other.line_count;
+}
+
+//
 // Debug routine: print all fields in consistent format as single line.
 //
 void Segment::debug_print(std::ostream &out) const

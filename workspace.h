@@ -111,11 +111,11 @@ public:
     // Delete segments from workspace between from and to lines (delete from prototype)
     void delete_contents(int from, int to);
 
-    // Split segment at given line number (breaksegm from prototype)
-    int breaksegm(int line_no);
+    // Split segment at given line number
+    int split(int line_no);
 
-    // Merge adjacent segments (catsegm from prototype)
-    bool catsegm();
+    // Merge adjacent segments
+    bool merge();
 
     // Create segments for n empty lines (blanklines from prototype)
     static std::list<Segment> create_blank_lines(int n);
@@ -146,6 +146,15 @@ private:
     // Helper for load_file: parse a single line from buffered input
     // Returns line length including newline, or 0 on EOF
     int parse_line_from_buffer(char *read_buf, int &buf_count, int &buf_next, int fd);
+
+    // Helper for split: handle empty workspace case
+    int split_empty_workspace(int line_no);
+
+    // Helper for split: extend file beyond end with blank lines
+    int split_beyond_end(int line_no);
+
+    // Helper for split: split segment at relative line position
+    void split_segment(int rel_line);
 
     std::list<Segment> contents_; // list of segments
     Segment::iterator cursegm_;   // current segment iterator (points into contents_)

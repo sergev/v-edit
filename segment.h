@@ -53,6 +53,15 @@ public:
     // Returns true on success, false on error (seek or write failure).
     bool write_content(int out_fd) const;
 
+    // Check if this segment can be merged with another segment.
+    bool can_merge_with(const Segment &other) const;
+
+    // Check if this segment is adjacent to another segment.
+    bool is_adjacent_to(const Segment &other) const;
+
+    // Merge another segment into this segment.
+    void merge_with(const Segment &other);
+
     // Debug routine: print all fields in consistent format as single line.
     void debug_print(std::ostream &out) const;
 

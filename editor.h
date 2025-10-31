@@ -160,6 +160,16 @@ private:
     void handle_area_selection(int ch);
     bool is_movement_key(int ch) const;
 
+    // Command mode helpers
+    int parse_count_from_cmd(const std::string &cmd, int default_count = 1);
+    void exit_command_mode(bool clear_area_selection = true, bool clear_filter = true);
+    bool handle_rectangular_block_cmd(int ch);
+    void handle_copy_lines_cmd(int count);
+    void handle_delete_lines_cmd(int count);
+    void handle_insert_lines_cmd(int count);
+    void start_area_selection_if_movement(int ch);
+    void execute_command(const std::string &cmd);
+
     // Signal handling
     void setup_signal_handlers();
     static void handle_sigint(int sig);

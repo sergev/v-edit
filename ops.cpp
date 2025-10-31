@@ -1,3 +1,5 @@
+#include <signal.h>
+
 #include "editor.h"
 
 //
@@ -542,4 +544,313 @@ void Editor::combineline(int line, int col)
     wksp_->delete_contents(line + 1, line + 1);
 
     ensure_cursor_visible();
+}
+
+//
+// Command mode operation helpers (moved from key_bindings.cpp)
+//
+
+//
+// Parse numeric count from command string.
+//
+int Editor::parse_count_from_cmd(const std::string &cmd, int default_count)
+{
+    if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
+        // Extract all leading digits
+        size_t i = 0;
+        while (i < cmd.size() && cmd[i] >= '0' && cmd[i] <= '9') {
+            i++;
+        }
+        if (i > 0) {
+            int count = std::atoi(cmd.substr(0, i).c_str());
+            return count < 1 ? default_count : count;
+        }
+    }
+    return default_count;
+}
+
+//
+// Switch to command input mode.
+//
+void Editor::enter_command_mode()
+{
+    cmd_mode_            = true;
+    area_selection_mode_ = false;
+    params_.reset();
+    cmd_.clear();
+    status_ = "Cmd: ";
+}
+
+//
+// Exit command mode and clear related state.
+//
+void Editor::exit_command_mode(bool clear_area_selection, bool clear_filter)
+{
+    cmd_mode_ = false;
+    if (clear_area_selection) {
+        area_selection_mode_ = false;
+        params_.type         = Parameters::PARAM_NONE;
+    }
+    if (clear_filter) {
+        filter_mode_ = false;
+    }
+    cmd_.clear();
+    params_.reset();
+}
+
+//
+// Handle copy lines command.
+//
+void Editor::handle_copy_lines_cmd(int count)
+{
+    int cur_line = wksp_->view.topline + cursor_line_;
+    picklines(cur_line, count);
+    status_ = std::string("Copied ") + std::to_string(count) + " line(s)";
+    exit_command_mode(true, true);
+}
+
+//
+// Handle delete lines command.
+//
+void Editor::handle_delete_lines_cmd(int count)
+{
+    int cur_line = wksp_->view.topline + cursor_line_;
+    deletelines(cur_line, count);
+    status_ = std::string("Deleted ") + std::to_string(count) + " line(s)";
+    exit_command_mode(true, true);
+}
+
+//
+// Handle insert lines command.
+//
+void Editor::handle_insert_lines_cmd(int count)
+{
+    int cur_line = wksp_->view.topline + cursor_line_;
+    insertlines(cur_line, count);
+    status_ = std::string("Inserted ") + std::to_string(count) + " line(s)";
+    exit_command_mode(true, true);
+}
+
+//
+// Start area selection if movement key detected.
+//
+void Editor::start_area_selection_if_movement(int ch)
+{
+    if (is_movement_key(ch)) {
+        if (!area_selection_mode_) {
+            // Start area selection
+            area_selection_mode_ = true;
+            int cur_col          = wksp_->view.basecol + cursor_col_;
+            int cur_row          = wksp_->view.topline + cursor_line_;
+            params_.c0           = cur_col;
+            params_.r0           = cur_row;
+            params_.c1           = cur_col;
+            params_.r1           = cur_row;
+            status_              = "*** Area defined by cursor ***";
+        }
+        handle_area_selection(ch);
+    }
+}
+
+//
+// Execute command string.
+//
+void Editor::execute_command(const std::string &cmd)
+{
+    if (cmd.empty()) {
+        return;
+    }
+
+    // Parse numeric count if command starts with a number
+    std::string remaining_cmd = cmd;
+    if (!cmd.empty() && cmd[0] >= '0' && cmd[0] <= '9') {
+        size_t i = 0;
+        while (i < cmd.size() && cmd[i] >= '0' && cmd[i] <= '9') {
+            i++;
+        }
+        if (i > 0) {
+            params_.count = std::atoi(cmd.substr(0, i).c_str());
+            remaining_cmd = cmd.substr(i);
+        }
+    }
+
+    if (remaining_cmd == "qa") {
+        quit_flag_ = true;
+        status_    = "Exiting without saving changes";
+    } else if (remaining_cmd == "ad") {
+        // Force a crash dump
+        handle_fatal_signal(SIGQUIT);
+    } else if (remaining_cmd == "q") {
+        save_file();
+        quit_flag_ = true;
+        status_    = "Saving changes and exiting";
+    } else if (remaining_cmd == "r") {
+        // Redraw screen
+        wksp_redraw();
+        status_ = "Redrawn";
+    } else if (remaining_cmd.size() >= 2 && remaining_cmd.substr(0, 2) == "w ") {
+        // w + to make writable (or other w commands)
+        if (remaining_cmd.size() >= 3 && remaining_cmd[2] == '+') {
+            wksp_->file_state.writable = true;
+            status_                    = "File marked writable";
+        } else {
+            wksp_->file_state.writable = false;
+            status_                    = "File marked read-only";
+        }
+    } else if (remaining_cmd == "s") {
+        save_file();
+    } else if (remaining_cmd.size() > 1 && remaining_cmd[0] == 's' && remaining_cmd[1] != ' ') {
+        // s<filename> - save as
+        std::string new_filename = remaining_cmd.substr(1);
+        save_as(new_filename);
+    } else if (remaining_cmd.size() > 1 && remaining_cmd[0] == 'o') {
+        // Open file: o<filename> - now opens in current workspace
+        std::string file_to_open = remaining_cmd.substr(1);
+        filename_                = file_to_open;
+        if (load_file_segments(file_to_open)) {
+            status_ = std::string("Opened: ") + file_to_open;
+        } else {
+            status_ = std::string("Failed to open: ") + file_to_open;
+        }
+    } else if (filter_mode_ && !remaining_cmd.empty()) {
+        // External filter command
+        int cur_line  = wksp_->view.topline + cursor_line_;
+        int num_lines = 1; // default to current line
+
+        // Parse command for line count (e.g., "3 sort" means sort 3 lines)
+        std::string command = remaining_cmd;
+        size_t spacePos     = remaining_cmd.find(' ');
+        if (spacePos != std::string::npos) {
+            std::string countStr = remaining_cmd.substr(0, spacePos);
+            if (countStr.find_first_not_of("0123456789") == std::string::npos) {
+                num_lines = std::atoi(countStr.c_str());
+                if (num_lines < 1)
+                    num_lines = 1;
+                command = remaining_cmd.substr(spacePos + 1);
+                // Trim leading spaces from command
+                while (!command.empty() && command[0] == ' ') {
+                    command = command.substr(1);
+                }
+            }
+        } else {
+            // No space found, check if command starts with a number
+            if (!remaining_cmd.empty() && remaining_cmd[0] >= '0' && remaining_cmd[0] <= '9') {
+                // Extract number from beginning
+                size_t i = 0;
+                while (i < remaining_cmd.size() && remaining_cmd[i] >= '0' &&
+                       remaining_cmd[i] <= '9') {
+                    i++;
+                }
+                if (i > 0) {
+                    std::string countStr = remaining_cmd.substr(0, i);
+                    num_lines            = std::atoi(countStr.c_str());
+                    if (num_lines < 1)
+                        num_lines = 1;
+                    command = remaining_cmd.substr(i);
+                }
+            }
+        }
+
+        // Debug: show what we're executing
+        status_ =
+            std::string("Executing: ") + command + " on " + std::to_string(num_lines) + " lines";
+
+        if (execute_external_filter(command, cur_line, num_lines)) {
+            status_ = std::string("Filtered ") + std::to_string(num_lines) + " line(s)";
+        } else {
+            status_ = "Filter execution failed";
+        }
+        filter_mode_ = false;
+    } else if (remaining_cmd.size() > 1 && remaining_cmd[0] == 'g') {
+        // goto line: g<number>
+        int ln = std::atoi(remaining_cmd.c_str() + 1);
+        if (ln < 1)
+            ln = 1;
+        goto_line(ln - 1);
+    } else if (remaining_cmd.size() > 1 && remaining_cmd[0] == '/') {
+        // search: /text
+        std::string needle = remaining_cmd.substr(1);
+        if (!needle.empty()) {
+            last_search_forward_ = true;
+            last_search_         = needle;
+            search_forward(needle);
+        }
+    } else if (remaining_cmd.size() > 1 && remaining_cmd[0] == '?') {
+        // backward search: ?text
+        std::string needle = remaining_cmd.substr(1);
+        if (!needle.empty()) {
+            last_search_forward_ = false;
+            last_search_         = needle;
+            search_backward(needle);
+        }
+    } else if (remaining_cmd == "n") {
+        if (last_search_forward_)
+            search_next();
+        else
+            search_prev();
+    } else if (remaining_cmd.size() == 2 && remaining_cmd[0] == '>' && remaining_cmd[1] >= 'a' &&
+               remaining_cmd[1] <= 'z') {
+        // Save macro buffer: >x (saves current clipboard to named buffer)
+        save_macro_buffer(remaining_cmd[1]);
+        status_ = std::string("Buffer '") + remaining_cmd[1] + "' saved";
+    } else if (remaining_cmd.size() == 3 && remaining_cmd[0] == '>' && remaining_cmd[1] == '>' &&
+               remaining_cmd[2] >= 'a' && remaining_cmd[2] <= 'z') {
+        // Save macro position: >>x (saves current position)
+        save_macro_position(remaining_cmd[2]);
+        status_ = std::string("Position '") + remaining_cmd[2] + "' saved";
+    } else if (remaining_cmd.size() == 2 && remaining_cmd[0] == '$' && remaining_cmd[1] >= 'a' &&
+               remaining_cmd[1] <= 'z') {
+        // Use macro: $x (tries buffer first, then position)
+        // Check if in area selection mode for mdeftag
+        if (area_selection_mode_) {
+            // Define area using tag
+            mdeftag(remaining_cmd[1]);
+            // Stay in area selection mode for further commands
+            return;
+        }
+        auto it = macros_.find(remaining_cmd[1]);
+        if (it != macros_.end()) {
+            if (it->second.is_buffer()) {
+                if (paste_macro_buffer(remaining_cmd[1])) {
+                    status_ = std::string("Pasted buffer '") + remaining_cmd[1] + "'";
+                } else {
+                    status_ = std::string("Buffer '") + remaining_cmd[1] + "' empty";
+                }
+            } else if (it->second.is_position()) {
+                if (goto_macro_position(remaining_cmd[1])) {
+                    status_ = std::string("Goto position '") + remaining_cmd[1] + "'";
+                } else {
+                    status_ = std::string("Position '") + remaining_cmd[1] + "' not found";
+                }
+            }
+        } else {
+            status_ = std::string("Macro '") + remaining_cmd[1] + "' not found";
+        }
+    } else if (remaining_cmd.size() >= 1 && remaining_cmd[0] == ':') {
+        // Colon commands: :w, :q, :wq, :<number>
+        if (remaining_cmd == ":w") {
+            save_file();
+        } else if (remaining_cmd == ":q") {
+            quit_flag_ = true;
+            status_    = "Exiting";
+        } else if (remaining_cmd == ":wq") {
+            save_file();
+            quit_flag_ = true;
+            status_    = "Saved and exiting";
+        } else if (remaining_cmd.size() > 1 && remaining_cmd[0] == ':') {
+            // :<number> - goto line
+            int ln = std::atoi(remaining_cmd.c_str() + 1);
+            if (ln >= 1) {
+                goto_line(ln - 1);
+                status_ = std::string("Goto line ") + std::to_string(ln);
+            }
+        }
+    } else if (remaining_cmd.size() >= 1 && remaining_cmd[0] >= '0' && remaining_cmd[0] <= '9') {
+        // Direct line number - goto line
+        int ln = std::atoi(remaining_cmd.c_str());
+        if (ln >= 1) {
+            goto_line(ln - 1);
+            status_ = std::string("Goto line ") + remaining_cmd;
+        }
+    }
 }
